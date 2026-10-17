@@ -2,10 +2,20 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="jewel_prefs.xml" />
+        <exclude domain="sharedpref" path="jewel_india_prefs.xml" />
+        <exclude domain="sharedpref" path="jewel_signup_flow_prefs.xml" />
+        <exclude domain="sharedpref" path="jewel_view_mode_prefs.xml" />
+        <exclude domain="sharedpref" path="jewel_ai_consent.xml" />
+        <exclude domain="sharedpref" path="com.jewelindia.app_preferences.xml" />
         <exclude domain="sharedpref" path="io.github.jan.supabase.auth.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="jewel_prefs.xml" />
+        <exclude domain="sharedpref" path="jewel_india_prefs.xml" />
+        <exclude domain="sharedpref" path="jewel_signup_flow_prefs.xml" />
+        <exclude domain="sharedpref" path="jewel_view_mode_prefs.xml" />
+        <exclude domain="sharedpref" path="jewel_ai_consent.xml" />
+        <exclude domain="sharedpref" path="com.jewelindia.app_preferences.xml" />
         <exclude domain="sharedpref" path="io.github.jan.supabase.auth.xml" />
     </device-transfer>
 </data-extraction-rules>

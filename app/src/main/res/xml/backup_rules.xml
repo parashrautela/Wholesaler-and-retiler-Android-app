@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
     <exclude domain="sharedpref" path="jewel_prefs.xml" />
+    <exclude domain="sharedpref" path="jewel_india_prefs.xml" />
+    <exclude domain="sharedpref" path="jewel_signup_flow_prefs.xml" />
+    <exclude domain="sharedpref" path="jewel_view_mode_prefs.xml" />
+    <exclude domain="sharedpref" path="jewel_ai_consent.xml" />
+    <exclude domain="sharedpref" path="com.jewelindia.app_preferences.xml" />
     <exclude domain="sharedpref" path="io.github.jan.supabase.auth.xml" />
 </full-backup-content>

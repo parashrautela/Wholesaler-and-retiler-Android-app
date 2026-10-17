@@ -40,8 +40,4 @@ class ViewModeStore(private val prefs: SharedPreferences) {
     fun clear(userId: String) {
         prefs.edit().remove(key(userId)).apply()
     }
-
-    fun clear() {
-        prefs.edit().clear().apply()
-    }
 }

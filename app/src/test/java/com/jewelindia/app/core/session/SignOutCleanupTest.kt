@@ -26,11 +26,15 @@ class SignOutCleanupTest {
         val store = ViewModeStore(fakePrefs)
 
         store.set(ViewMode.employee, "user_123")
+        store.set(ViewMode.employee, "user_999")
         assertEquals(ViewMode.employee, store.mode("user_123"))
+        assertEquals(ViewMode.employee, store.mode("user_999"))
 
-        store.clear()
-        // Should fall back to default retailer mode after clear
+        store.clear("user_123")
+        // user_123 should fall back to default retailer mode after clear
         assertEquals(ViewMode.retailer, store.mode("user_123"))
+        // user_999 should NOT be cleared (iOS behavior)
+        assertEquals(ViewMode.employee, store.mode("user_999"))
     }
 
     @Test
@@ -65,6 +69,7 @@ class SignOutCleanupTest {
         val fakePrefs = FakeSharedPreferences()
         val viewModeStore = ViewModeStore(fakePrefs)
         viewModeStore.set(ViewMode.employee, "user_456")
+        viewModeStore.set(ViewMode.employee, "user_other")
 
         val context = object : android.content.ContextWrapper(null) {
             override fun getFilesDir(): File = rootDir
@@ -72,11 +77,13 @@ class SignOutCleanupTest {
 
         AppGraph.performSignOutCleanup(
             context = context,
+            userId = "user_456",
             viewModeStore = viewModeStore,
             imageLoader = null
         )
 
         assertEquals(ViewMode.retailer, viewModeStore.mode("user_456"))
+        assertEquals(ViewMode.employee, viewModeStore.mode("user_other"))
         assertFalse(testFile.exists())
         assertFalse(LikeBook.isLiked("any_prod"))
     }

@@ -34,15 +34,15 @@ import com.jewelindia.app.feature.retailer.MarketplaceCatalogueStore
 class AppGraph(val app: Application) {
     val prefs = app.getSharedPreferences("jewel_india_prefs", Context.MODE_PRIVATE)
 
-    val viewModeStore = ViewModeStore(prefs)
-    val signupFlow = SignupFlow(prefs)
+    val viewModeStore = ViewModeStore(app)
+    val signupFlow = SignupFlow(app)
     val authRouter = AuthRouter(viewModeStore)
     val sessionStore = SessionStore(
         authRouter = authRouter,
         viewModeStore = viewModeStore,
         supabase = JewelSupabase.client,
         onSignOutCleanup = {
-            performSignOutCleanup(app, viewModeStore)
+            performSignOutCleanup(app)
         }
     ).apply {
         start()
@@ -68,11 +68,12 @@ class AppGraph(val app: Application) {
     companion object {
         fun performSignOutCleanup(
             context: Context,
+            userId: String? = null,
             viewModeStore: ViewModeStore? = null,
             imageLoader: coil3.ImageLoader? = null
         ) {
             LikeBook.clear()
-            viewModeStore?.clear()
+            userId?.let { viewModeStore?.clear(it) }
             MarketplaceCatalogueStore.clear(context)
             try {
                 val loader = imageLoader ?: SingletonImageLoader.get(context)
