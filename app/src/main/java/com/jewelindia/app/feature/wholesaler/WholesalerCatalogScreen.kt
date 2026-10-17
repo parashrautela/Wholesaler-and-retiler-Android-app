@@ -22,10 +22,14 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import android.provider.DocumentsContract
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DriveFolderUpload
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Search
@@ -64,8 +68,12 @@ import com.jewelindia.app.core.model.Product
 import com.jewelindia.app.core.model.Wholesaler
 import com.jewelindia.app.core.session.SessionStore
 import com.jewelindia.app.data.api.WholesalerApi
+import com.jewelindia.app.data.supabase.JewelJson
 import com.jewelindia.app.design.Palette
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,6 +91,15 @@ fun WholesalerCatalogScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val editSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var isExporting by remember { mutableStateOf(false) }
+    var exportFeedback by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(exportFeedback) {
+        exportFeedback?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
 
     LaunchedEffect(wholesaler?.id) {
         val wid = wholesaler?.id ?: return@LaunchedEffect
@@ -97,6 +114,39 @@ fun WholesalerCatalogScreen(
             it.title?.contains(query, ignoreCase = true) == true ||
                     it.jewelleryType?.contains(query, ignoreCase = true) == true ||
                     it.category?.contains(query, ignoreCase = true) == true
+        }
+    }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { treeUri ->
+        if (treeUri != null) {
+            scope.launch(Dispatchers.IO) {
+                isExporting = true
+                try {
+                    val docUri = DocumentsContract.buildDocumentUriUsingTree(
+                        treeUri,
+                        DocumentsContract.getTreeDocumentId(treeUri)
+                    )
+                    val fileUri = DocumentsContract.createDocument(
+                        context.contentResolver,
+                        docUri,
+                        "application/json",
+                        "catalog_export_${System.currentTimeMillis()}.json"
+                    )
+                    if (fileUri != null) {
+                        context.contentResolver.openOutputStream(fileUri)?.use { stream ->
+                            val jsonString = JewelJson.encodeToString(filtered)
+                            stream.write(jsonString.toByteArray())
+                        }
+                        exportFeedback = "Exported ${filtered.size} designs to folder"
+                    }
+                } catch (e: Exception) {
+                    exportFeedback = "Export failed: ${e.message}"
+                } finally {
+                    isExporting = false
+                }
+            }
         }
     }
 
@@ -127,8 +177,20 @@ fun WholesalerCatalogScreen(
                         color = Palette.muted
                     )
                 }
-                IconButton(onClick = {}) {
-                    Icon(Icons.Default.FilterList, contentDescription = "Filter", tint = Palette.dark)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = { exportLauncher.launch(null) },
+                        enabled = !isExporting && filtered.isNotEmpty()
+                    ) {
+                        if (isExporting) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Palette.dark)
+                        } else {
+                            Icon(Icons.Default.DriveFolderUpload, contentDescription = "Export to folder", tint = Palette.dark)
+                        }
+                    }
+                    IconButton(onClick = {}) {
+                        Icon(Icons.Default.FilterList, contentDescription = "Filter", tint = Palette.dark)
+                    }
                 }
             }
 
