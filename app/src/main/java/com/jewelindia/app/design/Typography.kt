@@ -23,6 +23,9 @@ enum class JewelWeight {
     Black
 }
 
+val Cirka: FontFamily get() = JewelFonts.Cirka
+val Manrope: FontFamily get() = JewelFonts.Manrope
+
 object JewelFonts {
     val cirkaLight = Font(R.font.cirka_light, FontWeight.Light)
     val cirkaRegular = Font(R.font.cirka_regular, FontWeight.Normal)

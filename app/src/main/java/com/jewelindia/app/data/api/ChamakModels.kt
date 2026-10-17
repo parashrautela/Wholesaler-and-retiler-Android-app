@@ -110,7 +110,7 @@ enum class ContentFlag(val rawValue: String) {
     val userMessage: String?
         get() = when (this) {
             Ok -> null
-            NotJewelry -> "One or both selected images do not appear to be jewelry. Please select jewelry designs from your catalogue or upload clear jewelry photos."
+            NotJewelry -> "Jewellery was not detected in one or both selected images. Please select two clear jewellery photos to continue."
             Inappropriate -> "Selected images contain inappropriate or unsupported visual content."
             TooUnclearToAssess -> "One or both images are too blurry or unclear for precision vision analysis."
         }
@@ -178,8 +178,28 @@ data class ChamakDesignItem(
     var imageURL: String? = null,
     var localImageData: ByteArray? = null,
     var product: Product? = null,
-    var contentHash: String? = null
+    var contentHash: String? = null,
+    var declaredJewelleryType: String? = null
 ) {
+    val canonicalJewelleryType: String?
+        get() {
+            declaredJewelleryType?.let { declared ->
+                return JewelleryTypeCanonical.canonicalize(declared)
+            }
+            product?.jewelleryType?.let { pType ->
+                return JewelleryTypeCanonical.canonicalize(pType)
+            }
+            return null
+        }
+
+    val displayTypeLabel: String
+        get() {
+            canonicalJewelleryType?.let { c ->
+                return JewelleryTypeCanonical.displayLabel(c)
+            }
+            return subtitle ?: "Piece"
+        }
+
     val hasImage: Boolean
         get() = (!imageURL.isNullOrEmpty()) || (localImageData != null && localImageData!!.isNotEmpty())
 
@@ -198,7 +218,24 @@ data class ChamakDesignItem(
                 imageURL = url,
                 localImageData = null,
                 product = product,
-                contentHash = null
+                contentHash = null,
+                declaredJewelleryType = null
+            )
+        }
+
+        fun from(imageData: ByteArray, slot: Int, declaredJewelleryType: String? = null): ChamakDesignItem {
+            val md = java.security.MessageDigest.getInstance("SHA-256")
+            val hash = md.digest(imageData).joinToString("") { "%02x".format(it) }
+            val label = declaredJewelleryType?.let { JewelleryTypeCanonical.displayLabel(it) } ?: "Direct Upload"
+            return ChamakDesignItem(
+                id = "custom_slot_${slot}_${java.util.UUID.randomUUID()}",
+                title = "Custom Photo $slot",
+                subtitle = label,
+                imageURL = null,
+                localImageData = imageData,
+                product = null,
+                contentHash = hash,
+                declaredJewelleryType = declaredJewelleryType
             )
         }
     }
@@ -233,6 +270,18 @@ data class SetCreationOutput(
 )
 
 @Serializable
+data class ChamakAttempt(
+    val attempt: Int,
+    val path: String,
+    val variants: Map<String, String> = emptyMap(),
+    @SerialName("created_at") val createdAt: String? = null
+) {
+    fun path(size: ImageSize): String {
+        return variants[size.value] ?: path
+    }
+}
+
+@Serializable
 data class ChamakGeneration(
     val id: String,
     @SerialName("wholesaler_id") val wholesalerId: String,
@@ -248,13 +297,21 @@ data class ChamakGeneration(
     @SerialName("output_image_url") val outputImageURL: String? = null,
     @SerialName("output_variants") val outputVariants: Map<String, String> = emptyMap(),
     @SerialName("output_images") val outputImages: List<SetCreationOutput> = emptyList(),
+    @SerialName("output_history") val outputHistory: List<ChamakAttempt> = emptyList(),
     val status: ChamakStatus = ChamakStatus.Queued,
     @SerialName("content_flag_hit") val contentFlagHit: ContentFlag? = null,
+    @SerialName("error_message") val errorMessage: String? = null,
     @SerialName("created_at") val createdAt: String,
     @SerialName("completed_at") val completedAt: String? = null,
     val mode: ChamakMode = ChamakMode.Fusion,
     @SerialName("set_backdrop") val setBackdrop: SetBackdrop? = null
 ) {
+    val failureUserMessage: String
+        get() = errorMessage
+            ?: contentFlagHit?.userMessage
+            ?: stage1AnalysisJSON?.contentFlag?.userMessage
+            ?: "AI generation could not complete. Please try again or report the issue."
+
     fun outputPath(size: ImageSize): String? {
         return outputVariants[size.value] ?: outputImageURL
     }
@@ -298,3 +355,56 @@ data class ChamakQuote(
         )
     }
 }
+
+object ChamakSlot {
+    fun label(slot: Int, mode: ChamakMode): String = when {
+        mode == ChamakMode.SetCreation -> "Piece $slot"
+        slot == 1 -> "Design 1"
+        else -> "Design 2"
+    }
+
+    fun colorHex(slot: Int): Long = when (slot) {
+        1 -> 0xFFCA8A04L
+        2 -> 0xFF3B82F6L
+        3 -> 0xFF10B981L
+        else -> 0xFFE11D48L
+    }
+}
+
+enum class JewelleryTypeCanonical(val key: String, val displayLabel: String) {
+    Chain("chain", "Chains"),
+    Necklace("necklace", "Necklace"),
+    Ring("ring", "Ring"),
+    Earrings("earrings", "Earrings"),
+    Bangle("bangle", "Bangle"),
+    Pendant("pendant", "Pendant"),
+    Nosepin("nosepin", "Nosepin"),
+    Haram("haram", "Haram"),
+    Mangalsutra("mangalsutra", "Mangalsutra");
+
+    companion object {
+        val allCanonical: List<String> = entries.map { it.key }
+
+        fun canonicalize(raw: String?): String? {
+            val trimmed = raw?.trim()?.lowercase() ?: return null
+            if (trimmed.isEmpty()) return null
+            return when (trimmed) {
+                "chain", "chains", "neck chain", "neck chains" -> Chain.key
+                "necklace", "necklaces" -> Necklace.key
+                "ring", "rings" -> Ring.key
+                "earring", "earrings", "jhumka", "jhumkas" -> Earrings.key
+                "bangle", "bangles" -> Bangle.key
+                "pendant", "pendants" -> Pendant.key
+                "nosepin", "nosepins", "nose pin", "nose pins" -> Nosepin.key
+                "haram", "harams" -> Haram.key
+                "mangalsutra", "mangalsutras" -> Mangalsutra.key
+                else -> null
+            }
+        }
+
+        fun displayLabel(canonicalKey: String): String =
+            entries.find { it.key.equals(canonicalKey, ignoreCase = true) }?.displayLabel
+                ?: canonicalKey.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+    }
+}
+

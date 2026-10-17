@@ -18,7 +18,13 @@ enum class ImageSize(val value: String) {
     DETAIL("detail"),
 
     /** Pinch-to-zoom — 2048px. */
-    FULL("full")
+    FULL("full");
+
+    companion object {
+        val Card = CARD
+        val Detail = DETAIL
+        val Full = FULL
+    }
 }
 
 @Serializable
