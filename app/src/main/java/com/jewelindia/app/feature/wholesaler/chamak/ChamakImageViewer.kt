@@ -11,7 +11,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -281,7 +280,7 @@ fun ZoomableProtectedImage(
     val maxScale = 4f
     val doubleTapScale = 2.5f
 
-    BoxWithConstraints(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(0.dp))

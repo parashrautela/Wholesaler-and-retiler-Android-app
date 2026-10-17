@@ -41,6 +41,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -82,6 +83,7 @@ fun EmployeeHomeScreen(
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
+    val storeState by store.state.collectAsState()
     var designs by remember { mutableStateOf<List<Product>>(emptyList()) }
     var loadingDesigns by remember { mutableStateOf(true) }
 
@@ -374,7 +376,7 @@ fun EmployeeHomeScreen(
                         items(shuffledDesigns, key = { it.id }) { product ->
                             EmployeeDesignCard(
                                 product = product,
-                                isSelected = store.state.value.selectedProductIds.contains(product.id),
+                                isSelected = storeState.selectedProductIds.contains(product.id),
                                 onClick = { onOpenDetail(product) },
                                 onLongClick = { store.toggleSelection(product.id) }
                             )
