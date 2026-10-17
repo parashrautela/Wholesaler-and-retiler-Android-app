@@ -10,12 +10,12 @@ Last updated: 2026-10-17 · Current phase: 5 (Wholesaler partial per §18 D5 Sto
 | 2 Data layer | ✅ | ok | 22/22 | cbeb1f9 | Supabase client, OkHttp clients, SsrSessionBridge, withRetry, ApiError, all API modules (Wholesaler, Chamak, Credits, Orders, Chat, Retailer, Staff, Wishlist, LikeBook, Invites, OnboardingFee, StoreActivity, WholesalerReport, ManufacturingApi), unit tests passing |
 | 3 Auth + routing | ✅ | ok | 59/59 | aba91dd | SessionStore, AuthRouter, SignupFlow, ViewModeStore, 8 auth screens, AuthNavHost, RootScreen, deep link handling, WebShuffle, Prefs, ImageNormalizer, CachedImage, verified on Pixel 6 |
 | 4 Onboarding | ✅ | ok | 68/68 | 252a70d | Wholesaler & Retailer 3-step flows, OnboardingFeeSheet (Razorpay link + Custom Tab), OnboardSubmitted views with stage timeline, invite code linking, RootScreen phase routing, verified on Pixel 6 |
-| 5 Wholesaler | ✅ | ok | 159/159 | 3fbc6c4 | Exact iOS pixel-for-pixel parity completed across all Wholesaler screens (Steps A–H): Auth user ID fix, Chamak supervisorScope fix, floating glass tab bar, Wholesaler shell, Home, Catalogue, Orders, Chat, Invite, Profile, Credits, Report, Manufacturing, and Chamak Studio |
+| 5 Wholesaler | ✅ | ok | 159/159 | eaa9e0b | Exact iOS pixel-for-pixel parity completed across all Wholesaler screens (Steps A–H): Auth user ID fix, Chamak supervisorScope fix, floating glass tab bar, Wholesaler shell, Home, Catalogue, Orders, Chat, Invite, Profile, Credits, Report, Manufacturing, and Chamak Studio |
 | 6 Chamak | ✅ | ok | 159/159 | 3fbc6c4 | Chamak studio: exact iOS Chamak Hub, empty states, catalogue picker, slider form, result attempts, pure black full-screen image viewer, set styling |
 | 7 Retailer | ✅ | ok | 159/159 | 1b9e07e | Retailer portal: manufacturing enquiry request contract aligned with min_weight_grams/max_weight_grams, multipart asset upload, ProtectedImage catalogue |
 | 8 Employee | ✅ | ok | 159/159 | 77e3b30 | Staff app: StaffProfileScreen with account deletion & sign-out cleanup, pill navigation, ProtectedImage |
 | 9 Protection/links/polish | ✅ | ok | 159/159 | 3e9ee27 | Screen security wiring across 26 files, Coil memory/disk cache and catalogue stores cleared on sign out, 600-line limit enforced across all files |
-| 10 Tests/release | ✅ | ok | 159/159 | 3fbc6c4 | 159 unit tests passing with 0 failures or errors (targeted tests covering password rules, catalogue filtering, credit decode, Chamak failure copy, source upload, image search, wishlist sharing, account deletion, JSON encoding, ViewModel state machines) |
+| 10 Tests/release | ✅ | ok | 159/159 | eaa9e0b | 159 unit tests passing with 0 failures or errors (targeted tests covering password rules, catalogue filtering, credit decode, Chamak failure copy, source upload, image search, wishlist sharing, account deletion, JSON encoding, ViewModel state machines) |
 
 ## File coverage (all 140 iOS files from Plan §A1)
 
