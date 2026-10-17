@@ -74,4 +74,9 @@ object LikeBook {
             }
         }
     }
+
+    fun clear() {
+        _liked.value = emptySet()
+        loadedAt = 0
+    }
 }

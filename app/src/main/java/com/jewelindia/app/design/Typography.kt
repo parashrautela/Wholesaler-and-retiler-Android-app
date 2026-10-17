@@ -206,3 +206,37 @@ fun sfPro(size: Float, weight: JewelWeight = JewelWeight.Regular): TextStyle {
         platformStyle = DefaultPlatformTextStyle
     )
 }
+
+object Typography {
+    val Cirka: FontFamily get() = JewelFonts.Cirka
+    val Manrope: FontFamily get() = JewelFonts.Manrope
+    val Satoshi: FontFamily get() = JewelFonts.Satoshi
+    val Gilroy: FontFamily get() = JewelFonts.Gilroy
+    val GildaDisplay: FontFamily get() = JewelFonts.GildaDisplay
+    val EmployeeMatter: FontFamily get() = JewelFonts.EmployeeMatter
+
+    fun cirka(size: TextUnit, weight: JewelWeight = JewelWeight.Regular): TextStyle =
+        com.jewelindia.app.design.cirka(size.value, weight)
+
+    fun cirka(size: Float, weight: JewelWeight = JewelWeight.Regular): TextStyle =
+        com.jewelindia.app.design.cirka(size, weight)
+
+    fun manrope(size: TextUnit, weight: JewelWeight = JewelWeight.Regular): TextStyle =
+        com.jewelindia.app.design.manrope(size.value, weight)
+
+    fun manrope(size: Float, weight: JewelWeight = JewelWeight.Regular): TextStyle =
+        com.jewelindia.app.design.manrope(size, weight)
+
+    fun satoshi(size: TextUnit, weight: JewelWeight = JewelWeight.Regular): TextStyle =
+        com.jewelindia.app.design.satoshi(size.value, weight)
+
+    fun satoshi(size: Float, weight: JewelWeight = JewelWeight.Regular): TextStyle =
+        com.jewelindia.app.design.satoshi(size, weight)
+
+    fun santoshi(size: TextUnit, weight: JewelWeight = JewelWeight.Regular): TextStyle =
+        com.jewelindia.app.design.satoshi(size.value, weight)
+
+    fun santoshi(size: Float, weight: JewelWeight = JewelWeight.Regular): TextStyle =
+        com.jewelindia.app.design.satoshi(size, weight)
+}
+

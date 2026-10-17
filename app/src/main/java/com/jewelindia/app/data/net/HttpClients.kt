@@ -39,7 +39,7 @@ class InMemoryCookieJar : CookieJar {
     }
 }
 
-class HttpClients(val app: Application) {
+class HttpClients(val app: Application? = null) {
     val cookieJar: InMemoryCookieJar get() = Companion.cookieJar
     val site: OkHttpClient get() = Companion.site
     val pipeline: OkHttpClient get() = Companion.pipeline

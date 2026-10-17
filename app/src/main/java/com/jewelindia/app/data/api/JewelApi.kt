@@ -13,6 +13,7 @@ import com.jewelindia.app.data.net.HttpClients
 import com.jewelindia.app.data.net.SsrSessionBridge
 import com.jewelindia.app.data.net.parseApiError
 import com.jewelindia.app.data.supabase.JewelJson
+import com.jewelindia.app.data.supabase.JewelSupabase
 import com.jewelindia.app.data.supabase.projectRef
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
@@ -241,10 +242,12 @@ data class SuccessResponse(
     val success: Boolean = true
 )
 
-class JewelApi(
-    private val supabase: SupabaseClient,
-    private val http: HttpClients
+open class JewelApi(
+    private val supabase: SupabaseClient = JewelSupabase.client,
+    private val http: HttpClients = HttpClients()
 ) {
+    companion object : JewelApi(JewelSupabase.client, HttpClients())
+
     private suspend fun freshToken(): String = AuthToken.fresh(supabase)
 
     val hasLocalSession: Boolean

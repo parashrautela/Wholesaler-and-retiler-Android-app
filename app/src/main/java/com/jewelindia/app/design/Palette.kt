@@ -58,4 +58,17 @@ object Palette {
 
     /** Crimson warning shake — Tailwind red-500. */
     val statusRejected = Color(0xFFEF4444)
+
+    val textPrimary: Color get() = foreground
+    val textSecondary: Color get() = muted
+    val textMuted: Color get() = muted
+    val surfaceElevated: Color get() = cream
+    val surface: Color get() = cream
+    val white: Color get() = light
+    val goldPrimary: Color get() = Color(0xFFC5A880)
+    val gold: Color get() = Color(0xFFC5A880)
+    val accentGreen: Color get() = statusVerified
+    val accentRed: Color get() = statusRejected
+    val borderSubtle: Color get() = border
 }
+

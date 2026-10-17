@@ -1,58 +1,70 @@
 // Port of: wholesaler ios/JewelIndia/Sources/JewelIndiaApp.swift + RootView.onOpenURL
 package com.jewelindia.app
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.runtime.CompositionLocalProvider
+import com.jewelindia.app.core.session.SessionStore
+import com.jewelindia.app.data.supabase.JewelSupabase
 import com.jewelindia.app.design.JewelTheme
-import com.jewelindia.app.design.Palette
-import com.jewelindia.app.design.cirka
+import com.jewelindia.app.navigation.RootScreen
+import io.github.jan.supabase.auth.handleDeeplinks
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val graph = (application as JewelApplication).graph
+        handleIncomingIntent(intent, graph)
+
         setContent {
-            JewelTheme {
-                LaunchScreen()
+            CompositionLocalProvider(LocalAppGraph provides graph) {
+                JewelTheme {
+                    RootScreen(
+                        sessionStore = graph.sessionStore,
+                        signupFlow = graph.signupFlow,
+                        authRouter = graph.authRouter
+                    )
+                }
             }
         }
     }
-}
 
-/**
- * Launch state while the persisted session is resolved. Deliberately quiet —
- * brand mark only, no spinner flash. (iOS: LaunchView in RootView.swift)
- */
-@Composable
-fun LaunchScreen() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Palette.background),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "Jewel India",
-            style = cirka(32f),
-            color = Palette.foreground
-        )
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val graph = (application as JewelApplication).graph
+        handleIncomingIntent(intent, graph)
     }
-}
 
-@Preview(showBackground = true)
-@Composable
-private fun LaunchScreenPreview() {
-    JewelTheme {
-        LaunchScreen()
+    private fun handleIncomingIntent(intent: Intent?, graph: AppGraph) {
+        val uri = intent?.data ?: return
+
+        // 1. If unauthenticated, check for retailer invitation link
+        if (graph.sessionStore.phase.value is SessionStore.Phase.Unauthenticated) {
+            if (graph.signupFlow.captureRetailerInvitation(uri)) {
+                return
+            }
+        }
+
+        // 2. Custom scheme deep links
+        if (uri.scheme.equals("jewelindia", ignoreCase = true)) {
+            val fragment = uri.fragment ?: ""
+            val nextParam = uri.getQueryParameter("next")
+            val isRecovery = nextParam == "/update-password" ||
+                    fragment.contains("type=recovery") ||
+                    uri.getQueryParameter("type") == "recovery"
+
+            if (isRecovery) {
+                graph.sessionStore.beginPasswordRecovery()
+            }
+
+            JewelSupabase.client.handleDeeplinks(intent)
+        }
     }
 }
