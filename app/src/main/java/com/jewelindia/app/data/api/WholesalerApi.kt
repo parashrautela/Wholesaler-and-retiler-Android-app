@@ -27,7 +27,9 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -477,13 +479,12 @@ object WholesalerApi {
     }
 
     suspend fun clearProductImages(id: String, wholesalerId: String) {
-        @Serializable
-        data class Patch(
-            @SerialName("processed_image_url") val processedImageURL: String? = null,
-            @SerialName("generated_image_urls") val generatedImageURLs: List<String> = emptyList()
-        )
+        val patch = buildJsonObject {
+            put("processed_image_url", JsonNull)
+            put("generated_image_urls", buildJsonArray { })
+        }
         JewelNetwork.withRetry {
-            db.from("products").update(Patch()) {
+            db.from("products").update(patch) {
                 filter {
                     eq("id", id)
                     eq("wholesaler_id", wholesalerId)

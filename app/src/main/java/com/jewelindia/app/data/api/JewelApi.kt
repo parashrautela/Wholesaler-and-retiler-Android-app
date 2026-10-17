@@ -449,7 +449,7 @@ open class JewelApi(
         try {
             val json = buildJsonObject {
                 put("gift_credits", gift)
-                put("generation_key", key.toString())
+                put("idempotency_key", key.toString())
             }.toString()
             val body = authenticatedPostSite("/api/referral/generate", json)
             JewelJson.decodeFromString(RetailerInvitation.serializer(), body)
@@ -486,7 +486,7 @@ open class JewelApi(
                 @SerialName("max_uses") val maxUses: Int = 1,
                 @SerialName("is_active") val isActive: Boolean = true,
                 @SerialName("expires_at") val expiresAt: String,
-                val source: String = "android"
+                val source: String = "web"
             )
 
             @Serializable
@@ -503,7 +503,7 @@ open class JewelApi(
                     maxUses = 1,
                     isActive = true,
                     expiresAt = expiresAt,
-                    source = "android"
+                    source = "web"
                 )
             ) {
                 select(Columns.raw("id, code, expires_at"))

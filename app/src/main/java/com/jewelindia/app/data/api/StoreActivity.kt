@@ -48,11 +48,10 @@ object StoreActivity {
         }
     }
 
+    fun getDeviceId(context: Context): String = com.jewelindia.app.core.prefs.Prefs(context).deviceId
+
     fun registerDevice(context: Context) {
-        val deviceId = Settings.Secure.getString(
-            context.contentResolver,
-            Settings.Secure.ANDROID_ID
-        ) ?: return
+        val deviceId = getDeviceId(context)
 
         val pInfo = try {
             context.packageManager.getPackageInfo(context.packageName, 0)
