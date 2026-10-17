@@ -1,6 +1,7 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Features/Wholesaler/Chamak/ChamakHubView.swift
 package com.jewelindia.app.feature.wholesaler.chamak
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,9 +22,6 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -36,18 +34,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jewelindia.app.design.Cirka
-import com.jewelindia.app.design.Manrope
-import com.jewelindia.app.design.Palette
+import com.jewelindia.app.R
 import com.jewelindia.app.data.api.ChamakCatalogueSource
 import com.jewelindia.app.data.api.ChamakGeneration
 import com.jewelindia.app.data.api.ChamakMode
+import com.jewelindia.app.design.Cirka
+import com.jewelindia.app.design.Manrope
+import com.jewelindia.app.design.Palette
 
 data class ChamakLaunch(
     val mode: ChamakMode,
@@ -89,7 +89,7 @@ fun ChamakHubScreen(
         )
     } else {
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 160.dp),
+            columns = GridCells.Fixed(2),
             contentPadding = PaddingValues(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -105,14 +105,14 @@ fun ChamakHubScreen(
                 ) {
                     Text(
                         text = "Chamak Studio",
-                        fontFamily = Cirka,
-                        fontSize = 30.sp,
+                        fontSize = 34.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Palette.dark
+                        color = Color.Black,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
                     )
 
-                    // Fusion Card (Gold)
-                    ChamakFusionCard(
+                    // Chamak Studio Card
+                    ChamakToolCard(
                         onClick = { launch = ChamakLaunch(ChamakMode.Fusion) }
                     )
 
@@ -123,7 +123,7 @@ fun ChamakHubScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     // Gallery Header
                     Row(
@@ -134,7 +134,7 @@ fun ChamakHubScreen(
                         Text(
                             text = "Your Gallery",
                             fontFamily = Cirka,
-                            fontSize = 26.sp,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             color = Palette.dark
                         )
@@ -143,8 +143,8 @@ fun ChamakHubScreen(
                             Text(
                                 text = "$count ${if (count == 1) "creation" else "creations"}",
                                 fontFamily = Manrope,
-                                fontSize = 12.sp,
-                                color = Palette.muted
+                                fontSize = 13.sp,
+                                color = Color(0xFF8E8E93)
                             )
                         }
                     }
@@ -152,7 +152,7 @@ fun ChamakHubScreen(
                         text = "Everything you make stays private here. Nothing is published to your catalogue.",
                         fontFamily = Manrope,
                         fontSize = 13.sp,
-                        color = Palette.muted
+                        color = Color(0xFF8E8E93)
                     )
                 }
             }
@@ -174,28 +174,33 @@ fun ChamakHubScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 36.dp),
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color(0xFFFAFAFA))
+                            .border(1.dp, Color(0xFFE5E5EA), RoundedCornerShape(20.dp))
+                            .padding(vertical = 36.dp, horizontal = 20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.AutoAwesome,
+                            painter = painterResource(R.drawable.ic_chamak_empty_box),
                             contentDescription = null,
                             tint = Color(0xFFBB8651),
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(44.dp)
                         )
                         Text(
-                            text = "No Chamak Generations Yet",
+                            text = "Nothing Here Yet",
                             fontFamily = Cirka,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = Palette.dark
                         )
                         Text(
-                            text = "Combine your first pair of catalogue designs to see your AI creations stored here.",
+                            text = "Your combined designs and sets will appear here as\nsoon as you make them.",
                             fontFamily = Manrope,
-                            fontSize = 12.sp,
-                            color = Palette.muted
+                            fontSize = 13.sp,
+                            color = Color(0xFF8E8E93),
+                            textAlign = TextAlign.Center,
+                            lineHeight = 18.sp
                         )
                     }
                 }
@@ -215,56 +220,68 @@ fun ChamakHubScreen(
 }
 
 @Composable
-private fun ChamakFusionCard(
+private fun ChamakToolCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                Brush.horizontalGradient(
-                    colors = listOf(Color(0xFFBB8651), Color(0xFFF6E0A7))
-                )
-            )
-            .border(1.dp, Color(0xFFE4CC8F).copy(alpha = 0.5f), RoundedCornerShape(18.dp))
-            .shadow(4.dp, RoundedCornerShape(18.dp), spotColor = Color.Black.copy(alpha = 0.08f))
+            .height(180.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color(0xFFEDEDF0))
+            .border(1.dp, Color(0xFFE5E5EA), RoundedCornerShape(24.dp))
             .clickable(onClick = onClick)
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(start = 20.dp, top = 20.dp, bottom = 20.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "Chamak Studio",
-            fontFamily = Cirka,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
-        Text(
-            text = "Synthesizes the best elements of two catalogue designs into a bold, original piece.",
-            fontFamily = Manrope,
-            fontSize = 13.sp,
-            color = Color.White.copy(alpha = 0.95f),
-            lineHeight = 18.sp
-        )
-        Row(
+        Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.Black)
-                .padding(horizontal = 14.dp, vertical = 9.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                .weight(1.15f)
+                .padding(end = 8.dp),
+            verticalArrangement = Arrangement.Center
         ) {
-            Icon(Icons.Default.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(14.dp))
             Text(
-                text = "Combine Designs",
-                fontFamily = Manrope,
-                fontSize = 13.sp,
+                text = "Chamak Studio",
+                fontFamily = Cirka,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = Color(0xFF1C1C1E)
             )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Reimagine your jewellery.\nCreate something new.",
+                fontFamily = Manrope,
+                fontSize = 12.5.sp,
+                color = Color(0xFF6E6E73),
+                lineHeight = 17.sp
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(Color(0xFFC7C7CC))
+                    .padding(horizontal = 14.dp, vertical = 7.dp)
+            ) {
+                Text(
+                    text = "Get started →",
+                    fontFamily = Manrope,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.Black
+                )
+            }
         }
+
+        Image(
+            painter = painterResource(R.drawable.chamak_studio_artwork),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(width = 130.dp, height = 180.dp)
+                .clip(RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp))
+        )
     }
 }
 
@@ -273,52 +290,63 @@ private fun ChamakSetCreationCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFFF3F3F3))
-            .border(1.dp, Color(0xFFD0D0D0), RoundedCornerShape(20.dp))
-            .shadow(3.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = 0.04f))
+            .height(180.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color(0xFFEDEDF0))
+            .border(1.dp, Color(0xFFE5E5EA), RoundedCornerShape(24.dp))
             .clickable(onClick = onClick)
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(start = 20.dp, top = 16.dp, bottom = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "Set Creation",
-            fontFamily = Cirka,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF323232)
-        )
-        Text(
-            text = "Stage 2–4 pieces together. Choose one item from each jewellery type.",
-            fontFamily = Manrope,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF494949).copy(alpha = 0.85f),
-            lineHeight = 18.sp
-        )
-        Row(
+        Column(
             modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(Color(0xFFB6B6B6), Color(0xFF9E9E9E))
-                    )
-                )
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                .weight(1.15f)
+                .padding(end = 8.dp),
+            verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "Create a Set",
-                fontFamily = Manrope,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.Black
+                text = "Set Creation",
+                fontFamily = Cirka,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF1C1C1E)
             )
-            Icon(Icons.Default.ChevronRight, null, tint = Color.Black, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Stage 2–4 pieces together. Choose\none item from each jewellery type.",
+                fontFamily = Manrope,
+                fontSize = 12.5.sp,
+                color = Color(0xFF6E6E73),
+                lineHeight = 17.sp
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(Color(0xFFC7C7CC))
+                    .padding(horizontal = 14.dp, vertical = 7.dp)
+            ) {
+                Text(
+                    text = "Create a Set →",
+                    fontFamily = Manrope,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.Black
+                )
+            }
         }
+
+        Image(
+            painter = painterResource(R.drawable.invite_reward_artwork),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(width = 130.dp, height = 180.dp)
+                .clip(RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp))
+        )
     }
 }

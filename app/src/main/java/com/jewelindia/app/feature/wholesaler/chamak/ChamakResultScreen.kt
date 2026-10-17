@@ -82,35 +82,16 @@ fun ChamakResultScreen(
 
     // Collect viewer images
     val viewerImages = remember(gen, vm.signedFullOutputImageURL, vm.signedOutputImageURL) {
-        val list = mutableListOf<ChamakViewerImage>()
-        val outputUrl = vm.signedFullOutputImageURL ?: vm.signedOutputImageURL
-        if (outputUrl != null) {
-            list.add(
-                ChamakViewerImage(
-                    id = "result",
-                    label = if (isSet) "Your Set" else "Final Design",
-                    url = outputUrl,
-                    isResult = true
-                )
-            )
+        buildList {
+            val outputUrl = vm.signedFullOutputImageURL ?: vm.signedOutputImageURL
+            if (outputUrl != null) add(ChamakViewerImage("result", if (isSet) "Your Set" else "Final Design", outputUrl, isResult = true))
+            listOfNotNull(
+                (gen?.sourceImage1URL ?: vm.selectedDesign1?.imageURL)?.let { ChamakViewerImage("source1", if (isSet) "Piece 1" else "Core design", it) },
+                (gen?.sourceImage2URL ?: vm.selectedDesign2?.imageURL)?.let { ChamakViewerImage("source2", if (isSet) "Piece 2" else "New direction", it) },
+                (gen?.sourceImage3URL ?: vm.selectedDesign3?.imageURL)?.let { ChamakViewerImage("source3", "Piece 3", it) },
+                (gen?.sourceImage4URL ?: vm.selectedDesign4?.imageURL)?.let { ChamakViewerImage("source4", "Piece 4", it) }
+            ).let { addAll(it) }
         }
-        val s1 = gen?.sourceImage1URL ?: vm.selectedDesign1?.imageURL
-        if (!s1.isNullOrEmpty()) {
-            list.add(ChamakViewerImage("source1", if (isSet) "Piece 1" else "Core design", s1))
-        }
-        val s2 = gen?.sourceImage2URL ?: vm.selectedDesign2?.imageURL
-        if (!s2.isNullOrEmpty()) {
-            list.add(ChamakViewerImage("source2", if (isSet) "Piece 2" else "New direction", s2))
-        }
-        val s3 = gen?.sourceImage3URL ?: vm.selectedDesign3?.imageURL
-        if (!s3.isNullOrEmpty()) {
-            list.add(ChamakViewerImage("source3", "Piece 3", s3))
-        }
-        val s4 = gen?.sourceImage4URL ?: vm.selectedDesign4?.imageURL
-        if (!s4.isNullOrEmpty()) {
-            list.add(ChamakViewerImage("source4", "Piece 4", s4))
-        }
-        list
     }
 
     Box(
@@ -232,31 +213,43 @@ fun ChamakResultScreen(
                         }
                     }
                 } else {
-                    // Main Result Section
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(Color.White)
-                            .border(1.dp, Color(0xFFE7E5E4), RoundedCornerShape(20.dp))
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    // Section Header: New Direction / Your Matched Set
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = if (isSet) "Your Matched Set" else "New Direction",
                             fontFamily = Manrope,
-                            fontSize = 16.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = Palette.dark
                         )
+                        Text(
+                            text = "•••",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Palette.muted
+                        )
+                    }
 
-                        val signedUrl = vm.signedFullOutputImageURL ?: vm.signedOutputImageURL
+                    // Main Result Card
+                    val signedUrl = vm.signedFullOutputImageURL ?: vm.signedOutputImageURL
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(Color.White)
+                            .border(1.dp, Color(0xFFE7E5E4), RoundedCornerShape(22.dp))
+                            .padding(14.dp)
+                    ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .aspectRatio(1.1f)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(Color(0xFFF9F9F8))
+                                .aspectRatio(1.05f)
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(Color(0xFF1E1E22))
                                 .clickable {
                                     viewerStartIndex = 0
                                     showImageViewer = true
@@ -266,10 +259,8 @@ fun ChamakResultScreen(
                                 ProtectedImage(
                                     url = signedUrl,
                                     contentDescription = "Chamak Output",
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(16.dp)
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
                                 )
                                 IconButton(
                                     onClick = {
@@ -309,60 +300,80 @@ fun ChamakResultScreen(
                                 }
                             }
                         }
+                    }
 
-                        // History attempts row if multiple attempts exist
-                        val history = gen?.outputHistory ?: emptyList()
-                        if (!isSet && history.size > 1) {
-                            val showing = vm.selectedAttempt ?: history.lastOrNull()?.attempt
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(
-                                    text = "All attempts",
-                                    fontFamily = Manrope,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Palette.muted
-                                )
-                                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    items(history) { attempt ->
-                                        val isShowing = attempt.attempt == showing
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            modifier = Modifier.clickable {
-                                                scope.launch {
-                                                    vm.selectAttempt(attempt)
-                                                }
+                    // History attempts row if multiple attempts exist
+                    val history = gen?.outputHistory ?: emptyList()
+                    if (!isSet && history.size > 1) {
+                        val showing = vm.selectedAttempt ?: history.lastOrNull()?.attempt
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "All attempts",
+                                fontFamily = Manrope,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Palette.muted
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                history.forEach { attempt ->
+                                    val isShowing = attempt.attempt == showing
+                                    val thumb = vm.attemptThumbnailURLs[attempt.attempt]
+                                    val isLatest = attempt.attempt == history.lastOrNull()?.attempt
+                                    val label = if (isLatest) "Latest" else "#${attempt.attempt}"
+                                    val topLabel = when (attempt.attempt) {
+                                        1 -> "Earrings"
+                                        3 -> "Pendants"
+                                        else -> null
+                                    }
+
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.clickable {
+                                            scope.launch {
+                                                vm.selectAttempt(attempt)
                                             }
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(68.dp)
-                                                    .clip(RoundedCornerShape(10.dp))
-                                                    .background(Color(0xFFF9F9F8))
-                                                    .border(
-                                                        width = if (isShowing) 2.dp else 1.dp,
-                                                        color = if (isShowing) Palette.dark else Color(0xFFE7E5E4),
-                                                        shape = RoundedCornerShape(10.dp)
-                                                    )
-                                            ) {
-                                                val thumb = vm.attemptThumbnailURLs[attempt.attempt]
-                                                if (thumb != null) {
-                                                    ProtectedImage(
-                                                        url = thumb,
-                                                        contentDescription = "Attempt ${attempt.attempt}",
-                                                        contentScale = ContentScale.Crop,
-                                                        modifier = Modifier.fillMaxSize()
-                                                    )
-                                                }
-                                            }
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(
-                                                text = if (attempt.attempt == history.lastOrNull()?.attempt) "Latest" else "#${attempt.attempt}",
-                                                fontFamily = Manrope,
-                                                fontSize = 11.sp,
-                                                fontWeight = if (isShowing) FontWeight.Bold else FontWeight.Medium,
-                                                color = if (isShowing) Palette.dark else Palette.muted
-                                            )
                                         }
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(64.dp)
+                                                .clip(RoundedCornerShape(14.dp))
+                                                .background(Color(0xFF1E1E22))
+                                                .border(
+                                                    width = if (isShowing) 1.5.dp else 0.5.dp,
+                                                    color = if (isShowing) Palette.dark else Color(0xFFE7E5E4),
+                                                    shape = RoundedCornerShape(14.dp)
+                                                )
+                                        ) {
+                                            if (thumb != null) {
+                                                ProtectedImage(
+                                                    url = thumb,
+                                                    contentDescription = "Attempt ${attempt.attempt}",
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier.fillMaxSize()
+                                                )
+                                            }
+                                            if (topLabel != null) {
+                                                Text(
+                                                    text = topLabel,
+                                                    fontFamily = Manrope,
+                                                    fontSize = 8.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color.White,
+                                                    modifier = Modifier
+                                                        .align(Alignment.TopCenter)
+                                                        .padding(top = 4.dp)
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = label,
+                                            fontFamily = Manrope,
+                                            fontSize = 12.sp,
+                                            fontWeight = if (isLatest) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isLatest) Palette.dark else Palette.muted
+                                        )
                                     }
                                 }
                             }
@@ -370,36 +381,27 @@ fun ChamakResultScreen(
                     }
 
                     // Source Designs Section
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(Color.White)
-                            .border(1.dp, Color(0xFFE7E5E4), RoundedCornerShape(20.dp))
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
                             text = if (isSet) "Pieces in this Set" else "Core Design",
                             fontFamily = Manrope,
-                            fontSize = 16.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = Palette.dark
                         )
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             val s1 = gen?.sourceImage1URL ?: vm.selectedDesign1?.imageURL
                             val s2 = gen?.sourceImage2URL ?: vm.selectedDesign2?.imageURL
 
                             if (!s1.isNullOrEmpty()) {
-                                SourceDesignTile(
-                                    title = if (isSet) "Piece 1" else "Core design",
-                                    caption = if (isSet) "Core piece" else "Keeps its identity",
+                                SourcePieceTile(
                                     url = s1,
-                                    onClick = {
+                                    title = "Necklace",
+                                    onExpand = {
                                         viewerStartIndex = 1
                                         showImageViewer = true
                                     },
@@ -407,11 +409,10 @@ fun ChamakResultScreen(
                                 )
                             }
                             if (!s2.isNullOrEmpty()) {
-                                SourceDesignTile(
-                                    title = if (isSet) "Piece 2" else "New direction",
-                                    caption = if (isSet) "Second piece" else "New expression",
+                                SourcePieceTile(
                                     url = s2,
-                                    onClick = {
+                                    title = null,
+                                    onExpand = {
                                         viewerStartIndex = 2
                                         showImageViewer = true
                                     },
@@ -432,7 +433,7 @@ fun ChamakResultScreen(
                     .background(Color.White)
                     .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (!isFailed) {
                         val exportUrl = vm.signedOutputImageURL
                         val genId = gen?.id
@@ -451,24 +452,25 @@ fun ChamakResultScreen(
                             onClick = { vm.reviseAndRetry() },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(50.dp),
-                            shape = RoundedCornerShape(25.dp),
+                                .height(54.dp),
+                            shape = RoundedCornerShape(27.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color.White,
                                 contentColor = Palette.dark
                             ),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD1D5DB))
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp), tint = Palette.dark)
                                 Text(
                                     text = "Try Again",
                                     fontFamily = Manrope,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Palette.dark
                                 )
                             }
                         }
@@ -477,14 +479,14 @@ fun ChamakResultScreen(
                             onClick = { vm.reviseAndRetry() },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(50.dp),
-                            shape = RoundedCornerShape(25.dp),
+                                .height(54.dp),
+                            shape = RoundedCornerShape(27.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Palette.dark)
                         ) {
                             Text(
                                 text = "Adjust & Try Again",
                                 fontFamily = Manrope,
-                                fontSize = 14.sp,
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
@@ -516,63 +518,38 @@ fun ChamakResultScreen(
 }
 
 @Composable
-private fun SourceDesignTile(
-    title: String,
-    caption: String,
+private fun SourcePieceTile(
     url: String,
-    onClick: () -> Unit,
+    title: String?,
+    onExpand: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Box(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFFF9F9F8))
-            .border(1.dp, Color(0xFFE7E5E4), RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFF1E1E22))
+            .clickable(onClick = onExpand)
     ) {
-        Box(
+        ProtectedImage(
+            url = url,
+            contentDescription = title ?: "Piece",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        IconButton(
+            onClick = onExpand,
             modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .background(Color(0xFFF3F4F6))
+                .align(Alignment.TopEnd)
+                .padding(6.dp)
+                .size(26.dp)
+                .background(Color.White.copy(alpha = 0.95f), CircleShape)
         ) {
-            ProtectedImage(
-                url = url,
-                contentDescription = title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
             Icon(
                 imageVector = Icons.Default.OpenInFull,
                 contentDescription = "Expand",
                 tint = Palette.dark,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(6.dp)
-                    .size(24.dp)
-                    .background(Color.White.copy(alpha = 0.9f), CircleShape)
-                    .padding(6.dp)
-            )
-        }
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 6.dp)
-        ) {
-            Text(
-                text = title,
-                fontFamily = Manrope,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = Palette.dark,
-                maxLines = 1
-            )
-            Text(
-                text = caption,
-                fontFamily = Manrope,
-                fontSize = 10.sp,
-                color = Palette.muted,
-                maxLines = 1
+                modifier = Modifier.size(12.dp)
             )
         }
     }

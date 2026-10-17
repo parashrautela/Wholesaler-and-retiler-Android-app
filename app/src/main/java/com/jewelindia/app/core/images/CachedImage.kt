@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
@@ -24,10 +25,11 @@ fun CachedImage(
     url: String?,
     contentDescription: String?,
     modifier: Modifier = Modifier,
-    contentScale: ContentScale = ContentScale.Crop
+    contentScale: ContentScale = ContentScale.Crop,
+    placeholderColor: Color? = Palette.taupe.copy(alpha = 0.35f)
 ) {
     Box(
-        modifier = modifier.background(Palette.taupe.copy(alpha = 0.35f))
+        modifier = if (placeholderColor != null) modifier.background(placeholderColor) else modifier
     ) {
         if (!url.isNullOrBlank()) {
             AsyncImage(

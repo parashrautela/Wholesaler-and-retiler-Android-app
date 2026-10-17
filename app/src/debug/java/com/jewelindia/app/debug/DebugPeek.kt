@@ -351,7 +351,20 @@ object DebugPeek {
                     onClose = onBack
                 )
             }
-            "chamak-picker", "chamak-picker-sample" -> {
+            "chamak-picker" -> {
+                val vm = remember {
+                    ChamakViewModel().apply {
+                        mode = ChamakMode.Fusion
+                        catalogProducts = emptyList()
+                    }
+                }
+                ChamakCatalogPickerScreen(
+                    vm = vm,
+                    wholesalerId = "w-peek-0001",
+                    onClose = onBack
+                )
+            }
+            "chamak-picker-sample" -> {
                 ChamakCatalogPickerScreen(
                     vm = DebugPeekSamples.pickerVM(context),
                     wholesalerId = "w-peek-0001",
@@ -387,7 +400,7 @@ object DebugPeek {
                 val vm = remember {
                     ChamakViewModel().apply {
                         mode = ChamakMode.SetCreation
-                        catalogProducts = DebugPeekSamples.products(context)
+                        catalogProducts = emptyList()
                     }
                 }
                 ChamakCatalogPickerScreen(

@@ -68,7 +68,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun ChamakSliderFormScreen(
     vm: ChamakViewModel,
@@ -278,16 +278,28 @@ fun ChamakSliderFormScreen(
                         .clip(RoundedCornerShape(20.dp))
                         .background(Color.White)
                         .border(1.dp, Color(0xFFE7E5E4), RoundedCornerShape(20.dp))
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(
-                        text = "Ai Report",
-                        fontFamily = Manrope,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Palette.dark
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Ai Report",
+                            fontFamily = Manrope,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Palette.dark
+                        )
+                        Text(
+                            text = "•••",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Palette.muted
+                        )
+                    }
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -299,19 +311,22 @@ fun ChamakSliderFormScreen(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = d1Name,
+                                text = "Core design",
                                 fontFamily = Manrope,
-                                fontSize = 13.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFFCA8A04),
+                                color = Color(0xFFD97706),
                                 maxLines = 1
                             )
                             val list1 = (analysis?.image1Strengths ?: defaultStrengths1).take(5)
                             list1.forEach { item ->
+                                val titleCased = item.split(" ").joinToString(" ") { word ->
+                                    word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                                }
                                 Text(
-                                    text = "• ${item.replaceFirstChar { it.titlecase() }}",
+                                    text = "• $titleCased",
                                     fontFamily = Manrope,
-                                    fontSize = 12.sp,
+                                    fontSize = 13.sp,
                                     color = Color(0xFF4B5563),
                                     maxLines = 2
                                 )
@@ -324,19 +339,22 @@ fun ChamakSliderFormScreen(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = d2Name,
+                                text = "New direction",
                                 fontFamily = Manrope,
-                                fontSize = 13.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF3B82F6),
                                 maxLines = 1
                             )
                             val list2 = (analysis?.image2Strengths ?: defaultStrengths2).take(5)
                             list2.forEach { item ->
+                                val titleCased = item.split(" ").joinToString(" ") { word ->
+                                    word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                                }
                                 Text(
-                                    text = "• ${item.replaceFirstChar { it.titlecase() }}",
+                                    text = "• $titleCased",
                                     fontFamily = Manrope,
-                                    fontSize = 12.sp,
+                                    fontSize = 13.sp,
                                     color = Color(0xFF4B5563),
                                     maxLines = 2
                                 )
@@ -352,13 +370,13 @@ fun ChamakSliderFormScreen(
                         .clip(RoundedCornerShape(20.dp))
                         .background(Color.White)
                         .border(1.dp, Color(0xFFE7E5E4), RoundedCornerShape(20.dp))
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Text(
                         text = "Fine Tune",
                         fontFamily = Manrope,
-                        fontSize = 16.sp,
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                         color = Palette.dark
                     )
@@ -368,16 +386,16 @@ fun ChamakSliderFormScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = d1Name,
+                            text = "Core design",
                             fontFamily = Manrope,
-                            fontSize = 12.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFCA8A04)
+                            color = Color(0xFFD97706)
                         )
                         Text(
-                            text = d2Name,
+                            text = "New direction",
                             fontFamily = Manrope,
-                            fontSize = 12.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF3B82F6)
                         )
@@ -388,12 +406,12 @@ fun ChamakSliderFormScreen(
                         val p1 = ((1.0 - currentVal) * 100).roundToInt()
                         val p2 = (currentVal * 100).roundToInt()
 
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
                                 text = attr.name,
                                 fontFamily = Manrope,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
                                 color = Palette.dark
                             )
                             Row(
@@ -404,9 +422,9 @@ fun ChamakSliderFormScreen(
                                 Text(
                                     text = "$p1%",
                                     fontFamily = Manrope,
-                                    fontSize = 11.sp,
+                                    fontSize = 13.sp,
                                     color = Palette.muted,
-                                    modifier = Modifier.width(32.dp)
+                                    modifier = Modifier.width(36.dp)
                                 )
                                 Slider(
                                     value = currentVal.toFloat(),
@@ -414,18 +432,32 @@ fun ChamakSliderFormScreen(
                                         vm.sliderValues = vm.sliderValues + (attr.id to newVal.toDouble())
                                     },
                                     valueRange = 0f..1f,
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = Color(0xFFCA8A04),
-                                        activeTrackColor = Color(0xFFCA8A04)
-                                    ),
+                                    thumb = {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(width = 32.dp, height = 22.dp)
+                                                .shadow(3.dp, RoundedCornerShape(11.dp), spotColor = Color.Black.copy(alpha = 0.2f))
+                                                .background(Color.White, RoundedCornerShape(11.dp))
+                                        )
+                                    },
+                                    track = { sliderState ->
+                                        SliderDefaults.Track(
+                                            sliderState = sliderState,
+                                            colors = SliderDefaults.colors(
+                                                activeTrackColor = Color(0xFFD97706),
+                                                inactiveTrackColor = Color(0xFFE5E7EB)
+                                            ),
+                                            modifier = Modifier.height(4.dp)
+                                        )
+                                    },
                                     modifier = Modifier.weight(1f)
                                 )
                                 Text(
                                     text = "$p2%",
                                     fontFamily = Manrope,
-                                    fontSize = 11.sp,
+                                    fontSize = 13.sp,
                                     color = Palette.muted,
-                                    modifier = Modifier.width(32.dp)
+                                    modifier = Modifier.width(36.dp)
                                 )
                             }
                         }

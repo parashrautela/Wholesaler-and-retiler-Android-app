@@ -12,9 +12,12 @@ import com.jewelindia.app.core.model.OrderStatus
 import com.jewelindia.app.core.model.Product
 import com.jewelindia.app.core.model.VerificationStatus
 import com.jewelindia.app.core.model.Wholesaler
+import com.jewelindia.app.data.api.ChamakAttempt
+import com.jewelindia.app.data.api.ChamakDesignItem
 import com.jewelindia.app.data.api.ChamakGeneration
 import com.jewelindia.app.data.api.ChamakMode
 import com.jewelindia.app.data.api.ChamakStatus
+import com.jewelindia.app.data.api.Stage1Analysis
 import com.jewelindia.app.data.api.ChatThread
 import com.jewelindia.app.data.api.CreditPrice
 import com.jewelindia.app.data.api.CreditWallet
@@ -269,11 +272,9 @@ object DebugPeekSamples {
 
     fun viewerImages(context: Context): List<ChamakViewerImage> {
         return listOf(
-            ChamakViewerImage(id = "1", label = "Source 1", url = fileUrl(context, "cat_necklace")),
-            ChamakViewerImage(id = "2", label = "Source 2", url = fileUrl(context, "cat_haram")),
-            ChamakViewerImage(id = "3", label = "Creation", url = fileUrl(context, "cat_pendants"), isResult = true),
-            ChamakViewerImage(id = "4", label = "Attempt 2", url = fileUrl(context, "cat_earrings")),
-            ChamakViewerImage(id = "5", label = "Attempt 1", url = fileUrl(context, "cat_rings"))
+            ChamakViewerImage(id = "1", label = "Source", url = fileUrl(context, "cat_necklace")),
+            ChamakViewerImage(id = "2", label = "Upgrade", url = fileUrl(context, "cat_haram")),
+            ChamakViewerImage(id = "3", label = "Result", url = fileUrl(context, "cat_pendants"), isResult = true)
         )
     }
 
@@ -394,6 +395,7 @@ object DebugPeekSamples {
             sourceImage2URL = fileUrl(context, "cat_haram"),
             status = ChamakStatus.Done,
             mode = ChamakMode.Fusion,
+            stage1AnalysisJSON = Stage1Analysis(jewelryType = "Pendants"),
             createdAt = "2026-09-10T10:30:00Z"
         )
         vm.signedOutputImageURL = fileUrl(context, "cat_pendants")
@@ -411,6 +413,28 @@ object DebugPeekSamples {
             sourceImage2URL = fileUrl(context, "cat_haram"),
             status = ChamakStatus.Done,
             mode = ChamakMode.Fusion,
+            stage1AnalysisJSON = Stage1Analysis(
+                jewelryType = "Pendants",
+                image1Strengths = listOf(
+                    "Intricate floral motifs",
+                    "Vibrant gemstone colors",
+                    "Balanced symmetry",
+                    "Elegant gold finish",
+                    "Lightweight design"
+                ),
+                image2Strengths = listOf(
+                    "Intricate floral motifs",
+                    "Vibrant gemstone colors",
+                    "Balanced symmetry",
+                    "Elegant gold finish",
+                    "Lightweight design"
+                )
+            ),
+            outputHistory = listOf(
+                ChamakAttempt(1, fileUrl(context, "cat_earrings")),
+                ChamakAttempt(2, fileUrl(context, "cat_rings")),
+                ChamakAttempt(3, fileUrl(context, "cat_pendants"))
+            ),
             createdAt = "2026-09-10T10:30:00Z"
         )
         vm.signedOutputImageURL = fileUrl(context, "cat_pendants")
@@ -418,6 +442,20 @@ object DebugPeekSamples {
             1 to fileUrl(context, "cat_earrings"),
             2 to fileUrl(context, "cat_rings"),
             3 to fileUrl(context, "cat_pendants")
+        )
+        vm.selectedAttempt = 3
+        vm.sliderValues = mapOf("attr_0" to 0.3)
+        vm.selectedDesign1 = ChamakDesignItem(
+            id = "d1",
+            title = "Core design",
+            subtitle = "Keeps its identity",
+            imageURL = null
+        )
+        vm.selectedDesign2 = ChamakDesignItem(
+            id = "d2",
+            title = "New direction",
+            subtitle = "New expression",
+            imageURL = null
         )
         return vm
     }

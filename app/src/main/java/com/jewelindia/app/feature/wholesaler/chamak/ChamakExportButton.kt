@@ -4,9 +4,11 @@ package com.jewelindia.app.feature.wholesaler.chamak
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
@@ -99,29 +101,30 @@ fun ChamakExportButton(
             }
         },
         enabled = !imageUrl.isNullOrBlank() && !exporting,
-        shape = RoundedCornerShape(10.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Palette.goldPrimary),
-        modifier = modifier
+        shape = RoundedCornerShape(27.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E1E22)),
+        modifier = modifier.height(54.dp)
     ) {
         if (exporting) {
             CircularProgressIndicator(
-                color = Palette.light,
-                modifier = Modifier.size(16.dp),
+                color = Color.White,
+                modifier = Modifier.size(18.dp),
                 strokeWidth = 2.dp
             )
         } else {
             Icon(
-                imageVector = Icons.Default.Share,
+                imageVector = Icons.Default.Download,
                 contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = Palette.light
+                modifier = Modifier.size(18.dp),
+                tint = Color.White
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Export High-Res",
-                style = Typography.santoshi(13.sp),
+                text = "Download 2K · Free",
+                fontFamily = com.jewelindia.app.design.Manrope,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
-                color = Palette.light
+                color = Color.White
             )
         }
     }

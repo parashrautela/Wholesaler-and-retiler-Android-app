@@ -120,43 +120,20 @@ fun ChamakSetStylingScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Pieces comparison cards
-                val pieces = vm.setPieces
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    pieces.forEachIndexed { index, piece ->
-                        PieceThumbnailCard(
-                            slot = index + 1,
-                            label = "Piece ${index + 1}",
-                            design = piece,
-                            accentColor = Color(ChamakSlot.colorHex(index + 1)),
-                            onZoom = {
-                                piece.imageURL?.let {
-                                    previewImage = ChamakViewerImage("piece_${index + 1}", "Piece ${index + 1}", it)
-                                }
-                            },
-                            modifier = Modifier.weight(1f, fill = true)
-                        )
-                    }
-                }
-
                 // Backdrop Presets Section
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(22.dp))
                         .background(Color.White)
-                        .border(1.dp, Color(0xFFE7E5E4), RoundedCornerShape(20.dp))
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .border(1.dp, Color(0xFFE7E5E4), RoundedCornerShape(22.dp))
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Text(
                         text = "Choose Backdrop",
                         fontFamily = Manrope,
-                        fontSize = 16.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Palette.dark
                     )
@@ -166,39 +143,52 @@ fun ChamakSetStylingScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(if (isSelected) Color(0xFFFDF8EE) else Color(0xFFF9FAFB))
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(if (isSelected) Color(0xFFFFFDF8) else Color(0xFFF9FAFB))
                                 .border(
                                     width = if (isSelected) 1.5.dp else 1.dp,
-                                    color = if (isSelected) Color(0xFFCA8A04) else Color(0xFFE5E7EB),
-                                    shape = RoundedCornerShape(14.dp)
+                                    color = if (isSelected) Color(0xFFCA8A04) else Color(0xFFF3F4F6),
+                                    shape = RoundedCornerShape(16.dp)
                                 )
                                 .clickable { vm.selectedBackdrop = preset }
-                                .padding(14.dp),
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = { vm.selectedBackdrop = preset },
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = Color(0xFFCA8A04)
+                            if (isSelected) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .border(2.dp, Color(0xFFCA8A04), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(9.dp)
+                                            .background(Color(0xFFCA8A04), CircleShape)
+                                    )
+                                }
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .background(Color(0xFFE5E7EB), CircleShape)
                                 )
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(
                                     text = preset.label,
                                     fontFamily = Manrope,
-                                    fontSize = 13.sp,
+                                    fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Palette.dark
                                 )
                                 Text(
                                     text = preset.blurb,
                                     fontFamily = Manrope,
-                                    fontSize = 11.sp,
+                                    fontSize = 13.sp,
                                     color = Palette.muted,
-                                    lineHeight = 15.sp
+                                    lineHeight = 17.sp
                                 )
                             }
                         }
@@ -209,11 +199,11 @@ fun ChamakSetStylingScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(22.dp))
                         .background(Color.White)
-                        .border(1.dp, Color(0xFFE7E5E4), RoundedCornerShape(20.dp))
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .border(1.dp, Color(0xFFE7E5E4), RoundedCornerShape(22.dp))
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -223,14 +213,14 @@ fun ChamakSetStylingScreen(
                         Text(
                             text = "Quick Styling",
                             fontFamily = Manrope,
-                            fontSize = 16.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = Palette.dark
                         )
                         Text(
                             text = "Optional",
                             fontFamily = Manrope,
-                            fontSize = 11.sp,
+                            fontSize = 13.sp,
                             color = Palette.muted
                         )
                     }
@@ -238,85 +228,53 @@ fun ChamakSetStylingScreen(
                     Text(
                         text = "Choose any options to guide composition. Your jewelry stays unchanged.",
                         fontFamily = Manrope,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         color = Palette.muted
                     )
 
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        SetStylingChip.all.forEach { chip ->
-                            val isSelected = vm.selectedStylingChips.contains(chip)
+                    val primaryChips = listOf(
+                        Pair(SetStylingChip("balanced", "Balanced", ""), SetStylingChip("equal_focus", "Equal focus", "")),
+                        Pair(SetStylingChip("luxury", "Luxury showroom", ""), SetStylingChip("minimal", "Minimal", "")),
+                        Pair(SetStylingChip("soft_light", "Soft light", ""), SetStylingChip("detail", "Show detail", ""))
+                    )
+
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        primaryChips.forEach { (c1, c2) ->
                             Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(if (isSelected) Color(0xFF111827) else Color(0xFFF9FAFB))
-                                    .border(
-                                        width = 1.dp,
-                                        color = if (isSelected) Color.Transparent else Color(0xFFE5E7EB),
-                                        shape = RoundedCornerShape(16.dp)
-                                    )
-                                    .clickable { vm.toggleStylingChip(chip) }
-                                    .padding(horizontal = 12.dp, vertical = 9.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(12.dp)
-                                    )
+                                listOf(c1, c2).forEach { chip ->
+                                    val isSelected = vm.selectedStylingChips.any { it.id == chip.id }
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(42.dp)
+                                            .clip(RoundedCornerShape(21.dp))
+                                            .background(if (isSelected) Color(0xFF212120) else Color.White)
+                                            .border(
+                                                width = 1.dp,
+                                                color = if (isSelected) Color.Transparent else Color(0xFFE5E7EB),
+                                                shape = RoundedCornerShape(21.dp)
+                                            )
+                                            .clickable {
+                                                val match = SetStylingChip.all.find { it.id == chip.id } ?: chip
+                                                vm.toggleStylingChip(match)
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = chip.label,
+                                            fontFamily = Manrope,
+                                            fontSize = 13.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) Color.White else Palette.dark
+                                        )
+                                    }
                                 }
-                                Text(
-                                    text = chip.label,
-                                    fontFamily = Manrope,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (isSelected) Color.White else Palette.dark
-                                )
                             }
                         }
                     }
-                }
-
-                // Artisan Staging Note
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color.White)
-                        .border(1.dp, Color(0xFFE7E5E4), RoundedCornerShape(20.dp))
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Artisan Staging Note (Optional)",
-                        fontFamily = Manrope,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Palette.dark
-                    )
-
-                    OutlinedTextField(
-                        value = vm.noteText,
-                        onValueChange = { vm.noteText = it },
-                        placeholder = {
-                            Text(
-                                "e.g. Place necklace prominent on velvet bust, earrings arranged symmetrically...",
-                                fontFamily = Manrope,
-                                fontSize = 13.sp,
-                                color = Palette.muted
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    )
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -368,80 +326,6 @@ fun ChamakSetStylingScreen(
                 images = listOf(img),
                 startIndex = 0,
                 onDismiss = { previewImage = null }
-            )
-        }
-    }
-}
-
-@Composable
-private fun PieceThumbnailCard(
-    slot: Int,
-    label: String,
-    design: ChamakDesignItem,
-    accentColor: Color,
-    onZoom: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color.White)
-            .border(1.5.dp, accentColor.copy(alpha = 0.8f), RoundedCornerShape(18.dp))
-            .shadow(2.dp, RoundedCornerShape(18.dp), spotColor = Color.Black.copy(alpha = 0.04f))
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .background(Color(0xFFF3F4F6))
-        ) {
-            val url = design.displayURL(com.jewelindia.app.core.model.ImageSize.Card)
-            if (url != null) {
-                ProtectedImage(
-                    url = url,
-                    contentDescription = label,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-                IconButton(
-                    onClick = onZoom,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(6.dp)
-                        .size(26.dp)
-                        .background(Color.White.copy(alpha = 0.9f), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.OpenInFull,
-                        contentDescription = "Expand",
-                        tint = Palette.dark,
-                        modifier = Modifier.size(12.dp)
-                    )
-                }
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFFF9F9F8))
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-        ) {
-            Text(
-                text = label,
-                fontFamily = Manrope,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = Palette.dark
-            )
-            Text(
-                text = design.title,
-                fontFamily = Manrope,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = Palette.muted,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
             )
         }
     }

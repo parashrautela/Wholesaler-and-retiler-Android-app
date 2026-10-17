@@ -131,55 +131,48 @@ fun DesignThumbnailCard(
     onZoom: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Box(
         modifier = modifier
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color.White)
-            .border(1.5.dp, accentColor.copy(alpha = 0.8f), RoundedCornerShape(18.dp))
-            .shadow(2.dp, RoundedCornerShape(18.dp), spotColor = Color.Black.copy(alpha = 0.04f))
+            .aspectRatio(0.72f)
+            .clip(RoundedCornerShape(22.dp))
+            .background(Color(0xFFF3F4F6))
+            .border(1.5.dp, accentColor, RoundedCornerShape(22.dp))
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .background(Color(0xFFF3F4F6))
-        ) {
-            val url = design?.displayURL(ImageSize.Card)
-            if (url != null) {
-                ProtectedImage(
-                    url = url,
-                    contentDescription = title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
+        val url = design?.displayURL(ImageSize.Card)
+        if (url != null) {
+            ProtectedImage(
+                url = url,
+                contentDescription = title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            IconButton(
+                onClick = onZoom,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .size(28.dp)
+                    .background(Color.White.copy(alpha = 0.9f), CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.OpenInFull,
+                    contentDescription = "Expand",
+                    tint = Palette.dark,
+                    modifier = Modifier.size(13.dp)
                 )
-                IconButton(
-                    onClick = onZoom,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(6.dp)
-                        .size(26.dp)
-                        .background(Color.White.copy(alpha = 0.9f), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.OpenInFull,
-                        contentDescription = "Expand",
-                        tint = Palette.dark,
-                        modifier = Modifier.size(12.dp)
-                    )
-                }
             }
         }
 
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFFF9F9F8))
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .align(Alignment.BottomStart)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
                 text = title,
                 fontFamily = Manrope,
-                fontSize = 13.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = Palette.dark,
                 maxLines = 1,
@@ -188,8 +181,8 @@ fun DesignThumbnailCard(
             Text(
                 text = subtitle,
                 fontFamily = Manrope,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Normal,
                 color = Palette.muted,
                 maxLines = 1
             )

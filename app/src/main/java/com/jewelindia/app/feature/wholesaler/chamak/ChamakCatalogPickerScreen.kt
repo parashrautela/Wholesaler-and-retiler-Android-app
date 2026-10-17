@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -214,16 +215,27 @@ fun ChamakCatalogPickerScreen(
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF374151)
                         )
-                        Text(
-                            text = "Design Archive",
-                            fontFamily = Manrope,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF5E5D5A),
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                             modifier = Modifier
                                 .clickable { vm.step = ChamakViewModel.Step.Gallery }
                                 .padding(4.dp)
-                        )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Inventory2,
+                                contentDescription = null,
+                                tint = Color(0xFF5E5D5A),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = "Design Archive",
+                                fontFamily = Manrope,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF5E5D5A)
+                            )
+                        }
                     }
                 }
 
@@ -385,27 +397,33 @@ fun ChamakCatalogPickerScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(160.dp)
-                                .clip(RoundedCornerShape(16.dp))
+                                .clip(RoundedCornerShape(20.dp))
                                 .background(Color.White)
-                                .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(16.dp))
-                                .padding(16.dp),
+                                .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(20.dp))
+                                .padding(vertical = 44.dp, horizontal = 20.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
+                            Icon(
+                                painter = androidx.compose.ui.res.painterResource(com.jewelindia.app.R.drawable.ic_chamak_empty_catalog),
+                                contentDescription = null,
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(48.dp)
+                            )
                             Text(
                                 text = "No catalogue items found",
                                 fontFamily = Manrope,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Palette.dark
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1C1C1E)
                             )
                             Text(
-                                text = "Upload photos directly using the + buttons in the slots above.",
+                                text = "Upload photos directly using the + buttons in the\nslots above.",
                                 fontFamily = Manrope,
-                                fontSize = 12.sp,
-                                color = Palette.muted,
-                                textAlign = TextAlign.Center
+                                fontSize = 13.sp,
+                                color = Color(0xFF8E8E93),
+                                textAlign = TextAlign.Center,
+                                lineHeight = 18.sp
                             )
                         }
                     }
@@ -446,20 +464,29 @@ fun ChamakCatalogPickerScreen(
                     .background(Color.White)
                     .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
-                Button(
-                    onClick = {
-                        scope.launch {
-                            vm.startVisionAnalysis(wholesalerId)
-                        }
-                    },
+                val isEnabled = vm.canStartAnalysis && !vm.isSubmitting
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp),
-                    shape = RoundedCornerShape(27.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (vm.canStartAnalysis) Color(0xFF212120) else Color(0xFF9CA3AF)
-                    ),
-                    enabled = vm.canStartAnalysis && !vm.isSubmitting
+                        .height(54.dp)
+                        .clip(RoundedCornerShape(27.dp))
+                        .background(
+                            if (isEnabled) {
+                                androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    listOf(Color(0xFF2C2B29), Color(0xFF1C1C1E))
+                                )
+                            } else {
+                                androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    listOf(Color(0xFF8B8E99), Color(0xFF6B6E79))
+                                )
+                            }
+                        )
+                        .clickable(enabled = isEnabled) {
+                            scope.launch {
+                                vm.startVisionAnalysis(wholesalerId)
+                            }
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
                     if (vm.isSubmitting) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))

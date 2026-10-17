@@ -1,6 +1,7 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Features/Wholesaler/Chamak/ChamakImageViewer.swift
 package com.jewelindia.app.feature.wholesaler.chamak
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -14,10 +15,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -69,128 +72,134 @@ fun ChamakImageViewer(
     startIndex: Int = 0,
     onDismiss: () -> Unit
 ) {
-    if (images.isEmpty()) return
+    BackHandler(onBack = onDismiss)
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
+    var selection by remember { mutableIntStateOf(startIndex.coerceIn(0, images.size - 1)) }
+    var isComparing by remember { mutableStateOf(false) }
+    var compareIndex by remember { mutableIntStateOf(if (startIndex != 0) 0 else 1.coerceAtMost(images.size - 1)) }
+
+    val hasResult = images.any { it.isResult }
+    val canCompare = hasResult && images.size >= 2
+    val currentImage = images[selection]
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
     ) {
-        var selection by remember { mutableIntStateOf(startIndex.coerceIn(0, images.size - 1)) }
-        var isComparing by remember { mutableStateOf(false) }
-        var compareIndex by remember { mutableIntStateOf(if (startIndex != 0) 0 else 1.coerceAtMost(images.size - 1)) }
+        // Main image or compare view
+        if (isComparing && canCompare) {
+            val resultImage = images.first { it.isResult }
+            val otherImage = images[compareIndex]
 
-        val hasResult = images.any { it.isResult }
-        val canCompare = hasResult && images.size >= 2
-        val currentImage = images[selection]
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.96f))
-        ) {
-            // Main image or compare view
-            if (isComparing && canCompare) {
-                val resultImage = images.first { it.isResult }
-                val otherImage = images[compareIndex]
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 70.dp, bottom = 120.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                        ZoomableProtectedImage(url = resultImage.url)
-                        Text(
-                            text = resultImage.label,
-                            fontFamily = Manrope,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1E1E1E),
-                            modifier = Modifier
-                                .padding(12.dp)
-                                .background(Color(0xFFE4CC8F), RoundedCornerShape(12.dp))
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
-                    }
-                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                        ZoomableProtectedImage(url = otherImage.url)
-                        Text(
-                            text = otherImage.label,
-                            fontFamily = Manrope,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            modifier = Modifier
-                                .padding(12.dp)
-                                .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
-                    }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 80.dp, bottom = 120.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    ZoomableProtectedImage(url = resultImage.url)
+                    Text(
+                        text = resultImage.label,
+                        fontFamily = Manrope,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1E1E1E),
+                        modifier = Modifier
+                            .padding(12.dp)
+                            .background(Color(0xFFE4CC8F), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
                 }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 70.dp, bottom = 120.dp)
-                ) {
-                    ZoomableProtectedImage(url = currentImage.url)
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    ZoomableProtectedImage(url = otherImage.url)
+                    Text(
+                        text = otherImage.label,
+                        fontFamily = Manrope,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        modifier = Modifier
+                            .padding(12.dp)
+                            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
                 }
             }
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 80.dp, bottom = 120.dp)
+            ) {
+                ZoomableProtectedImage(url = currentImage.url)
+            }
+        }
 
             // Top Header Bar
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 IconButton(
                     onClick = onDismiss,
                     modifier = Modifier
                         .size(36.dp)
-                        .background(Color.White.copy(alpha = 0.15f), CircleShape)
+                        .align(Alignment.CenterStart)
+                        .background(Color(0xFF2C2C2E), CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close",
-                        tint = Color.White
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
-
                 Text(
-                    text = if (isComparing) "Compare Mode" else currentImage.label,
-                    fontFamily = Cirka,
-                    fontSize = 18.sp,
+                    text = if (isComparing) "Compare" else currentImage.label,
+                    fontFamily = Manrope,
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.align(Alignment.Center)
                 )
 
-                Spacer(modifier = Modifier.weight(1f))
-
                 if (canCompare) {
-                    Text(
-                        text = if (isComparing) "Browse" else "Compare",
-                        fontFamily = Manrope,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                    Row(
                         modifier = Modifier
-                            .background(
-                                if (isComparing) Color(0xFFCA8A04) else Color.White.copy(alpha = 0.2f),
-                                RoundedCornerShape(16.dp)
-                            )
+                            .align(Alignment.CenterEnd)
+                            .background(Color(0xFF2C2C2E), RoundedCornerShape(16.dp))
                             .clickable { isComparing = !isComparing }
-                            .padding(horizontal = 14.dp, vertical = 6.dp)
-                    )
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(width = 14.dp, height = 11.dp)
+                                .border(1.2.dp, Color.White, RoundedCornerShape(2.dp))
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .width(5.dp)
+                                    .background(Color.White)
+                            )
+                        }
+                        Text(
+                            text = if (isComparing) "Browse" else "Compare",
+                            fontFamily = Manrope,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
             }
 
@@ -212,13 +221,18 @@ fun ChamakImageViewer(
                     )
                 }
 
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
                     modifier = Modifier.padding(horizontal = 16.dp)
                 ) {
-                    itemsIndexed(images) { index, img ->
+                    images.forEachIndexed { index, img ->
                         val isSelected = if (isComparing) index == compareIndex else index == selection
                         val isEnabled = !isComparing || !img.isResult
+                        val topCat = when (img.label.lowercase()) {
+                            "source" -> "Necklace"
+                            "result" -> "Pendants"
+                            else -> null
+                        }
 
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -234,13 +248,13 @@ fun ChamakImageViewer(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(60.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color.White.copy(alpha = 0.1f))
+                                    .size(62.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF1E1E22))
                                     .border(
                                         width = if (isSelected) 2.dp else 1.dp,
-                                        color = if (isSelected) Color(0xFFE4CC8F) else Color.White.copy(alpha = 0.25f),
-                                        shape = RoundedCornerShape(8.dp)
+                                        color = if (isSelected) Color(0xFFD4A359) else Color.White.copy(alpha = 0.2f),
+                                        shape = RoundedCornerShape(12.dp)
                                     )
                             ) {
                                 ProtectedImage(
@@ -249,19 +263,30 @@ fun ChamakImageViewer(
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
                                 )
+                                if (topCat != null) {
+                                    Text(
+                                        text = topCat,
+                                        fontFamily = Manrope,
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        modifier = Modifier
+                                            .align(Alignment.TopCenter)
+                                            .padding(top = 3.dp)
+                                    )
+                                }
                             }
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = img.label,
                                 fontFamily = Manrope,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f),
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
                                 maxLines = 1
                             )
                         }
                     }
-                }
             }
         }
     }
@@ -329,7 +354,8 @@ fun ZoomableProtectedImage(
                 url = url,
                 contentDescription = "Zoomable Preview",
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                placeholderColor = null
             )
         }
     }

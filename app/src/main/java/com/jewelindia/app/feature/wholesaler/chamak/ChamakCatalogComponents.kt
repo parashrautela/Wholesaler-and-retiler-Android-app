@@ -25,8 +25,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -36,11 +41,11 @@ import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.model.ImageSize
 import com.jewelindia.app.core.model.Product
 import com.jewelindia.app.core.security.ProtectedImage
-import com.jewelindia.app.design.Manrope
-import com.jewelindia.app.design.Palette
 import com.jewelindia.app.data.api.ChamakDesignItem
 import com.jewelindia.app.data.api.ChamakMode
 import com.jewelindia.app.data.api.ChamakSlot
+import com.jewelindia.app.design.Manrope
+import com.jewelindia.app.design.Palette
 
 @Composable
 fun SlotCard(
@@ -56,22 +61,40 @@ fun SlotCard(
 ) {
     val isFilled = designItem != null
 
+    val emptyBorderModifier = Modifier.drawBehind {
+        val strokeWidth = 1.5.dp.toPx()
+        val halfStroke = strokeWidth / 2f
+        val stroke = Stroke(
+            width = strokeWidth,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+        )
+        drawRoundRect(
+            color = Color(0xFFC7C7CC),
+            topLeft = Offset(halfStroke, halfStroke),
+            size = Size(size.width - strokeWidth, size.height - strokeWidth),
+            style = stroke,
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(18.dp.toPx() - halfStroke, 18.dp.toPx() - halfStroke)
+        )
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color.White)
-            .border(
-                width = 1.5.dp,
-                color = if (isFilled) accentColor else Color(0xFFE5E7EB),
-                shape = RoundedCornerShape(18.dp)
+            .background(Color.White, RoundedCornerShape(18.dp))
+            .then(
+                if (isFilled) {
+                    Modifier.border(1.5.dp, accentColor, RoundedCornerShape(18.dp))
+                } else {
+                    emptyBorderModifier
+                }
             )
+            .clip(RoundedCornerShape(18.dp))
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .background(Color(0xFFF9FAFB))
+                .background(Color.White)
         ) {
             if (designItem != null) {
                 val url = designItem.displayURL(ImageSize.Card)
@@ -95,7 +118,7 @@ fun SlotCard(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Remove",
                         tint = Color.White,
-                        modifier = Modifier.size(12.dp)
+                        modifier = Modifier.size(11.dp)
                     )
                 }
             } else {
@@ -103,36 +126,36 @@ fun SlotCard(
                     onClick = onAddPhoto,
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(10.dp)
-                        .size(26.dp)
+                        .padding(8.dp)
+                        .size(24.dp)
                         .background(accentColor, CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Upload",
                         tint = Color.White,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(12.dp)
                     )
                 }
                 Column(
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .padding(top = 16.dp),
+                        .padding(top = 18.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
                         text = emptyTitle,
                         fontFamily = Manrope,
-                        fontSize = 13.sp,
+                        fontSize = 13.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF374151)
+                        color = Color(0xFF1C1C1E)
                     )
                     Text(
                         text = subtitle,
                         fontFamily = Manrope,
-                        fontSize = 11.sp,
-                        color = Color(0xFF9CA3AF)
+                        fontSize = 11.5.sp,
+                        color = Color(0xFF8E8E93)
                     )
                 }
             }
@@ -142,8 +165,9 @@ fun SlotCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFFF9F9F8))
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .background(Color.White)
+                    .border(width = 0.5.dp, color = Color(0xFFE5E7EB))
+                    .padding(horizontal = 10.dp, vertical = 7.dp)
             ) {
                 Text(
                     text = designItem.title,
@@ -158,7 +182,7 @@ fun SlotCard(
                     Text(
                         text = designItem.displayTypeLabel,
                         fontFamily = Manrope,
-                        fontSize = 10.sp,
+                        fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = accentColor
                     )
@@ -166,7 +190,7 @@ fun SlotCard(
                     Text(
                         text = if (slotNumber == 1) "Keeps its identity" else "New expression",
                         fontFamily = Manrope,
-                        fontSize = 10.sp,
+                        fontSize = 10.5.sp,
                         color = Palette.muted,
                         maxLines = 1
                     )
@@ -197,7 +221,7 @@ fun CatalogProductCard(
             .clip(RoundedCornerShape(16.dp))
             .background(Color.White)
             .border(
-                width = if (isSelected) 2.dp else 1.dp,
+                width = if (isSelected) 1.5.dp else 1.dp,
                 color = if (isSelected) slotColor else Color(0xFFE5E7EB),
                 shape = RoundedCornerShape(16.dp)
             )
