@@ -95,9 +95,6 @@ fun WholesalerHomeScreen(
     }
     val homeState by homeVm.uiState.collectAsState()
 
-    var showMenu by remember { mutableStateOf(false) }
-    var showSignOutDialog by remember { mutableStateOf(false) }
-
     LaunchedEffect(resolvedUserId) {
         if (resolvedUserId.isNotBlank()) {
             homeVm.load()
@@ -115,103 +112,36 @@ fun WholesalerHomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Palette.background)
+            .background(androidx.compose.ui.graphics.Color.White)
             .statusBarsPadding()
     ) {
-        // Top Bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Home",
-                style = Typography.cirka(26.sp),
-                fontWeight = FontWeight.Bold,
-                color = Palette.dark
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                CreditBalancePill(
-                    creditStore = creditStore,
-                    onClick = onTreasureClick
-                )
-
-                // Menu Button
-                Box {
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(Palette.goldPrimary)
-                            .clickable { showMenu = true },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = (wholesaler?.businessName?.firstOrNull() ?: 'J').uppercase(),
-                            style = Typography.cirka(15.sp),
-                            fontWeight = FontWeight.Bold,
-                            color = Palette.light
-                        )
-                    }
-
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Profile & Settings") },
-                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = Palette.dark) },
-                            onClick = {
-                                showMenu = false
-                                onProfileClick()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Invite Retailer") },
-                            leadingIcon = { Icon(Icons.Default.PersonAdd, contentDescription = null, tint = Palette.dark) },
-                            onClick = {
-                                showMenu = false
-                                onInviteClick()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Manufacturing Offers") },
-                            leadingIcon = { Icon(Icons.Default.Build, contentDescription = null, tint = Palette.dark) },
-                            onClick = {
-                                showMenu = false
-                                onOffersClick()
-                            }
-                        )
-                        HorizontalDivider()
-                        DropdownMenuItem(
-                            text = { Text("Log Out", color = Palette.accentRed) },
-                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = Palette.accentRed) },
-                            onClick = {
-                                showMenu = false
-                                showSignOutDialog = true
-                            }
-                        )
-                    }
-                }
-            }
-        }
-
         // Scrollable Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 6.dp),
+                .padding(bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Hero Upload Card
-            HeroUploadCard(onUploadClick = onUploadClick)
+            // Spacing to clear the floating top capsule
+            Spacer(modifier = Modifier.height(44.dp))
+
+            // iOS Large Title: "Home"
+            Text(
+                text = "Home",
+                style = com.jewelindia.app.design.sfPro(34f, com.jewelindia.app.design.JewelWeight.Bold),
+                color = Palette.dark,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Hero Upload Card
+                HeroUploadCard(onUploadClick = onUploadClick)
 
             // Insights Grid (4 KPI cards)
             Text(
@@ -318,27 +248,8 @@ fun WholesalerHomeScreen(
             Spacer(modifier = Modifier.height(28.dp))
         }
     }
-
-    if (showSignOutDialog) {
-        AlertDialog(
-            onDismissRequest = { showSignOutDialog = false },
-            title = { Text("Log Out", style = Typography.cirka(18.sp), fontWeight = FontWeight.Bold) },
-            text = { Text("Are you sure you want to log out of Jewel India?", style = Typography.santoshi(14.sp)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showSignOutDialog = false
-                        scope.launch { sessionStore.signOut() }
-                    }
-                ) {
-                    Text("Log Out", color = Palette.accentRed, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSignOutDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
 }
+}
+
+
+

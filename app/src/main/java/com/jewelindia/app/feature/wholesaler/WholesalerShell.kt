@@ -6,29 +6,39 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.ShoppingBag
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,31 +50,38 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.model.Wholesaler
 import com.jewelindia.app.core.session.SessionStore
+import com.jewelindia.app.core.text.Copy
 import com.jewelindia.app.data.api.ChatThread
 import com.jewelindia.app.data.api.WholesalerApi
+import com.jewelindia.app.design.JewelWeight
 import com.jewelindia.app.design.Palette
+import com.jewelindia.app.design.components.SvgImage
+import com.jewelindia.app.design.manrope
 import com.jewelindia.app.feature.chat.ChatThreadScreen
 import com.jewelindia.app.feature.chat.ChatThreadsScreen
 import com.jewelindia.app.feature.manufacturing.WholesalerOfferDetailScreen
 import com.jewelindia.app.feature.manufacturing.WholesalerOffersListScreen
 import com.jewelindia.app.feature.profile.WholesalerProfileScreen
+import com.jewelindia.app.feature.treasurechest.CreditBalancePill
 import com.jewelindia.app.feature.treasurechest.CreditStore
 import com.jewelindia.app.feature.treasurechest.TreasureChestScreen
 import com.jewelindia.app.feature.wholesaler.chamak.ChamakStudioScreen
 import kotlinx.coroutines.launch
 
-enum class WholesalerTab(val label: String, val icon: ImageVector) {
-    Home("Home", Icons.Filled.Home),
-    Catalog("Catalogue", Icons.Filled.GridView),
-    Chamak("Chamak", Icons.Filled.AutoAwesome),
-    Orders("Orders", Icons.Filled.ShoppingBag),
-    Chat("Chat", Icons.AutoMirrored.Filled.Chat)
+enum class WholesalerTab(val label: String, val svgName: String?) {
+    Home(Copy.WholesalerTab.home, "NavHome"),
+    Catalog(Copy.WholesalerTab.catalogue, "NavCatalogue"),
+    Chamak(Copy.WholesalerTab.chamak, null),
+    Orders(Copy.WholesalerTab.orders, "NavOrders"),
+    Chat(Copy.WholesalerTab.chat, "NavChat")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -92,6 +109,7 @@ fun WholesalerShell(
     var showTreasureChest by remember { mutableStateOf(false) }
     var showUploadHistory by remember { mutableStateOf(false) }
     var selectedCatalogueCategory by remember { mutableStateOf<String?>(null) }
+    var showLogoutConfirm by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
     val creditStore = previewCreditStore ?: remember { CreditStore(scope) }
@@ -107,7 +125,6 @@ fun WholesalerShell(
         val w = try { WholesalerApi.fetchWholesaler(wholesalerUserId, email) } catch (_: Exception) { null }
         wholesaler = w
         scope.launch {
-            // Under RLS and schema, orders and conversations store auth UID
             pendingOrderCount = try { WholesalerApi.countPendingOrders(wholesalerUserId) } catch (_: Exception) { 0 }
         }
         scope.launch {
@@ -183,79 +200,133 @@ fun WholesalerShell(
         return
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Palette.background)
+            .background(if (selectedTab == WholesalerTab.Home) Color.White else Palette.background)
     ) {
-        // Main Content
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-        ) {
-            AnimatedContent(
-                targetState = selectedTab,
-                transitionSpec = { fadeIn().togetherWith(fadeOut()) },
-                label = "wholesaler_tab_content"
-            ) { tab ->
-                when (tab) {
-                    WholesalerTab.Home -> WholesalerHomeScreen(
-                        wholesalerUserId = wholesalerUserId,
-                        wholesaler = wholesaler,
-                        sessionStore = sessionStore,
-                        creditStore = creditStore,
-                        onUploadClick = {
-                            selectedTab = WholesalerTab.Catalog
-                        },
-                        onChamakClick = { selectedTab = WholesalerTab.Chamak },
-                        onOrdersClick = { selectedTab = WholesalerTab.Orders },
-                        onChatClick = { selectedTab = WholesalerTab.Chat },
-                        onCatalogueClick = { selectedTab = WholesalerTab.Catalog },
-                        onInviteClick = { showInviteSheet = true },
-                        onOffersClick = { showOffersList = true },
-                        onReportClick = { showReport = true },
-                        onTreasureClick = { showTreasureChest = true },
-                        onProfileClick = { showProfile = true },
-                        onSelectCategory = { cat ->
-                            selectedCatalogueCategory = cat
-                            selectedTab = WholesalerTab.Catalog
-                        },
-                        onOpenUploadHistory = { showUploadHistory = true }
-                    )
-                    WholesalerTab.Catalog -> WholesalerCatalogScreen(
-                        wholesalerUserId = wholesalerUserId,
-                        wholesaler = wholesaler,
-                        sessionStore = sessionStore,
-                        onOpenUploadHistory = { showUploadHistory = true }
-                    )
-                    WholesalerTab.Chamak -> ChamakStudioScreen(
-                        wholesalerUserId = wholesalerUserId,
-                        wholesaler = wholesaler,
-                        sessionStore = sessionStore
-                    )
-                    WholesalerTab.Orders -> WholesalerOrdersScreen(
-                        wholesalerUserId = wholesalerUserId,
-                        wholesaler = wholesaler,
-                        onOrderCountChange = { pendingOrderCount = it }
-                    )
-                    WholesalerTab.Chat -> ChatThreadsScreen(
-                        title = "Queries & Chat",
-                        emptyTitle = "No Active Queries",
-                        emptyMessage = "When stores ask about your designs, their questions will appear here.",
-                        onOpenThread = { thread -> activeChatThread = thread },
-                        onUnreadChange = { unreadChatCount = it }
-                    )
-                }
+        // Tab Content
+        AnimatedContent(
+            targetState = selectedTab,
+            transitionSpec = { fadeIn().togetherWith(fadeOut()) },
+            label = "wholesaler_tab_content",
+            modifier = Modifier.fillMaxSize()
+        ) { tab ->
+            when (tab) {
+                WholesalerTab.Home -> WholesalerHomeScreen(
+                    wholesalerUserId = wholesalerUserId,
+                    wholesaler = wholesaler,
+                    sessionStore = sessionStore,
+                    creditStore = creditStore,
+                    onUploadClick = { selectedTab = WholesalerTab.Catalog },
+                    onChamakClick = { selectedTab = WholesalerTab.Chamak },
+                    onOrdersClick = { selectedTab = WholesalerTab.Orders },
+                    onChatClick = { selectedTab = WholesalerTab.Chat },
+                    onCatalogueClick = { selectedTab = WholesalerTab.Catalog },
+                    onInviteClick = { showInviteSheet = true },
+                    onOffersClick = { showOffersList = true },
+                    onReportClick = { showReport = true },
+                    onTreasureClick = { showTreasureChest = true },
+                    onProfileClick = { showProfile = true },
+                    onSelectCategory = { cat ->
+                        selectedCatalogueCategory = cat
+                        selectedTab = WholesalerTab.Catalog
+                    },
+                    onOpenUploadHistory = { showUploadHistory = true }
+                )
+                WholesalerTab.Catalog -> WholesalerCatalogScreen(
+                    wholesalerUserId = wholesalerUserId,
+                    wholesaler = wholesaler,
+                    sessionStore = sessionStore,
+                    onOpenUploadHistory = { showUploadHistory = true }
+                )
+                WholesalerTab.Chamak -> ChamakStudioScreen(
+                    wholesalerUserId = wholesalerUserId,
+                    wholesaler = wholesaler,
+                    sessionStore = sessionStore
+                )
+                WholesalerTab.Orders -> WholesalerOrdersScreen(
+                    wholesalerUserId = wholesalerUserId,
+                    wholesaler = wholesaler,
+                    onOrderCountChange = { pendingOrderCount = it }
+                )
+                WholesalerTab.Chat -> ChatThreadsScreen(
+                    title = "Queries & Chat",
+                    emptyTitle = "No Active Queries",
+                    emptyMessage = "When stores ask about your designs, their questions will appear here.",
+                    onOpenThread = { thread -> activeChatThread = thread },
+                    onUnreadChange = { unreadChatCount = it }
+                )
             }
         }
 
-        // Bottom Navigation Bar
-        WholesalerBottomNav(
+        // Top-Right Floating Capsule
+        WholesalerTopCapsule(
+            creditStore = creditStore,
+            onCreditClick = { showTreasureChest = true },
+            onProfileClick = { showProfile = true },
+            onInviteClick = { showInviteSheet = true },
+            onOffersClick = { showOffersList = true },
+            onLogoutClick = { showLogoutConfirm = true },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(top = 8.dp, end = 16.dp)
+        )
+
+        // Bottom Floating Glass Tab Bar
+        WholesalerTabBar(
             selectedTab = selectedTab,
             pendingOrderCount = pendingOrderCount,
             unreadChatCount = unreadChatCount,
-            onTabSelected = { selectedTab = it }
+            onTabSelected = { selectedTab = it },
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
+
+    // Logout Confirmation Dialog
+    if (showLogoutConfirm) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirm = false },
+            title = {
+                Text(
+                    text = Copy.logoutTitle,
+                    style = manrope(18f, JewelWeight.Bold),
+                    color = Palette.dark
+                )
+            },
+            text = {
+                Text(
+                    text = Copy.logoutBody,
+                    style = manrope(14f, JewelWeight.Regular),
+                    color = Palette.dark
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLogoutConfirm = false
+                        scope.launch { sessionStore.signOut() }
+                    }
+                ) {
+                    Text(
+                        text = Copy.logoutConfirm,
+                        style = manrope(14f, JewelWeight.Bold),
+                        color = Color(0xFFDC2626)
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutConfirm = false }) {
+                    Text(
+                        text = Copy.logoutCancel,
+                        style = manrope(14f, JewelWeight.Medium),
+                        color = Palette.muted
+                    )
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(16.dp)
         )
     }
 
@@ -270,73 +341,236 @@ fun WholesalerShell(
 }
 
 @Composable
-private fun WholesalerBottomNav(
-    selectedTab: WholesalerTab,
-    pendingOrderCount: Int,
-    unreadChatCount: Int,
-    onTabSelected: (WholesalerTab) -> Unit
+fun WholesalerTopCapsule(
+    creditStore: CreditStore,
+    onCreditClick: () -> Unit,
+    onProfileClick: () -> Unit,
+    onInviteClick: () -> Unit,
+    onOffersClick: () -> Unit,
+    onLogoutClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Palette.light)
-            .padding(horizontal = 8.dp, vertical = 8.dp)
-            .navigationBarsPadding(),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        WholesalerTab.entries.forEach { tab ->
-            val badge = when (tab) {
-                WholesalerTab.Orders -> pendingOrderCount
-                WholesalerTab.Chat -> unreadChatCount
-                else -> 0
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .shadow(
+                    elevation = 3.dp,
+                    shape = CircleShape,
+                    ambientColor = Color(0x1F000000),
+                    spotColor = Color(0x1F000000)
+                )
+                .clip(CircleShape)
+                .background(Color.White)
+                .border(0.5.dp, Color(0xFFE5E5EA), CircleShape)
+                .padding(horizontal = 4.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            CreditBalancePill(
+                creditStore = creditStore,
+                onClick = onCreditClick
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable { menuExpanded = true },
+                contentAlignment = Alignment.Center
+            ) {
+                SvgImage(
+                    name = "JewelLogo",
+                    contentDescription = "More options",
+                    modifier = Modifier.size(26.dp)
+                )
             }
-            NavTabItem(
-                tab = tab,
-                isSelected = selectedTab == tab,
-                badge = badge,
-                onClick = { onTabSelected(tab) }
+            Spacer(modifier = Modifier.width(2.dp))
+        }
+
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false },
+            modifier = Modifier
+                .background(Color.White, RoundedCornerShape(14.dp))
+                .border(0.5.dp, Color(0xFFE5E5EA), RoundedCornerShape(14.dp))
+        ) {
+            DropdownMenuItem(
+                text = { Text("Profile", style = manrope(14f, JewelWeight.Medium), color = Palette.dark) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.AccountCircle,
+                        contentDescription = null,
+                        tint = Palette.dark,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                onClick = {
+                    menuExpanded = false
+                    onProfileClick()
+                }
+            )
+            DropdownMenuItem(
+                text = { Text(Copy.WholesalerTab.inviteRetailer, style = manrope(14f, JewelWeight.Medium), color = Palette.dark) },
+                leadingIcon = {
+                    SvgImage(
+                        name = "NavAddRetailer",
+                        contentDescription = null,
+                        colorFilter = ColorFilter.tint(Palette.dark),
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                onClick = {
+                    menuExpanded = false
+                    onInviteClick()
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("Manufacturing Offers", style = manrope(14f, JewelWeight.Medium), color = Palette.dark) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Build,
+                        contentDescription = null,
+                        tint = Palette.dark,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                onClick = {
+                    menuExpanded = false
+                    onOffersClick()
+                }
+            )
+            HorizontalDivider(
+                color = Color(0xFFE5E5EA),
+                thickness = 0.5.dp,
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+            DropdownMenuItem(
+                text = { Text(Copy.logoutConfirm, style = manrope(14f, JewelWeight.Medium), color = Color(0xFFDC2626)) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
+                        contentDescription = null,
+                        tint = Color(0xFFDC2626),
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                onClick = {
+                    menuExpanded = false
+                    onLogoutClick()
+                }
             )
         }
     }
 }
 
 @Composable
-private fun NavTabItem(
+fun WholesalerTabBar(
+    selectedTab: WholesalerTab,
+    pendingOrderCount: Int,
+    unreadChatCount: Int,
+    onTabSelected: (WholesalerTab) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .navigationBarsPadding()
+            .padding(bottom = 8.dp)
+            .height(64.dp)
+            .shadow(
+                elevation = 12.dp,
+                shape = CircleShape,
+                ambientColor = Color(0x28000000),
+                spotColor = Color(0x28000000)
+            )
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.94f))
+            .border(0.5.dp, Color(0xFFE5E5EA), CircleShape)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        WholesalerTab.entries.forEach { tab ->
+            val isSelected = selectedTab == tab
+            val badge = when (tab) {
+                WholesalerTab.Orders -> pendingOrderCount
+                WholesalerTab.Chat -> unreadChatCount
+                else -> 0
+            }
+            WholesalerTabItem(
+                tab = tab,
+                isSelected = isSelected,
+                badge = badge,
+                onClick = { onTabSelected(tab) },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            )
+        }
+    }
+}
+
+@Composable
+private fun WholesalerTabItem(
     tab: WholesalerTab,
     isSelected: Boolean,
     badge: Int,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val color = if (isSelected) Palette.goldPrimary else Palette.muted
+    val contentColor = if (isSelected) Palette.dark else Color(0xFF1E2124).copy(alpha = 0.70f)
+    val fontWeight = if (isSelected) JewelWeight.Semibold else JewelWeight.Medium
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 4.dp)
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .then(
+                if (isSelected) Modifier.background(Color(0xFFEFEFEF)) else Modifier
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
-        BadgedBox(
-            badge = {
-                if (badge > 0) {
-                    Badge {
-                        Text(text = if (badge > 99) "99+" else badge.toString(), fontSize = 9.sp)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        ) {
+            BadgedBox(
+                badge = {
+                    if (badge > 0) {
+                        Badge(
+                            containerColor = Color(0xFFDC2626),
+                            contentColor = Color.White
+                        ) {
+                            Text(if (badge > 99) "99+" else badge.toString(), fontSize = 9.sp)
+                        }
                     }
                 }
+            ) {
+                if (tab.svgName != null) {
+                    SvgImage(
+                        name = tab.svgName,
+                        contentDescription = tab.label,
+                        colorFilter = ColorFilter.tint(contentColor),
+                        modifier = Modifier.size(22.dp)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.AutoAwesome,
+                        contentDescription = tab.label,
+                        tint = contentColor,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
-        ) {
-            Icon(
-                imageVector = tab.icon,
-                contentDescription = tab.label,
-                tint = color,
-                modifier = Modifier.size(22.dp)
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = tab.label,
+                style = manrope(11f, fontWeight),
+                color = contentColor
             )
         }
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = tab.label,
-            fontSize = 10.sp,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            color = color
-        )
     }
 }
