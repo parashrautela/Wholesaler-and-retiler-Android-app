@@ -98,6 +98,10 @@ class Prefs(val sharedPreferences: SharedPreferences) {
         get() = sharedPreferences.getString(KEY_EMPLOYEE_STYLE, null)
         set(value) = edit { if (value != null) putString(KEY_EMPLOYEE_STYLE, value) else remove(KEY_EMPLOYEE_STYLE) }
 
+    var employeeSarvam: Boolean
+        get() = sharedPreferences.getBoolean(KEY_EMPLOYEE_SARVAM, false)
+        set(value) = edit { putBoolean(KEY_EMPLOYEE_SARVAM, value) }
+
     val employeeSarvamLegacy: Boolean
         get() = sharedPreferences.getBoolean(KEY_EMPLOYEE_SARVAM, false)
 
@@ -108,6 +112,15 @@ class Prefs(val sharedPreferences: SharedPreferences) {
 
     fun setEmployeeOrdersLastChecked(seedId: String, timestamp: Long) {
         edit { putLong(keyEmployeeOrdersLastChecked(seedId), timestamp) }
+    }
+
+    fun getEmployeeOrdersLastCheckedString(seedId: String): String? {
+        val k = keyEmployeeOrdersLastChecked(seedId)
+        return sharedPreferences.getString(k, null)
+    }
+
+    fun setEmployeeOrdersLastCheckedString(seedId: String, isoTimestamp: String) {
+        edit { putString(keyEmployeeOrdersLastChecked(seedId), isoTimestamp) }
     }
 
     fun getInviteSkipGuide(userId: String): Boolean {

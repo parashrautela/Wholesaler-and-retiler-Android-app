@@ -33,6 +33,9 @@ data class StaffMember(
             return email.substring(0, at)
         }
 
+    val authUsername: String? get() = username
+    val isLoginAccount: Boolean get() = !signsInWithGoogle
+
     val signInLabel: String
         get() = if (signsInWithGoogle) (inviteEmail ?: email) else email
 }

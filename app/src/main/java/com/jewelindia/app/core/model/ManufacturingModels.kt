@@ -62,12 +62,22 @@ data class ManufacturingQuote(
     @SerialName("metal_estimate_amount") val metalEstimateAmount: Double? = null,
     @SerialName("gemstone_estimate_amount") val gemstoneEstimateAmount: Double? = null,
     @SerialName("other_estimate_amount") val otherEstimateAmount: Double? = null,
+    @SerialName("total_quote_amount") val totalAmount: Double? = null,
     val currency: String = "INR",
     @SerialName("proposed_delivery_date") val proposedDeliveryDate: String,
     val comments: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
     val wholesaler: WholesalerBusinessSummary? = null
 ) {
+    val totalQuoteAmount: Double?
+        get() = totalAmount ?: run {
+            val sum = (metalEstimateAmount ?: 0.0) +
+                (gemstoneEstimateAmount ?: 0.0) +
+                (otherEstimateAmount ?: 0.0) +
+                (if (makingChargeMode == "fixed_total" || makingChargeMode == "total_quote") makingChargeAmount else 0.0)
+            if (sum > 0.0) sum else makingChargeAmount
+        }
+
     val formattedMakingCharge: String
         get() = when (makingChargeMode) {
             "fixed_total", "total_quote" -> "₹${makingChargeAmount.toLong()}"

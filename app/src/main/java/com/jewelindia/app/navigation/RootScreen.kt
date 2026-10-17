@@ -165,11 +165,7 @@ fun RootScreen(
                         com.jewelindia.app.feature.onboarding.OnboardSubmittedScreen(sessionStore = sessionStore)
                     }
                     is AppDestination.WholesalerDashboard -> {
-                        PhaseGatePlaceholder(
-                            title = "Wholesaler Dashboard",
-                            note = "Wholesaler catalogue and portal will be available in Phase 5.",
-                            onSignOut = { scope.launch { sessionStore.signOut() } }
-                        )
+                        com.jewelindia.app.feature.wholesaler.WholesalerShell(sessionStore = sessionStore)
                     }
                     is AppDestination.RetailerOnboarding -> {
                         com.jewelindia.app.feature.retailer_onboarding.RetailerOnboardCoordinator(
@@ -181,18 +177,10 @@ fun RootScreen(
                         com.jewelindia.app.feature.retailer_onboarding.RetailerOnboardSubmittedScreen(sessionStore = sessionStore)
                     }
                     is AppDestination.RetailerDashboard -> {
-                        PhaseGatePlaceholder(
-                            title = "Retailer Dashboard",
-                            note = "Retailer catalogue and store will be available in Phase 6.",
-                            onSignOut = { scope.launch { sessionStore.signOut() } }
-                        )
+                        RetailerShell(sessionStore = sessionStore)
                     }
                     is AppDestination.EmployeeDashboard -> {
-                        PhaseGatePlaceholder(
-                            title = "Employee Dashboard",
-                            note = "Employee operations dashboard will be available in Phase 8.",
-                            onSignOut = { scope.launch { sessionStore.signOut() } }
-                        )
+                        EmployeeShell(sessionStore = sessionStore)
                     }
                     is AppDestination.UpdatePassword -> {
                         UpdatePasswordScreen(

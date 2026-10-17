@@ -233,10 +233,30 @@ object Typography {
     fun satoshi(size: Float, weight: JewelWeight = JewelWeight.Regular): TextStyle =
         com.jewelindia.app.design.satoshi(size, weight)
 
+    fun satoshi(size: TextUnit, weight: FontWeight): TextStyle =
+        com.jewelindia.app.design.satoshi(size.value, weight.toJewelWeight())
+
     fun santoshi(size: TextUnit, weight: JewelWeight = JewelWeight.Regular): TextStyle =
         com.jewelindia.app.design.satoshi(size.value, weight)
 
     fun santoshi(size: Float, weight: JewelWeight = JewelWeight.Regular): TextStyle =
         com.jewelindia.app.design.satoshi(size, weight)
+
+    fun santoshi(size: TextUnit, weight: FontWeight): TextStyle =
+        com.jewelindia.app.design.satoshi(size.value, weight.toJewelWeight())
+
+    fun cirka(size: TextUnit, weight: FontWeight): TextStyle =
+        com.jewelindia.app.design.cirka(size.value, weight.toJewelWeight())
+}
+
+fun FontWeight.toJewelWeight(): JewelWeight = when (this) {
+    FontWeight.ExtraLight, FontWeight.Thin -> JewelWeight.Thin
+    FontWeight.Light -> JewelWeight.Light
+    FontWeight.Normal -> JewelWeight.Regular
+    FontWeight.Medium -> JewelWeight.Medium
+    FontWeight.SemiBold -> JewelWeight.Semibold
+    FontWeight.Bold -> JewelWeight.Bold
+    FontWeight.ExtraBold, FontWeight.Black -> JewelWeight.Black
+    else -> JewelWeight.Regular
 }
 

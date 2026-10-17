@@ -49,7 +49,8 @@ data class Product(
     @SerialName("ai_processing_run_id") val aiProcessingRunId: String? = null,
     @SerialName("ai_verified_output_urls") val aiVerifiedOutputURLs: List<String> = emptyList(),
     @SerialName("ai_completed_at") val aiCompletedAt: String? = null,
-    @SerialName("created_at") val createdAt: String? = null
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("is_shortlisted") val isShortlisted: Boolean? = null
 ) {
     /**
      * Whether this product is eligible for publication to retailers / catalogue.
@@ -117,4 +118,24 @@ data class Product(
         val variant = imageVariants[original]?.get(size.value)
         return if (!variant.isNullOrBlank()) variant else original
     }
+
+    val primaryImage: String? get() = displaySource
+    val displayTitle: String get() = title ?: jewelleryType ?: category ?: "Fine Jewellery"
+    val purity: String? get() = metalPurity
+    val weightGrams: Double? get() = netWeight
+    val grossWeightGrams: Double? get() = grossWeight
+    val type: String? get() = jewelleryType ?: category
+    val styleAesthetic: String? get() = style
+    val inStock: Boolean get() = stockAvailable == true
+    val allImages: List<String>
+        get() {
+            val list = mutableListOf<String>()
+            showcaseImageURLs.forEach { if (it.isNotBlank() && !list.contains(it)) list.add(it) }
+            generatedImageURLs.forEach { if (it.isNotBlank() && !list.contains(it)) list.add(it) }
+            processedImageURL?.let { if (it.isNotBlank() && !list.contains(it)) list.add(it) }
+            imageURL?.let { if (it.isNotBlank() && !list.contains(it)) list.add(it) }
+            customImageURLs.forEach { if (it.isNotBlank() && !list.contains(it)) list.add(it) }
+            rawImageURL?.let { if (it.isNotBlank() && !list.contains(it)) list.add(it) }
+            return list
+        }
 }

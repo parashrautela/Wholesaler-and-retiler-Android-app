@@ -2,11 +2,16 @@
 package com.jewelindia.app
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import com.jewelindia.app.core.security.LocalScreenSecurity
+import com.jewelindia.app.core.security.ScreenSecurity
 import com.jewelindia.app.core.session.SessionStore
 import com.jewelindia.app.data.supabase.JewelSupabase
 import com.jewelindia.app.design.JewelTheme
@@ -19,11 +24,34 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // §16c.1 App switcher snapshot protection
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            setRecentsScreenshotEnabled(false)
+        } else {
+            // On older APIs, permanently set FLAG_SECURE
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+
         val graph = (application as JewelApplication).graph
         handleIncomingIntent(intent, graph)
 
         setContent {
-            CompositionLocalProvider(LocalAppGraph provides graph) {
+            val screenSecurity = remember {
+                ScreenSecurity { isSecure ->
+                    if (isSecure) {
+                        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    } else {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                        }
+                    }
+                }
+            }
+
+            CompositionLocalProvider(
+                LocalAppGraph provides graph,
+                LocalScreenSecurity provides screenSecurity
+            ) {
                 JewelTheme {
                     RootScreen(
                         sessionStore = graph.sessionStore,

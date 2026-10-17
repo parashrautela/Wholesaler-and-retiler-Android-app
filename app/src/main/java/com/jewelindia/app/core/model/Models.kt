@@ -54,6 +54,16 @@ data class RetailerGate(
 )
 
 @Serializable
+data class Retailer(
+    val id: String? = null,
+    @SerialName("user_id") val userId: String? = null,
+    @SerialName("business_name") val businessName: String? = null,
+    val city: String? = null,
+    val state: String? = null,
+    val phone: String? = null
+)
+
+@Serializable
 data class EmployeeGate(
     val status: String? = null
 )

@@ -40,6 +40,19 @@ object RetailerApi {
         return row.id
     }
 
+    suspend fun fetchRetailerProfile(userId: String): com.jewelindia.app.core.model.Retailer? {
+        return try {
+            db.from("retailers").select {
+                filter {
+                    eq("user_id", userId)
+                }
+                limit(1)
+            }.decodeSingleOrNull<com.jewelindia.app.core.model.Retailer>()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     suspend fun fetchDesigns(): List<RetailerDesign> {
         return db.from("retailer_designs").select {
             filter {

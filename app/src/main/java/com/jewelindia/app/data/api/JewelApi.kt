@@ -234,7 +234,9 @@ data class CreateOrderResponse(
 
 @Serializable
 data class RetailerOrdersResponse(
-    val orders: List<com.jewelindia.app.core.model.Order> = emptyList()
+    val orders: List<com.jewelindia.app.core.model.Order> = emptyList(),
+    val products: Map<String, Product> = emptyMap(),
+    val suppliers: Map<String, com.jewelindia.app.core.model.Wholesaler> = emptyMap()
 )
 
 @Serializable

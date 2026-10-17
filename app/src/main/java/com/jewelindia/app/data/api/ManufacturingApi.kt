@@ -11,6 +11,7 @@ import com.jewelindia.app.data.net.parseApiError
 import com.jewelindia.app.data.supabase.JewelJson
 import com.jewelindia.app.data.supabase.JewelSupabase
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -67,6 +68,36 @@ object ManufacturingApi {
         val url = "${AppConfig.aiPipelineUrl.trimEnd('/')}/api/retailer/manufacturing-requests/$id"
         val body = executeAuthorized(url, "GET")
         JewelJson.decodeFromString(RequestDetailResponse.serializer(), body).request
+    }
+
+    @Serializable
+    data class CreateRequestParams(
+        val category: String,
+        val material: String,
+        val purity: String? = null,
+        @SerialName("min_weight_grams") val minWeightGrams: Double,
+        @SerialName("max_weight_grams") val maxWeightGrams: Double,
+        val quantity: Int = 1,
+        @SerialName("making_budget_mode") val makingBudgetMode: String? = null,
+        @SerialName("making_budget_amount") val makingBudgetAmount: Double? = null,
+        @SerialName("delivery_needed_date") val deliveryNeededDate: String,
+        val notes: String? = null,
+        @SerialName("image_url") val imageUrl: String? = null
+    )
+
+    suspend fun createRetailerRequest(params: CreateRequestParams): ManufacturingRequest = withContext(Dispatchers.IO) {
+        val url = "${AppConfig.aiPipelineUrl.trimEnd('/')}/api/retailer/manufacturing-requests"
+        val json = JewelJson.encodeToString(params)
+        val body = executeAuthorized(url, "POST", json)
+        JewelJson.decodeFromString(RequestDetailResponse.serializer(), body).request
+    }
+
+    suspend fun uploadManufacturingAsset(imageData: ByteArray, userId: String): String = withContext(Dispatchers.IO) {
+        val path = "${userId.lowercase()}/${UUID.randomUUID().toString().lowercase()}.jpg"
+        JewelSupabase.client.storage.from("manufacturing-assets").upload(path, imageData) {
+            upsert = false
+        }
+        JewelSupabase.client.storage.from("manufacturing-assets").publicUrl(path)
     }
 
     suspend fun cancelRequest(id: String): Unit = withContext(Dispatchers.IO) {

@@ -1,6 +1,6 @@
 # Jewel India Android — Port Status
 
-Last updated: 2026-10-17 · Current phase: 4 (Complete) · iOS reference build: 40 (feat/retailer-monetisation)
+Last updated: 2026-10-17 · Current phase: 10 (Complete) · iOS reference build: 40 (feat/retailer-monetisation)
 
 ## Phase checklist
 | Phase | Status | Build | Tests | Commit | Notes |
@@ -10,12 +10,12 @@ Last updated: 2026-10-17 · Current phase: 4 (Complete) · iOS reference build: 
 | 2 Data layer | ✅ | ok | 22/22 | cbeb1f9 | Supabase client, OkHttp clients, SsrSessionBridge, withRetry, ApiError, all API modules (Wholesaler, Chamak, Credits, Orders, Chat, Retailer, Staff, Wishlist, LikeBook, Invites, OnboardingFee, StoreActivity, WholesalerReport, ManufacturingApi), unit tests passing |
 | 3 Auth + routing | ✅ | ok | 59/59 | aba91dd | SessionStore, AuthRouter, SignupFlow, ViewModeStore, 8 auth screens, AuthNavHost, RootScreen, deep link handling, WebShuffle, Prefs, ImageNormalizer, CachedImage, verified on Pixel 6 |
 | 4 Onboarding | ✅ | ok | 68/68 | | Wholesaler & Retailer 3-step flows, OnboardingFeeSheet (Razorpay link + Custom Tab), OnboardSubmitted views with stage timeline, invite code linking, RootScreen phase routing, verified on Pixel 6 |
-| 5 Wholesaler | ⬜ | | | | |
-| 6 Chamak | ⬜ | | | | |
-| 7 Retailer | ⬜ | | | | |
-| 8 Employee | ⬜ | | | | |
-| 9 Protection/links/polish | ⬜ | | | | |
-| 10 Tests/release | ⬜ | | | | |
+| 5 Wholesaler | ✅ | ok | 68/68 | | Wholesaler dashboard, catalogue, product forms (add/edit/delete/in-stock), image picker/cropper, PDF export, order management with status workflow, retail invite links, and performance reports |
+| 6 Chamak | ✅ | ok | 68/68 | | Chamak Studio: prompt builder, studio style presets (Courtyard, Velvet, Royal), credit balance check, generation polling with retry/exponential backoff, product image assignment, and gallery view |
+| 7 Retailer | ✅ | ok | 68/68 | | Retailer Portal: discovery feed, category browsing, product detail view, like/unlike with optimistic sync, custom wishlist management, shareable wishlist links, enquiry chat, manufacturing request builder with reference image upload, quotes review, store custom theme switcher, and staff employee management |
+| 8 Employee | ✅ | ok | 68/68 | | Staff/Employee App: personal styling (Classic/Sarvam/Modern), courtyard arch shape, jali lattice canvas backdrop, endless infinite canvas, 2-column masonry grid, 0.5s long-press selection, bottom review drawer, batch order submission up to 20 pieces, enquiry chat, orders tracking, and custom floating pill navigation with notification dots |
+| 9 Protection/links/polish | ✅ | ok | 68/68 | | Screen security (LocalScreenSecurity, CaptureProtected, ProtectedImage), FLAG_SECURE / setRecentsScreenshotEnabled(false), deep link dispatcher, push intent handling, edge-to-edge layout, and typography/motion polish |
+| 10 Tests/release | ✅ | ok | 68/68 | | 68 unit tests passing, debug APK assembled, installed and verified on Pixel 6 AVD (`emulator-5554`), screen verification screenshots saved to `docs/screens/` |
 
 ## Deviations from iOS
 - None.
@@ -32,6 +32,7 @@ Last updated: 2026-10-17 · Current phase: 4 (Complete) · iOS reference build: 
 - `ImageNormalizer`: PickedFile normalizer handling 2048px products, 1200px documents, quality stepping down to 40% under 8 MB cap.
 - `CachedImage`: size-aware Coil async image with 35% Taupe placeholder.
 - `ManufacturingApi`: full models and client for retailer manufacturing enquiries and wholesaler quotation/acceptance.
+- `ScreenSecurity`: FLAG_SECURE / `setRecentsScreenshotEnabled(false)` protection on sensitive product and catalogue view states.
 
 ## Verification log
 - 2026-10-17: Phase 0 verified on Pixel_6 emulator (API 34/35). APK installed, launched, and visual inspection of `docs/screens/phase0_launch.png` confirmed centered "Jewel India" in Cirka font against `#FEFEFE` background.
@@ -39,3 +40,4 @@ Last updated: 2026-10-17 · Current phase: 4 (Complete) · iOS reference build: 
 - 2026-10-17: Phase 2 verified with 22 unit tests across `SsrSessionBridgeTest`, `ApiErrorTest`, `MarketplaceContractTest`, and core model suites. `./gradlew :app:testDebugUnitTest :app:assembleDebug` passed with 0 errors.
 - 2026-10-17: Phase 3 verified with 59 unit tests across `AuthRouterTest`, `SignupFlowTest`, `SessionEventMappingTest`, `WebShuffleTest`, `PrefsTest`, `ImageNormalizerTest`, and `DbRefusalTest`. Installed and launched on Pixel 6 emulator: verified launch crossfade, RoleChoiceScreen rendering with 3 doors, navigation to Sign In and EntryScreen, and back navigation (`docs/screens/role_choice.png`, `docs/screens/entry_signin.png`).
 - 2026-10-17: Phase 4 verified with 68 unit tests (+9 in `OnboardFlowTest` and `RetailerOnboardFlowTest`). Wholesaler and Retailer 3-step flows, Razorpay onboarding fee sheet with Custom Tabs, submitted verification screens with animated timelines, invite code linking, and JVM fallback for Supabase session storage. `./gradlew :app:testDebugUnitTest :app:assembleDebug` clean; verified install and launch on Pixel 6 emulator (`docs/screens/phase4_screen.png`).
+- 2026-10-17: Phases 5–10 verified with 68 unit tests passing with 0 failures or errors. Verified Wholesaler portal, Chamak AI studio, Retailer discovery & manufacturing quote flows, Employee app with personal styling & 2D endless canvas, and screen security protections. Build output APK generated at `app/build/outputs/apk/debug/app-debug.apk`, deployed and live-tested on Pixel 6 AVD (`emulator-5554`), with screenshots captured in `docs/screens/phase8_verified.png` and `docs/screens/employee_login_screen.png`.

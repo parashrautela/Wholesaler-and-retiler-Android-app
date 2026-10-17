@@ -67,8 +67,11 @@ object Palette {
     val white: Color get() = light
     val goldPrimary: Color get() = Color(0xFFC5A880)
     val gold: Color get() = Color(0xFFC5A880)
+    val goldLight: Color get() = Color(0xFFD4AF37)
     val accentGreen: Color get() = statusVerified
     val accentRed: Color get() = statusRejected
     val borderSubtle: Color get() = border
+    val surfaceBorder: Color get() = border
+    val textTertiary: Color get() = muted.copy(alpha = 0.7f)
 }
 
