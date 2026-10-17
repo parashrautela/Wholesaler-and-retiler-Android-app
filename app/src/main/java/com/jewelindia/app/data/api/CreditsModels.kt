@@ -3,6 +3,13 @@ package com.jewelindia.app.data.api
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.time.Duration
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
@@ -11,6 +18,7 @@ import kotlin.math.roundToInt
 @Serializable
 data class CreditWallet(
     val ok: Boolean = false,
+    @SerialName("error") val errorCode: String? = null,
     val available: Int = 0,
     @SerialName("lifetime_granted") val lifetimeGranted: Int = 0,
     @SerialName("lifetime_spent") val lifetimeSpent: Int = 0,
@@ -21,12 +29,90 @@ data class CreditWallet(
     @SerialName("low_balance_threshold") val lowBalanceThreshold: Int = 20,
     @SerialName("recovery_owed") val recoveryOwed: Int = 0,
     val mode: String? = null,
+    @SerialName("policy_type") val policyType: String? = null,
+    @SerialName("next_allowance") val nextAllowance: Int? = null,
+    @SerialName("is_paused") val isPaused: Boolean = false,
+    @SerialName("paid_available") val paidAvailable: Int? = null,
+    @SerialName("gift_available") val giftAvailable: Int? = null,
+    @SerialName("daily_available") val dailyAvailable: Int? = null,
+    @SerialName("bonus_available") val bonusAvailable: Int? = null,
     @SerialName("daily_allowance") val dailyAllowance: Int? = null,
     @SerialName("resets_at") val resetsAt: String? = null,
     @SerialName("server_now") val serverNow: String? = null,
     @SerialName("shared_business_wallet") val sharedBusinessWallet: Boolean = false,
     @SerialName("legacy_preserved") val legacyPreserved: Int = 0
 )
+
+// MARK: - Daily Credit Schedule
+
+data class DailyCreditSchedule(
+    val allowance: Int,
+    val resetsAt: Instant,
+    val secondsAtReceipt: Double,
+    val receivedAtNanos: Long = System.nanoTime()
+) {
+    companion object {
+        operator fun invoke(wallet: CreditWallet, receivedAtNanos: Long = System.nanoTime()): DailyCreditSchedule? =
+            create(wallet, receivedAtNanos)
+
+        fun create(wallet: CreditWallet, receivedAtNanos: Long = System.nanoTime()): DailyCreditSchedule? {
+            if (!wallet.ok || wallet.mode != "daily" || wallet.isPaused) return null
+            val currentAllowance = wallet.dailyAllowance ?: return null
+            if (currentAllowance <= 0) return null
+            val resetsAtRaw = wallet.resetsAt ?: return null
+            val serverNowRaw = wallet.serverNow ?: return null
+            val reset = parseInstant(resetsAtRaw) ?: return null
+            val serverNow = parseInstant(serverNowRaw) ?: return null
+            val interval = Duration.between(serverNow, reset).toNanos().toDouble() / 1_000_000_000.0
+            if (interval < 0.0 || interval > 86401.0) return null
+            val allowance = wallet.nextAllowance ?: currentAllowance
+            return DailyCreditSchedule(
+                allowance = allowance,
+                resetsAt = reset,
+                secondsAtReceipt = interval,
+                receivedAtNanos = receivedAtNanos
+            )
+        }
+
+        private fun parseInstant(raw: String): Instant? {
+            return try {
+                OffsetDateTime.parse(raw).toInstant()
+            } catch (_: Exception) {
+                try {
+                    Instant.parse(raw)
+                } catch (_: Exception) {
+                    null
+                }
+            }
+        }
+    }
+
+    fun remainingSeconds(advancedBySeconds: Double = 0.0): Int {
+        val nonNegativeElapsed = maxOf(0.0, advancedBySeconds)
+        return ceil(maxOf(0.0, secondsAtReceipt - nonNegativeElapsed)).toInt()
+    }
+
+    fun remainingSecondsAtNanos(nowNanos: Long): Int {
+        val elapsed = (nowNanos - receivedAtNanos).toDouble() / 1_000_000_000.0
+        return remainingSeconds(elapsed)
+    }
+
+    fun countdown(advancedBySeconds: Double = 0.0): String {
+        val remaining = remainingSeconds(advancedBySeconds)
+        val hours = remaining / 3600
+        val minutes = (remaining % 3600) / 60
+        val seconds = remaining % 60
+        return String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+    }
+
+    val resetDescription: String
+        get() {
+            val kolkata = ZoneId.of("Asia/Kolkata")
+            val zdt = resetsAt.atZone(kolkata)
+            val formatter = DateTimeFormatter.ofPattern("EEE, d MMM 'at' h:mm a 'IST'", Locale.ENGLISH)
+            return zdt.format(formatter)
+        }
+}
 
 // MARK: - Credit Price (Rate Card)
 
@@ -56,28 +142,34 @@ data class CreditLedgerEntry(
     @SerialName("created_at") val createdAt: String
 ) {
     val displayTitle: String
-        get() = when (kind) {
-            "debit" -> when (featureKey) {
-                "chamak.generate" -> "Chamak Combine"
-                "chamak.generate_custom" -> "Chamak Combine (Custom Photos)"
-                "chamak.set_creation" -> "Set Creation"
-                "chamak.set_creation_custom" -> "Set Creation (Custom Photos)"
-                "chamak.reroll" -> "Try Again"
-                "product.upload" -> "Product Upload"
-                "product.reprocess" -> "Reprocess Product"
-                else -> featureKey?.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() } ?: "Credit Spend"
+        get() {
+            if (referenceType == "invitation_funding") return if (kind == "refund") "Invitation gift refund" else "Invitation gift reserved"
+            if (referenceType == "invitation_gift") return "Retailer invitation gift"
+            if (referenceType == "purchased_carryover") return "Purchased credits preserved"
+            if (referenceType == "referral_bonus") return "Verified referral reward"
+            return when (kind) {
+                "debit" -> when (featureKey) {
+                    "chamak.generate" -> "Chamak Combine"
+                    "chamak.generate_custom" -> "Chamak Combine (Custom Photos)"
+                    "chamak.set_creation" -> "Set Creation"
+                    "chamak.set_creation_custom" -> "Set Creation (Custom Photos)"
+                    "chamak.reroll" -> "Try Again"
+                    "product.upload" -> "Product Upload"
+                    "product.reprocess" -> "Reprocess Product"
+                    else -> featureKey?.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() } ?: "Credit Spend"
+                }
+                "grant" -> when (referenceType) {
+                    "purchase" -> "Credits purchased"
+                    "daily" -> "Daily allowance"
+                    "welcome" -> "Welcome gift"
+                    "chamak_generation" -> "Refunded — generation failed"
+                    else -> "Credits added"
+                }
+                "refund" -> "Refunded — generation failed"
+                "expiry" -> "Credits expired"
+                "adjustment" -> "Adjustment"
+                else -> kind.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
             }
-            "grant" -> when (referenceType) {
-                "purchase" -> "Credits purchased"
-                "daily" -> "Daily allowance"
-                "welcome" -> "Welcome gift"
-                "chamak_generation" -> "Refunded — generation failed"
-                else -> "Credits added"
-            }
-            "refund" -> "Refunded — generation failed"
-            "expiry" -> "Credits expired"
-            "adjustment" -> "Adjustment"
-            else -> kind.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
         }
 }
 

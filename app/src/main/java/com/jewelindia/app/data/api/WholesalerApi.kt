@@ -505,10 +505,11 @@ object WholesalerApi {
         bucket: String,
         path: String,
         data: ByteArray,
-        contentType: String
+        contentType: String,
+        upsert: Boolean = true
     ): String {
         db.storage.from(bucket).upload(path, data) {
-            upsert = true
+            this.upsert = upsert
         }
         return db.storage.from(bucket).publicUrl(path)
     }

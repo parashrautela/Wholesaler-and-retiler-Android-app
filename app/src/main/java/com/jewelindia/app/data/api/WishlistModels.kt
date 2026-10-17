@@ -44,9 +44,30 @@ data class WishlistShare(
     @SerialName("link_path") val linkPath: String? = null
 ) {
     val url: String?
-        get() = linkPath?.let { path ->
+        get() {
+            val path = linkPath ?: return null
+            if (!Regex("""^/share/wishlist#[a-f0-9]{64}${'$'}""").matches(path)) return null
             val base = AppConfig.siteURL.trimEnd('/')
-            val relative = path.trimStart('/')
-            "$base/$relative"
+            return "$base$path"
+        }
+
+    val expiry: java.time.Instant?
+        get() {
+            return try {
+                java.time.OffsetDateTime.parse(expiresAt).toInstant()
+            } catch (_: Exception) {
+                try {
+                    java.time.Instant.parse(expiresAt)
+                } catch (_: Exception) {
+                    null
+                }
+            }
         }
 }
+
+sealed class WishlistShareError(message: String) : Exception(message) {
+    object NotDeployed : WishlistShareError("Wishlist sharing isn't available on the server yet. Please contact support.")
+    object InvalidLink : WishlistShareError("The server didn't return a valid sharing link. Please try again.")
+    object Unavailable : WishlistShareError("Wishlist sharing is temporarily unavailable. Please try again.")
+}
+

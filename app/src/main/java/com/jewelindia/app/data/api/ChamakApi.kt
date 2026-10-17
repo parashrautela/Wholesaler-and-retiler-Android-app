@@ -117,16 +117,22 @@ object ChamakApi {
         slot: Int,
         mode: ChamakMode = ChamakMode.Fusion
     ): String {
+        requireLiveSession(wholesalerId)
         val uid = wholesalerId.lowercase()
         val stamp = System.currentTimeMillis()
         val prefix = if (mode == ChamakMode.SetCreation) "setcreation" else "chamak"
         val path = "raw/$uid/${prefix}_${slot}_$stamp.jpg"
-        return WholesalerApi.upload(
-            bucket = "plant-images",
-            path = path,
-            data = imageData,
-            contentType = "image/jpeg"
-        )
+        return try {
+            WholesalerApi.upload(
+                bucket = "plant-images",
+                path = path,
+                data = imageData,
+                contentType = "image/jpeg",
+                upsert = false
+            )
+        } catch (e: Exception) {
+            throw ChamakException("Failed to upload source image $slot: ${e.message}")
+        }
     }
 
     // MARK: - Stage 1: Create & Analyze

@@ -77,10 +77,56 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
 @Serializable
+data class ImageSearchMatch(
+    val id: String,
+    val similarity: Double,
+    val decision: String? = null,
+    @SerialName("jev_probability") val jevProbability: Double? = null
+)
+
+@Serializable
+data class ImageSearchResult(
+    val matches: List<ImageSearchMatch> = emptyList(),
+    val checked: Int = 0,
+    val total: Int = 0,
+    val skipped: Int = 0,
+    @SerialName("decision_source") val decisionSource: String? = null
+) {
+    fun filterMatches(allowedIDs: Set<String>? = null): List<ImageSearchMatch> {
+        return matches.filter { match ->
+            if (allowedIDs != null && !allowedIDs.contains(match.id)) return@filter false
+            if (!match.similarity.isFinite()) return@filter false
+            if (decisionSource == "jev") {
+                if (match.decision != "similar") return@filter false
+                val prob = match.jevProbability ?: return@filter false
+                prob.isFinite() && prob in 0.0..1.0
+            } else {
+                match.similarity >= 0.90
+            }
+        }.take(20)
+    }
+}
+
+sealed class ImageSearchFailure(val messageText: String) : Exception(messageText) {
+    object InvalidImage : ImageSearchFailure("Choose a readable photo of the jewellery.")
+    object TooLarge : ImageSearchFailure("Choose a photo smaller than 10 MB.")
+    class Message(msg: String) : ImageSearchFailure(msg)
+
+    companion object {
+        const val MAXIMUM_BYTES = 10 * 1024 * 1024
+    }
+}
+
+@Serializable
 data class ImageSearchResponse(
     @SerialName("product_ids") val productIds: List<String> = emptyList(),
     val ids: List<String> = emptyList(),
-    val results: List<ResultItem> = emptyList()
+    val results: List<ResultItem> = emptyList(),
+    val matches: List<ImageSearchMatch> = emptyList(),
+    val checked: Int = 0,
+    val total: Int = 0,
+    val skipped: Int = 0,
+    @SerialName("decision_source") val decisionSource: String? = null
 ) {
     @Serializable
     data class ResultItem(
@@ -90,22 +136,71 @@ data class ImageSearchResponse(
     )
 
     val matchedIds: List<String>
-        get() = (productIds + ids + results.mapNotNull { it.productId ?: it.id }).distinct()
+        get() = (productIds + ids + results.mapNotNull { it.productId ?: it.id } + matches.map { it.id }).distinct()
 }
 
 object CatalogueImageSearchApi {
+    fun buildSearchBody(photoBytes: ByteArray, category: String): MultipartBody {
+        return MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("jewellery_type", category)
+            .addFormDataPart(
+                "photo",
+                "reference.jpg",
+                photoBytes.toRequestBody("image/jpeg".toMediaType())
+            )
+            .build()
+    }
+
+    suspend fun search(
+        photoBytes: ByteArray,
+        category: String,
+        allowedIDs: Set<String>? = null
+    ): ImageSearchResult = withContext(Dispatchers.IO) {
+        if (category.isBlank()) {
+            throw ImageSearchFailure.Message("Select a jewellery category.")
+        }
+        val token = AuthToken.fresh(JewelSupabase.client)
+            ?: throw ImageSearchFailure.Message("Your session isn't active on this device. Please sign in again.")
+        val url = "${AppConfig.aiPipelineUrl.trimEnd('/')}/api/retailer/image-search"
+
+        val body = buildSearchBody(photoBytes, category)
+
+        val request = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer $token")
+            .post(body)
+            .build()
+
+        HttpClients.pipeline.newCall(request).execute().use { response ->
+            val responseText = response.body.string()
+            if (!response.isSuccessful) {
+                if (response.code == 404) {
+                    throw ImageSearchFailure.Message("The image search service needs an update. Please try again after the service is deployed.")
+                }
+                val detail = try {
+                    val jsonElem = kotlinx.serialization.json.Json.parseToJsonElement(responseText)
+                    jsonElem.let { (it as? kotlinx.serialization.json.JsonObject)?.get("detail")?.toString()?.trim('"') }
+                } catch (_: Exception) { null }
+                throw ImageSearchFailure.Message(detail ?: "Image search is temporarily unavailable. Please try again.")
+            }
+
+            val decoded = try {
+                JewelJson.decodeFromString<ImageSearchResult>(responseText)
+            } catch (e: Exception) {
+                throw ImageSearchFailure.Message("Failed to parse image search response: ${e.message}")
+            }
+
+            val filtered = decoded.filterMatches(allowedIDs)
+            decoded.copy(matches = filtered)
+        }
+    }
+
     suspend fun searchByImage(jpegBytes: ByteArray): List<Product> = withContext(Dispatchers.IO) {
         val token = AuthToken.fresh(JewelSupabase.client)
         val url = "${AppConfig.aiPipelineUrl.trimEnd('/')}/api/retailer/image-search"
 
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart(
-                "image",
-                "search.jpg",
-                jpegBytes.toRequestBody("image/jpeg".toMediaType())
-            )
-            .build()
+        val body = buildSearchBody(jpegBytes, "all")
 
         val request = Request.Builder()
             .url(url)
@@ -117,7 +212,7 @@ object CatalogueImageSearchApi {
             if (!response.isSuccessful) {
                 return@withContext emptyList()
             }
-            response.body?.string().orEmpty()
+            response.body.string()
         }
 
         val decoded = try {
