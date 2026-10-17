@@ -25,8 +25,11 @@ import kotlinx.serialization.Serializable
  * In-memory form model scoped to the onboarding flow.
  */
 class OnboardFlow(
-    private val supabase: SupabaseClient = JewelSupabase.client
+    private val clientProvider: () -> SupabaseClient = { JewelSupabase.client }
 ) : ViewModel() {
+    constructor(supabase: SupabaseClient) : this({ supabase })
+
+    private val supabase: SupabaseClient get() = clientProvider()
 
     // Step 1 — identity
     var name by mutableStateOf("")

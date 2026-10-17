@@ -27,8 +27,11 @@ import kotlinx.serialization.Serializable
  * Onboarding form state for retailers.
  */
 class RetailerOnboardFlow(
-    private val supabase: SupabaseClient = JewelSupabase.client
+    private val clientProvider: () -> SupabaseClient = { JewelSupabase.client }
 ) : ViewModel() {
+    constructor(supabase: SupabaseClient) : this({ supabase })
+
+    private val supabase: SupabaseClient get() = clientProvider()
 
     // Step 1 — identity
     var name by mutableStateOf("")

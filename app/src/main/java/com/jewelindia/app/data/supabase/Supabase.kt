@@ -19,6 +19,7 @@ val JewelJson = Json {
     ignoreUnknownKeys = true
     coerceInputValues = true
     explicitNulls = false
+    encodeDefaults = true
     isLenient = true
 }
 

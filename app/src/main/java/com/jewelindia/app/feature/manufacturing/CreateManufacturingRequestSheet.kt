@@ -1,4 +1,4 @@
-// Port of: wholesaler ios/JewelIndia/Sources/Features/Manufacturing/CreateManufacturingRequestView.swift
+// Port of: wholesaler ios/JewelIndia/Sources/Features/Manufacturing/CreateManufacturingRequestSheet.swift
 package com.jewelindia.app.feature.manufacturing
 
 import android.net.Uri
@@ -11,7 +11,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -28,11 +28,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,6 +46,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -56,23 +64,32 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.jewelindia.app.core.images.ImageNormalizer
+import com.jewelindia.app.core.model.CreateManufacturingRequestParams
 import com.jewelindia.app.data.api.ManufacturingApi
+import com.jewelindia.app.data.supabase.JewelJson
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
 import com.jewelindia.app.feature.retailer.CategoryFilterPill
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateManufacturingRequestSheet(
-    userId: String,
+    userId: String = "",
+    initialCategory: String? = null,
     onDismiss: () -> Unit,
     onRequestCreated: () -> Unit
 ) {
@@ -80,309 +97,629 @@ fun CreateManufacturingRequestSheet(
     val scope = rememberCoroutineScope()
 
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-    var category by remember { mutableStateOf("Necklace") }
+    var category by remember { mutableStateOf(initialCategory?.takeIf { it.isNotBlank() } ?: "Ring") }
+    var isRangeWeight by remember { mutableStateOf(true) }
+    var minWeightText by remember { mutableStateOf("10.0") }
+    var maxWeightText by remember { mutableStateOf("15.0") }
+    var singleWeightText by remember { mutableStateOf("12.0") }
     var material by remember { mutableStateOf("Gold") }
-    var purity by remember { mutableStateOf("22KT") }
-    var minWeightText by remember { mutableStateOf("20") }
-    var maxWeightText by remember { mutableStateOf("25") }
     var quantity by remember { mutableIntStateOf(1) }
-    var makingBudgetMode by remember { mutableStateOf("per_gram") } // "per_gram" or "total"
-    var makingBudgetAmountText by remember { mutableStateOf("450") }
-    var deliveryDaysText by remember { mutableStateOf("21") }
+    var quotationWindowHours by remember { mutableIntStateOf(24) }
+    var deliveryDate by remember { mutableStateOf(LocalDate.now().plusDays(14)) }
     var notes by remember { mutableStateOf("") }
 
+    var isReviewing by remember { mutableStateOf(false) }
     var isSubmitting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var submissionIdempotencyKey by remember { mutableStateOf(UUID.randomUUID().toString()) }
+    var uploadedAssetId by remember { mutableStateOf<String?>(null) }
+    var lastSubmissionPayload by remember { mutableStateOf<String?>(null) }
+    var showDatePickerDialog by remember { mutableStateOf(false) }
 
     val photoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
-        selectedImageUri = uri
+        if (uri != null) {
+            selectedImageUri = uri
+            uploadedAssetId = null
+            lastSubmissionPayload = null
+            submissionIdempotencyKey = UUID.randomUUID().toString()
+        }
     }
 
-    val categoryOptions = listOf("Necklace", "Choker", "Bangle", "Ring", "Earrings", "Chain", "Bracelet")
-    val materialOptions = listOf("Gold", "Diamond", "Polki", "Kundan", "Platinum")
-    val purityOptions = listOf("22KT", "18KT", "14KT", "24KT")
+    val categories = listOf(
+        "Ring", "Necklace", "Earrings", "Bangles", "Bracelet", "Pendant", "Haram", "Chain", "Mangalsutra", "Other"
+    )
+    val materials = listOf("Gold", "Diamond", "Polki", "Kundan", "Platinum", "Silver")
+
+    fun validateAndProceed() {
+        if (selectedImageUri == null) {
+            errorMessage = "Please attach a reference photo of the jewellery."
+            return
+        }
+        val minW = if (isRangeWeight) (minWeightText.toDoubleOrNull() ?: 0.0) else (singleWeightText.toDoubleOrNull() ?: 0.0)
+        val maxW = if (isRangeWeight) (maxWeightText.toDoubleOrNull() ?: 0.0) else minW
+
+        if (minW <= 0.0 || maxW < minW) {
+            errorMessage = "Please enter a valid weight in grams."
+            return
+        }
+        errorMessage = null
+        isReviewing = true
+    }
+
+    fun submitRequest() {
+        val uri = selectedImageUri ?: return
+        isSubmitting = true
+        errorMessage = null
+
+        scope.launch {
+            try {
+                // 1. Upload asset if not already uploaded
+                val assetId = uploadedAssetId ?: run {
+                    val rawBytes = withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    } ?: throw RuntimeException("Could not process reference photo.")
+
+                    val jpegBytes = ImageNormalizer.jpeg(rawBytes, ImageNormalizer.MAX_PRODUCT_DIMENSION) ?: rawBytes
+                    val uploadRes = ManufacturingApi.uploadAsset(jpegBytes)
+                    if (!uploadRes.ok) {
+                        throw RuntimeException("The reference photo could not be saved. Please retry.")
+                    }
+                    uploadedAssetId = uploadRes.assetId
+                    uploadRes.assetId
+                }
+
+                val minW = if (isRangeWeight) (minWeightText.toDoubleOrNull() ?: 0.0) else (singleWeightText.toDoubleOrNull() ?: 0.0)
+                val maxW = if (isRangeWeight) (maxWeightText.toDoubleOrNull() ?: 0.0) else minW
+                val dateStr = deliveryDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
+
+                val params = CreateManufacturingRequestParams(
+                    assetId = assetId,
+                    category = category,
+                    minWeightGrams = minW,
+                    maxWeightGrams = maxW,
+                    material = material,
+                    purity = null,
+                    gemstonePreference = null,
+                    quantity = quantity,
+                    makingBudgetMode = null,
+                    makingBudgetAmount = null,
+                    currency = "INR",
+                    metalRateSnapshot = null,
+                    metalRateBasis = null,
+                    deliveryNeededDate = dateStr,
+                    notes = notes.ifBlank { null },
+                    supersededRequestId = null,
+                    quotationWindowHours = quotationWindowHours
+                )
+
+                val payloadJson = JewelJson.encodeToString(params)
+                if (lastSubmissionPayload != null && lastSubmissionPayload != payloadJson) {
+                    submissionIdempotencyKey = UUID.randomUUID().toString()
+                }
+                lastSubmissionPayload = payloadJson
+
+                val res = ManufacturingApi.createRequest(params, submissionIdempotencyKey)
+                if (!res.ok || res.requestId == null) {
+                    throw RuntimeException("The server did not confirm your enquiry. Please retry.")
+                }
+
+                isSubmitting = false
+                onRequestCreated()
+                onDismiss()
+            } catch (e: Exception) {
+                isSubmitting = false
+                errorMessage = e.message ?: "Failed to submit enquiry. Please try again."
+            }
+        }
+    }
+
+    if (showDatePickerDialog) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = deliveryDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePickerDialog = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        deliveryDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                    }
+                    showDatePickerDialog = false
+                }) {
+                    Text("OK", color = Palette.goldPrimary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePickerDialog = false }) {
+                    Text("Cancel", color = Palette.textSecondary)
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = Palette.surfaceElevated,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 36.dp)
-                .verticalScroll(rememberScrollState())
-                .imePadding(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 36.dp)
+                    .verticalScroll(rememberScrollState())
+                    .imePadding(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "Custom Manufacturing Enquiry",
-                    style = Typography.cirka(22.sp),
-                    color = Palette.textPrimary
-                )
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.Filled.Close, contentDescription = "Close", tint = Palette.textSecondary)
+                // Top bar
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    if (isReviewing) {
+                        IconButton(onClick = { isReviewing = false }) {
+                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Palette.textPrimary)
+                        }
+                    }
+                    Text(
+                        text = if (isReviewing) "Review Enquiry" else "Request Custom Jewellery",
+                        style = Typography.cirka(20.sp),
+                        color = Palette.textPrimary
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Filled.Close, contentDescription = "Close", tint = Palette.textSecondary)
+                    }
                 }
-            }
 
-            // Reference Photo
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Reference Design Photo",
-                    style = Typography.santoshi(14.sp, FontWeight.Medium),
-                    color = Palette.textPrimary
-                )
-
-                if (selectedImageUri != null) {
-                    Box(
-                        modifier = Modifier
-                            .size(100.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .border(1.dp, Palette.surfaceBorder, RoundedCornerShape(12.dp))
-                    ) {
+                if (isReviewing) {
+                    // Review View
+                    selectedImageUri?.let { uri ->
                         AsyncImage(
-                            model = selectedImageUri,
+                            model = uri,
                             contentDescription = "Reference",
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
+                                .clip(RoundedCornerShape(12.dp)),
                             contentScale = ContentScale.Crop
                         )
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(4.dp)
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .background(Color.Black.copy(alpha = 0.6f))
-                                .clickable { selectedImageUri = null },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Filled.Close, contentDescription = "Remove", tint = Color.White, modifier = Modifier.size(14.dp))
-                        }
                     }
-                } else {
-                    Box(
+
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(88.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(Palette.surface)
-                            .border(1.dp, Palette.surfaceBorder, RoundedCornerShape(12.dp))
-                            .clickable {
-                                photoPicker.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
-                            },
-                        contentAlignment = Alignment.Center
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Icon(Icons.Filled.AddPhotoAlternate, contentDescription = null, tint = Palette.goldPrimary)
-                            Text("Upload Jewellery Sketch or Photo", style = Typography.santoshi(14.sp, FontWeight.Medium), color = Palette.textPrimary)
+                        SummaryRow("Category", category)
+                        SummaryRow(
+                            "Weight",
+                            if (isRangeWeight) "$minWeightText - $maxWeightText g" else "$singleWeightText g"
+                        )
+                        SummaryRow("Material", material)
+                        SummaryRow("Quantity", "$quantity piece(s)")
+                        SummaryRow("Quotation Window", "$quotationWindowHours hours")
+                        SummaryRow(
+                            "Delivery Deadline",
+                            deliveryDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy"))
+                        )
+                        if (notes.isNotBlank()) {
+                            SummaryRow("Design Notes", notes)
                         }
                     }
-                }
-            }
 
-            // Category
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(text = "Category", style = Typography.santoshi(14.sp, FontWeight.Medium), color = Palette.textPrimary)
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(categoryOptions) { cat ->
-                        CategoryFilterPill(label = cat, isSelected = category == cat, onClick = { category = cat })
-                    }
-                }
-            }
-
-            // Material & Purity
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(text = "Material & Purity", style = Typography.santoshi(14.sp, FontWeight.Medium), color = Palette.textPrimary)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    LazyRow(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(materialOptions) { mat ->
-                            CategoryFilterPill(label = mat, isSelected = material == mat, onClick = { material = mat })
-                        }
-                    }
-                    LazyRow(modifier = Modifier.weight(0.8f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(purityOptions) { pur ->
-                            CategoryFilterPill(label = pur, isSelected = purity == pur, onClick = { purity = pur })
-                        }
-                    }
-                }
-            }
-
-            // Weight Range (Min & Max)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedTextField(
-                    value = minWeightText,
-                    onValueChange = { minWeightText = it },
-                    label = { Text("Min Weight (g) *", color = Palette.textSecondary) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Palette.goldPrimary,
-                        unfocusedBorderColor = Palette.surfaceBorder,
-                        focusedTextColor = Palette.textPrimary,
-                        unfocusedTextColor = Palette.textPrimary
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                OutlinedTextField(
-                    value = maxWeightText,
-                    onValueChange = { maxWeightText = it },
-                    label = { Text("Max Weight (g) *", color = Palette.textSecondary) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Palette.goldPrimary,
-                        unfocusedBorderColor = Palette.surfaceBorder,
-                        focusedTextColor = Palette.textPrimary,
-                        unfocusedTextColor = Palette.textPrimary
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                )
-            }
-
-            // Making Budget & Delivery Days
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedTextField(
-                    value = makingBudgetAmountText,
-                    onValueChange = { makingBudgetAmountText = it },
-                    label = { Text("Making Budget (₹/g)", color = Palette.textSecondary) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Palette.goldPrimary,
-                        unfocusedBorderColor = Palette.surfaceBorder,
-                        focusedTextColor = Palette.textPrimary,
-                        unfocusedTextColor = Palette.textPrimary
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                OutlinedTextField(
-                    value = deliveryDaysText,
-                    onValueChange = { deliveryDaysText = it },
-                    label = { Text("Delivery Needed (Days)", color = Palette.textSecondary) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Palette.goldPrimary,
-                        unfocusedBorderColor = Palette.surfaceBorder,
-                        focusedTextColor = Palette.textPrimary,
-                        unfocusedTextColor = Palette.textPrimary
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                )
-            }
-
-            // Notes
-            OutlinedTextField(
-                value = notes,
-                onValueChange = { notes = it },
-                label = { Text("Detailed Requirements / Notes", color = Palette.textSecondary) },
-                placeholder = { Text("Specify lock mechanism, rhodium finish, or stone details...", color = Palette.textTertiary) },
-                modifier = Modifier.fillMaxWidth().height(100.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Palette.goldPrimary,
-                    unfocusedBorderColor = Palette.surfaceBorder,
-                    focusedTextColor = Palette.textPrimary,
-                    unfocusedTextColor = Palette.textPrimary
-                ),
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            if (errorMessage != null) {
-                Text(
-                    text = errorMessage ?: "",
-                    style = Typography.santoshi(13.sp),
-                    color = Palette.accentRed
-                )
-            }
-
-            Button(
-                onClick = {
-                    val minW = minWeightText.toDoubleOrNull()
-                    val maxW = maxWeightText.toDoubleOrNull()
-                    if (minW == null || maxW == null || minW <= 0 || maxW < minW) {
-                        errorMessage = "Please enter a valid weight range in grams."
-                        return@Button
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Palette.goldPrimary.copy(alpha = 0.08f))
+                            .border(1.dp, Palette.goldPrimary.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "How Supplier Quotes Work",
+                            style = Typography.santoshi(14.sp, FontWeight.SemiBold),
+                            color = Palette.textPrimary
+                        )
+                        Text(
+                            text = "All verified wholesalers receive your enquiry at the same time. They submit quotes before the shared deadline. Compare the making charges, estimates and delivery dates, then select your preferred supplier. Submitting a quote does not reserve the project.",
+                            style = Typography.santoshi(12.sp),
+                            color = Palette.textSecondary,
+                            lineHeight = 18.sp
+                        )
                     }
 
-                    val days = deliveryDaysText.toIntOrNull() ?: 21
-                    val neededDate = LocalDate.now().plusDays(days.toLong()).toString()
+                    if (errorMessage != null) {
+                        Text(
+                            text = errorMessage ?: "",
+                            style = Typography.santoshi(13.sp),
+                            color = Palette.accentRed
+                        )
+                    }
 
-                    isSubmitting = true
-                    errorMessage = null
-
-                    scope.launch {
-                        try {
-                            var uploadedImageUrl: String? = null
-                            selectedImageUri?.let { uri ->
-                                val bytes = withContext(Dispatchers.IO) {
-                                    context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                                }
-                                if (bytes != null) {
-                                    val normalized = ImageNormalizer.jpeg(bytes, ImageNormalizer.MAX_PRODUCT_DIMENSION) ?: bytes
-                                    uploadedImageUrl = ManufacturingApi.uploadManufacturingAsset(normalized, userId)
+                    Button(
+                        onClick = { submitRequest() },
+                        enabled = !isSubmitting,
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Palette.goldPrimary,
+                            contentColor = Palette.dark
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Broadcast Request to Wholesalers", style = Typography.santoshi(16.sp, FontWeight.SemiBold))
+                    }
+                } else {
+                    // Form View
+                    // Reference Photo
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Reference Photo *",
+                            style = Typography.santoshi(13.sp, FontWeight.SemiBold),
+                            color = Palette.textPrimary
+                        )
+                        if (selectedImageUri != null) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .border(1.dp, Palette.surfaceBorder, RoundedCornerShape(12.dp))
+                            ) {
+                                AsyncImage(
+                                    model = selectedImageUri,
+                                    contentDescription = "Reference",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(8.dp)
+                                        .size(28.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.6f))
+                                        .clickable {
+                                            selectedImageUri = null
+                                            uploadedAssetId = null
+                                            lastSubmissionPayload = null
+                                            submissionIdempotencyKey = UUID.randomUUID().toString()
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Filled.Close, contentDescription = "Remove", tint = Color.White, modifier = Modifier.size(16.dp))
                                 }
                             }
-
-                            val params = ManufacturingApi.CreateRequestParams(
-                                category = category,
-                                material = material,
-                                purity = purity,
-                                minWeightGrams = minW,
-                                maxWeightGrams = maxW,
-                                quantity = quantity,
-                                makingBudgetMode = makingBudgetMode,
-                                makingBudgetAmount = makingBudgetAmountText.toDoubleOrNull(),
-                                deliveryNeededDate = neededDate,
-                                notes = notes.ifBlank { null },
-                                imageUrl = uploadedImageUrl
-                            )
-
-                            ManufacturingApi.createRetailerRequest(params)
-                            onRequestCreated()
-                            onDismiss()
-                        } catch (e: Exception) {
-                            errorMessage = e.message ?: "Failed to submit enquiry. Please try again."
-                        } finally {
-                            isSubmitting = false
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(140.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Palette.surface)
+                                    .border(1.dp, Palette.surfaceBorder, RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        photoPicker.launch(
+                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(Icons.Filled.AddPhotoAlternate, contentDescription = null, tint = Palette.goldPrimary, modifier = Modifier.size(32.dp))
+                                    Text("Add reference design photo", style = Typography.santoshi(14.sp, FontWeight.Medium), color = Palette.textPrimary)
+                                }
+                            }
                         }
                     }
-                },
-                enabled = !isSubmitting,
-                colors = ButtonDefaults.buttonColors(containerColor = Palette.goldPrimary),
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                if (isSubmitting) {
-                    CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(22.dp))
-                } else {
-                    Text("Broadcast Enquiry to Wholesalers", color = Color.Black, fontWeight = FontWeight.Bold)
+
+                    // Category
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = "Category", style = Typography.santoshi(13.sp, FontWeight.SemiBold), color = Palette.textPrimary)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(categories) { cat ->
+                                CategoryFilterPill(label = cat, isSelected = category == cat, onClick = { category = cat })
+                            }
+                        }
+                    }
+
+                    // Expected Weight
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(text = "Expected Weight (g)", style = Typography.santoshi(13.sp, FontWeight.SemiBold), color = Palette.textPrimary)
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Palette.surface)
+                                    .border(1.dp, Palette.surfaceBorder, RoundedCornerShape(8.dp))
+                                    .padding(2.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (isRangeWeight) Palette.goldPrimary else Color.Transparent)
+                                        .clickable { isRangeWeight = true }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = "Range",
+                                        style = Typography.santoshi(12.sp, FontWeight.SemiBold),
+                                        color = if (isRangeWeight) Palette.dark else Palette.textSecondary
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (!isRangeWeight) Palette.goldPrimary else Color.Transparent)
+                                        .clickable { isRangeWeight = false }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = "Single",
+                                        style = Typography.santoshi(12.sp, FontWeight.SemiBold),
+                                        color = if (!isRangeWeight) Palette.dark else Palette.textSecondary
+                                    )
+                                }
+                            }
+                        }
+
+                        if (isRangeWeight) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = minWeightText,
+                                    onValueChange = { minWeightText = it },
+                                    label = { Text("Min (grams)", color = Palette.textSecondary) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Palette.goldPrimary,
+                                        unfocusedBorderColor = Palette.surfaceBorder,
+                                        focusedTextColor = Palette.textPrimary,
+                                        unfocusedTextColor = Palette.textPrimary
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                OutlinedTextField(
+                                    value = maxWeightText,
+                                    onValueChange = { maxWeightText = it },
+                                    label = { Text("Max (grams)", color = Palette.textSecondary) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Palette.goldPrimary,
+                                        unfocusedBorderColor = Palette.surfaceBorder,
+                                        focusedTextColor = Palette.textPrimary,
+                                        unfocusedTextColor = Palette.textPrimary
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                            }
+                        } else {
+                            OutlinedTextField(
+                                value = singleWeightText,
+                                onValueChange = { singleWeightText = it },
+                                label = { Text("Approx weight (grams)", color = Palette.textSecondary) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Palette.goldPrimary,
+                                    unfocusedBorderColor = Palette.surfaceBorder,
+                                    focusedTextColor = Palette.textPrimary,
+                                    unfocusedTextColor = Palette.textPrimary
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                    }
+
+                    // Material
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = "Material", style = Typography.santoshi(13.sp, FontWeight.SemiBold), color = Palette.textPrimary)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(materials) { mat ->
+                                CategoryFilterPill(label = mat, isSelected = material == mat, onClick = { material = mat })
+                            }
+                        }
+                    }
+
+                    // Quantity Stepper
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = "Quantity", style = Typography.santoshi(13.sp, FontWeight.SemiBold), color = Palette.textPrimary)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Palette.surface)
+                                .border(1.dp, Palette.surfaceBorder, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            IconButton(
+                                onClick = { if (quantity > 1) quantity-- },
+                                enabled = quantity > 1,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Filled.Remove, contentDescription = "Decrease", tint = Palette.textPrimary)
+                            }
+                            Text(
+                                text = "$quantity pc",
+                                style = Typography.santoshi(14.sp, FontWeight.SemiBold),
+                                color = Palette.textPrimary
+                            )
+                            IconButton(
+                                onClick = { if (quantity < 500) quantity++ },
+                                enabled = quantity < 500,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = "Increase", tint = Palette.textPrimary)
+                            }
+                        }
+                    }
+
+                    // Quotation Window
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = "Time for Wholesalers to Quote", style = Typography.santoshi(13.sp, FontWeight.SemiBold), color = Palette.textPrimary)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Palette.surface)
+                                .border(1.dp, Palette.surfaceBorder, RoundedCornerShape(8.dp))
+                                .padding(2.dp)
+                        ) {
+                            listOf(1, 6, 24, 48).forEach { hours ->
+                                val selected = quotationWindowHours == hours
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (selected) Palette.goldPrimary else Color.Transparent)
+                                        .clickable { quotationWindowHours = hours }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (hours == 1) "1 hr" else "$hours hrs",
+                                        style = Typography.santoshi(12.sp, FontWeight.SemiBold),
+                                        color = if (selected) Palette.dark else Palette.textSecondary
+                                    )
+                                }
+                            }
+                        }
+                        Text(
+                            text = "All verified wholesalers receive the enquiry together. You choose the supplier from their quotes.",
+                            style = Typography.santoshi(12.sp),
+                            color = Palette.textSecondary
+                        )
+                    }
+
+                    // Delivery Needed By
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = "Delivery Needed By", style = Typography.santoshi(13.sp, FontWeight.SemiBold), color = Palette.textPrimary)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Palette.surface)
+                                .border(1.dp, Palette.surfaceBorder, RoundedCornerShape(8.dp))
+                                .clickable { showDatePickerDialog = true }
+                                .padding(14.dp)
+                        ) {
+                            Text(
+                                text = deliveryDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy")),
+                                style = Typography.santoshi(14.sp),
+                                color = Palette.textPrimary
+                            )
+                        }
+                    }
+
+                    // Design Notes
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = "Design Notes (Optional)", style = Typography.santoshi(13.sp, FontWeight.SemiBold), color = Palette.textPrimary)
+                        OutlinedTextField(
+                            value = notes,
+                            onValueChange = { notes = it },
+                            placeholder = { Text("Specific size, finish, stone placement, or details…", color = Palette.textTertiary) },
+                            modifier = Modifier.fillMaxWidth().height(100.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Palette.goldPrimary,
+                                unfocusedBorderColor = Palette.surfaceBorder,
+                                focusedTextColor = Palette.textPrimary,
+                                unfocusedTextColor = Palette.textPrimary
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                    }
+
+                    if (errorMessage != null) {
+                        Text(
+                            text = errorMessage ?: "",
+                            style = Typography.santoshi(13.sp),
+                            color = Palette.accentRed
+                        )
+                    }
+
+                    Button(
+                        onClick = { validateAndProceed() },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Palette.goldPrimary,
+                            contentColor = Palette.dark
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Review", style = Typography.santoshi(16.sp, FontWeight.SemiBold))
+                    }
+                }
+            }
+
+            if (isSubmitting) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Palette.surfaceElevated)
+                            .padding(24.dp)
+                    ) {
+                        CircularProgressIndicator(color = Palette.goldPrimary)
+                        Text(
+                            text = "Broadcasting enquiry…",
+                            style = Typography.santoshi(15.sp, FontWeight.SemiBold),
+                            color = Palette.textPrimary
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SummaryRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            text = label,
+            style = Typography.santoshi(13.sp),
+            color = Palette.textSecondary
+        )
+        Text(
+            text = value,
+            style = Typography.santoshi(13.sp, FontWeight.SemiBold),
+            color = Palette.textPrimary,
+            textAlign = TextAlign.End
+        )
     }
 }

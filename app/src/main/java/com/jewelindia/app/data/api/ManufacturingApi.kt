@@ -3,6 +3,7 @@ package com.jewelindia.app.data.api
 
 import com.jewelindia.app.core.config.AppConfig
 import com.jewelindia.app.core.model.AcceptOfferQuoteParams
+import com.jewelindia.app.core.model.CreateManufacturingRequestParams
 import com.jewelindia.app.core.model.ManufacturingOffer
 import com.jewelindia.app.core.model.ManufacturingRequest
 import com.jewelindia.app.data.net.AuthToken
@@ -11,7 +12,6 @@ import com.jewelindia.app.data.net.parseApiError
 import com.jewelindia.app.data.supabase.JewelJson
 import com.jewelindia.app.data.supabase.JewelSupabase
 import io.github.jan.supabase.SupabaseClient
-import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -21,13 +21,36 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.UUID
 
 object ManufacturingApi {
-    private val supabase: SupabaseClient = JewelSupabase.client
+    private val supabase: SupabaseClient by lazy { JewelSupabase.client }
     private val http: HttpClients = HttpClients()
+
+    @Serializable
+    private data class FastApiDetailError(val detail: String? = null)
+
+    @Serializable
+    data class AssetUploadResponse(
+        val ok: Boolean = true,
+        @SerialName("asset_id") val assetId: String,
+        @SerialName("preview_url") val previewUrl: String? = null,
+        val width: Int? = null,
+        val height: Int? = null,
+        @SerialName("byte_size") val byteSize: Long? = null
+    )
+
+    @Serializable
+    data class CreateRequestResponse(
+        val ok: Boolean = true,
+        @SerialName("request_id") val requestId: String? = null,
+        val state: String? = null,
+        @SerialName("active_offer_id") val activeOfferId: String? = null,
+        @SerialName("expires_at") val expiresAt: String? = null
+    )
 
     @Serializable
     private data class ListRequestsResponse(
@@ -57,72 +80,115 @@ object ManufacturingApi {
         @SerialName("server_time") val serverTime: String? = null
     )
 
+    typealias CreateRequestParams = CreateManufacturingRequestParams
+
+    suspend fun uploadAsset(imageData: ByteArray): AssetUploadResponse = withContext(Dispatchers.IO) {
+        val token = AuthToken.fresh(supabase)
+        val url = "${AppConfig.aiPipelineUrl.trimEnd('/')}/api/retailer/manufacturing-assets"
+
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart(
+                name = "file",
+                filename = "reference.jpg",
+                body = imageData.toRequestBody("image/jpeg".toMediaType())
+            )
+            .build()
+
+        val req = Request.Builder()
+            .url(url.toHttpUrl())
+            .addHeader("Authorization", "Bearer $token")
+            .post(requestBody)
+            .build()
+
+        http.pipeline.newCall(req).execute().use { response ->
+            val body = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                val detail = runCatching {
+                    JewelJson.decodeFromString(FastApiDetailError.serializer(), body).detail
+                }.getOrNull()
+                throw RuntimeException(detail ?: "Image upload failed with status ${response.code}.")
+            }
+            JewelJson.decodeFromString(AssetUploadResponse.serializer(), body)
+        }
+    }
+
+    suspend fun createRequest(
+        params: CreateManufacturingRequestParams,
+        idempotencyKey: String = UUID.randomUUID().toString()
+    ): CreateRequestResponse = withContext(Dispatchers.IO) {
+        val url = "${AppConfig.aiPipelineUrl.trimEnd('/')}/api/retailer/manufacturing-requests"
+        val json = JewelJson.encodeToString(params)
+        val body = executeAuthorized(
+            url = url,
+            method = "POST",
+            bodyJson = json,
+            idempotencyKey = idempotencyKey,
+            fallbackErrorMessage = "Request creation failed."
+        )
+        JewelJson.decodeFromString(CreateRequestResponse.serializer(), body)
+    }
+
+    suspend fun createRetailerRequest(
+        params: CreateManufacturingRequestParams,
+        idempotencyKey: String = UUID.randomUUID().toString()
+    ): CreateRequestResponse = createRequest(params, idempotencyKey)
+
     suspend fun fetchRetailerRequests(status: String? = null): List<ManufacturingRequest> = withContext(Dispatchers.IO) {
         val urlBuilder = "${AppConfig.aiPipelineUrl.trimEnd('/')}/api/retailer/manufacturing-requests".toHttpUrl().newBuilder()
         if (status != null) urlBuilder.addQueryParameter("status", status)
-        val body = executeAuthorized(urlBuilder.build().toString(), "GET")
+        val body = executeAuthorized(
+            url = urlBuilder.build().toString(),
+            method = "GET",
+            fallbackErrorMessage = "Failed to fetch manufacturing requests."
+        )
         JewelJson.decodeFromString(ListRequestsResponse.serializer(), body).requests
     }
 
     suspend fun fetchRetailerRequestDetail(id: String): ManufacturingRequest = withContext(Dispatchers.IO) {
         val url = "${AppConfig.aiPipelineUrl.trimEnd('/')}/api/retailer/manufacturing-requests/$id"
-        val body = executeAuthorized(url, "GET")
+        val body = executeAuthorized(
+            url = url,
+            method = "GET",
+            fallbackErrorMessage = "Failed to load request details."
+        )
         JewelJson.decodeFromString(RequestDetailResponse.serializer(), body).request
-    }
-
-    @Serializable
-    data class CreateRequestParams(
-        val category: String,
-        val material: String,
-        val purity: String? = null,
-        @SerialName("min_weight_grams") val minWeightGrams: Double,
-        @SerialName("max_weight_grams") val maxWeightGrams: Double,
-        val quantity: Int = 1,
-        @SerialName("making_budget_mode") val makingBudgetMode: String? = null,
-        @SerialName("making_budget_amount") val makingBudgetAmount: Double? = null,
-        @SerialName("delivery_needed_date") val deliveryNeededDate: String,
-        val notes: String? = null,
-        @SerialName("image_url") val imageUrl: String? = null
-    )
-
-    suspend fun createRetailerRequest(params: CreateRequestParams): ManufacturingRequest = withContext(Dispatchers.IO) {
-        val url = "${AppConfig.aiPipelineUrl.trimEnd('/')}/api/retailer/manufacturing-requests"
-        val json = JewelJson.encodeToString(params)
-        val body = executeAuthorized(url, "POST", json)
-        JewelJson.decodeFromString(RequestDetailResponse.serializer(), body).request
-    }
-
-    suspend fun uploadManufacturingAsset(imageData: ByteArray, userId: String): String = withContext(Dispatchers.IO) {
-        val path = "${userId.lowercase()}/${UUID.randomUUID().toString().lowercase()}.jpg"
-        JewelSupabase.client.storage.from("manufacturing-assets").upload(path, imageData) {
-            upsert = false
-        }
-        JewelSupabase.client.storage.from("manufacturing-assets").publicUrl(path)
     }
 
     suspend fun cancelRequest(id: String): Unit = withContext(Dispatchers.IO) {
         val url = "${AppConfig.aiPipelineUrl.trimEnd('/')}/api/retailer/manufacturing-requests/$id/cancel"
-        executeAuthorized(url, "POST")
+        executeAuthorized(url, "POST", fallbackErrorMessage = "Cancellation failed.")
     }
 
     suspend fun awardQuote(requestId: String, quoteId: String): Unit = withContext(Dispatchers.IO) {
         val url = "${AppConfig.aiPipelineUrl.trimEnd('/')}/api/retailer/manufacturing-requests/$requestId/award"
         val json = buildJsonObject { put("quote_id", quoteId) }.toString()
-        executeAuthorized(url, "POST", json)
+        executeAuthorized(url, "POST", json, fallbackErrorMessage = "Could not select this quote. Refresh the enquiry and try again.")
     }
 
     suspend fun fetchWholesalerOffers(status: String? = null): List<ManufacturingOffer> = withContext(Dispatchers.IO) {
         val urlBuilder = "${AppConfig.aiPipelineUrl.trimEnd('/')}/api/wholesaler/manufacturing-offers".toHttpUrl().newBuilder()
         if (status != null) urlBuilder.addQueryParameter("status", status)
-        val body = executeAuthorized(urlBuilder.build().toString(), "GET")
+        val body = executeAuthorized(
+            url = urlBuilder.build().toString(),
+            method = "GET",
+            fallbackErrorMessage = "Failed to fetch offers."
+        )
         JewelJson.decodeFromString(ListOffersResponse.serializer(), body).offers
     }
 
     suspend fun fetchWholesalerOfferDetail(id: String): ManufacturingOffer = withContext(Dispatchers.IO) {
         val url = "${AppConfig.aiPipelineUrl.trimEnd('/')}/api/wholesaler/manufacturing-offers/$id"
-        val body = executeAuthorized(url, "GET")
+        val body = executeAuthorized(
+            url = url,
+            method = "GET",
+            fallbackErrorMessage = "Failed to load offer."
+        )
         JewelJson.decodeFromString(OfferDetailResponse.serializer(), body).offer
     }
+
+    fun acceptOfferPath(offerId: String, parallel: Boolean): String =
+        "/api/wholesaler/manufacturing-offers/$offerId/${if (parallel) "quotes" else "accept"}"
 
     suspend fun acceptOffer(
         id: String,
@@ -130,10 +196,10 @@ object ManufacturingApi {
         parallel: Boolean = false,
         idempotencyKey: String = UUID.randomUUID().toString()
     ): Unit = withContext(Dispatchers.IO) {
-        val action = if (parallel) "quotes" else "accept"
-        val url = "${AppConfig.aiPipelineUrl.trimEnd('/')}/api/wholesaler/manufacturing-offers/$id/$action"
+        val path = acceptOfferPath(id, parallel)
+        val url = "${AppConfig.aiPipelineUrl.trimEnd('/')}$path"
         val json = JewelJson.encodeToString(params)
-        executeAuthorized(url, "POST", json, idempotencyKey = idempotencyKey)
+        executeAuthorized(url, "POST", json, idempotencyKey = idempotencyKey, fallbackErrorMessage = "Acceptance failed.")
     }
 
     suspend fun declineOffer(
@@ -143,7 +209,7 @@ object ManufacturingApi {
     ): Unit = withContext(Dispatchers.IO) {
         val url = "${AppConfig.aiPipelineUrl.trimEnd('/')}/api/wholesaler/manufacturing-offers/$id/decline"
         val json = buildJsonObject { put("reason", reason) }.toString()
-        executeAuthorized(url, "POST", json, idempotencyKey = idempotencyKey)
+        executeAuthorized(url, "POST", json, idempotencyKey = idempotencyKey, fallbackErrorMessage = "Decline failed.")
     }
 
     suspend fun registerDeviceToken(token: String, environment: String = "production"): Unit = withContext(Dispatchers.IO) {
@@ -163,7 +229,8 @@ object ManufacturingApi {
         url: String,
         method: String,
         bodyJson: String? = null,
-        idempotencyKey: String? = null
+        idempotencyKey: String? = null,
+        fallbackErrorMessage: String? = null
     ): String {
         val token = AuthToken.fresh(supabase)
         val reqBuilder = Request.Builder()
@@ -185,6 +252,15 @@ object ManufacturingApi {
         return http.pipeline.newCall(reqBuilder.build()).execute().use { response ->
             val body = response.body?.string().orEmpty()
             if (!response.isSuccessful) {
+                val detail = runCatching {
+                    JewelJson.decodeFromString(FastApiDetailError.serializer(), body).detail
+                }.getOrNull()
+                if (!detail.isNullOrBlank()) {
+                    throw RuntimeException(detail)
+                }
+                if (fallbackErrorMessage != null) {
+                    throw RuntimeException(fallbackErrorMessage)
+                }
                 throw parseApiError(response.code, body)
             }
             body

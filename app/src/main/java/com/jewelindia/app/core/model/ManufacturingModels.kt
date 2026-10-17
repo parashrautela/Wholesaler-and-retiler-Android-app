@@ -147,6 +147,7 @@ data class ManufacturingOffer(
         get() = (status == "active" || status == "open") && remainingSeconds > 0
 }
 
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 @Serializable
 data class CreateManufacturingRequestParams(
     @SerialName("asset_id") val assetId: String,
@@ -156,16 +157,16 @@ data class CreateManufacturingRequestParams(
     val material: String,
     val purity: String? = null,
     @SerialName("gemstone_preference") val gemstonePreference: String? = null,
-    val quantity: Int = 1,
+    @kotlinx.serialization.EncodeDefault val quantity: Int = 1,
     @SerialName("making_budget_mode") val makingBudgetMode: String? = null,
     @SerialName("making_budget_amount") val makingBudgetAmount: Double? = null,
-    val currency: String = "INR",
+    @kotlinx.serialization.EncodeDefault val currency: String = "INR",
     @SerialName("metal_rate_snapshot") val metalRateSnapshot: Double? = null,
     @SerialName("metal_rate_basis") val metalRateBasis: String? = null,
     @SerialName("delivery_needed_date") val deliveryNeededDate: String,
     val notes: String? = null,
     @SerialName("superseded_request_id") val supersededRequestId: String? = null,
-    @SerialName("quotation_window_hours") val quotationWindowHours: Int = 24
+    @kotlinx.serialization.EncodeDefault @SerialName("quotation_window_hours") val quotationWindowHours: Int = 24
 )
 
 @Serializable
