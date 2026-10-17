@@ -1,8 +1,10 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Features/Wholesaler/Report/WholesalerReport.swift (WholesalerReportView)
 package com.jewelindia.app.feature.wholesaler
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,25 +13,24 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.PanTool
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -37,8 +38,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.images.CachedImage
@@ -46,6 +51,17 @@ import com.jewelindia.app.data.api.WholesalerReport
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+
+private enum class ReportCardKind {
+    Summary,
+    Liked1,
+    Liked2,
+    Orders,
+    Attention,
+    Reach,
+    End
+}
 
 @Composable
 fun WholesalerReportScreen(
@@ -55,6 +71,8 @@ fun WholesalerReportScreen(
     var period by remember { mutableStateOf(WholesalerReport.Period.Week) }
     var report by remember { mutableStateOf<WholesalerReport?>(peekReport) }
     var loading by remember { mutableStateOf(peekReport == null) }
+    var currentIndex by remember { mutableIntStateOf(0) }
+    var dragOffset by remember { mutableFloatStateOf(0f) }
     val scope = rememberCoroutineScope()
 
     fun load() {
@@ -76,200 +94,530 @@ fun WholesalerReportScreen(
         }
     }
 
+    val cards = remember(report) {
+        val list = mutableListOf(ReportCardKind.Summary)
+        val rep = report
+        if (rep != null) {
+            if (rep.topLiked.isNotEmpty()) list.add(ReportCardKind.Liked1)
+            if (rep.topLiked.size > 1) list.add(ReportCardKind.Liked2)
+            list.add(ReportCardKind.Orders)
+            list.add(ReportCardKind.Attention)
+            list.add(ReportCardKind.Reach)
+            list.add(ReportCardKind.End)
+        }
+        list
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Palette.background)
             .statusBarsPadding()
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(
+        // Top Bar: Centered "Your Report" with "Done" pill on right
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .height(44.dp)
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
         ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Palette.dark
-                )
-            }
             Text(
-                text = "Performance Report",
-                style = Typography.cirka(20.sp),
+                text = "Your Report",
+                style = Typography.santoshi(17.sp),
                 fontWeight = FontWeight.Bold,
                 color = Palette.dark,
-                modifier = Modifier.weight(1f)
+                textAlign = TextAlign.Center
             )
-            IconButton(onClick = { load() }) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Refresh",
-                    tint = Palette.muted
-                )
-            }
-        }
 
-        // Period tabs
-        TabRow(
-            selectedTabIndex = if (period == WholesalerReport.Period.Week) 0 else 1,
-            containerColor = Palette.background,
-            contentColor = Palette.goldPrimary,
-            divider = {}
-        ) {
-            Tab(
-                selected = period == WholesalerReport.Period.Week,
-                onClick = { period = WholesalerReport.Period.Week },
-                text = { Text("7 Days", fontWeight = FontWeight.Bold) }
-            )
-            Tab(
-                selected = period == WholesalerReport.Period.Month,
-                onClick = { period = WholesalerReport.Period.Month },
-                text = { Text("30 Days", fontWeight = FontWeight.Bold) }
-            )
-        }
-
-        val rep = report
-        if (loading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Palette.goldPrimary)
-            }
-        } else if (rep == null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Report data unavailable", color = Palette.muted)
-            }
-        } else {
-            Column(
+            Surface(
+                onClick = onBack,
+                shape = CircleShape,
+                color = Color.White,
+                shadowElevation = 2.dp,
                 modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                    .align(Alignment.CenterEnd)
+                    .height(34.dp)
             ) {
-                // KPI Grid
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                Box(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    KpiCard(
-                        title = "Views",
-                        value = "${rep.views}",
-                        prev = rep.viewsPrev,
-                        modifier = Modifier.weight(1f)
-                    )
-                    KpiCard(
-                        title = "Shortlists / Likes",
-                        value = "${rep.likes}",
-                        prev = rep.likesPrev,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    KpiCard(
-                        title = "New Orders",
-                        value = "${rep.ordersNew}",
-                        prev = rep.ordersNewPrev,
-                        modifier = Modifier.weight(1f)
-                    )
-                    KpiCard(
-                        title = "Stores Reached",
-                        value = "${rep.stores}",
-                        prev = rep.storesPrev,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                // Top Liked Design
-                if (rep.topLiked.isNotEmpty()) {
                     Text(
-                        text = "Most Shortlisted",
-                        style = Typography.cirka(17.sp),
-                        fontWeight = FontWeight.Bold,
+                        text = "Done",
+                        style = Typography.santoshi(14.sp),
+                        fontWeight = FontWeight.SemiBold,
                         color = Palette.dark
                     )
+                }
+            }
+        }
 
-                    rep.topLiked.take(3).forEach { design ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Palette.cream)
-                                .padding(12.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (!design.imageURL.isNullOrBlank()) {
-                                    CachedImage(
-                                        url = design.imageURL ?: "",
-                                        contentDescription = design.name,
-                                        modifier = Modifier
-                                            .size(50.dp)
-                                            .clip(RoundedCornerShape(8.dp)),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = design.name,
-                                        style = Typography.santoshi(14.sp),
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Palette.dark
-                                    )
-                                    Text(
-                                        text = "${design.likes ?: 0} shortlists",
-                                        style = Typography.santoshi(12.sp),
-                                        color = Palette.goldPrimary
-                                    )
-                                }
-                            }
-                        }
-                    }
+        // Segmented Control ("This Week" / "This Month")
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .height(36.dp)
+                .clip(RoundedCornerShape(9.dp))
+                .background(Color(0xFFE5E5EA))
+                .padding(2.dp)
+        ) {
+            Row(modifier = Modifier.fillMaxSize()) {
+                val weekSelected = period == WholesalerReport.Period.Week
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(7.dp))
+                        .background(if (weekSelected) Color.White else Color.Transparent)
+                        .clickable {
+                            period = WholesalerReport.Period.Week
+                            currentIndex = 0
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "This Week",
+                        style = Typography.santoshi(13.sp),
+                        fontWeight = if (weekSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = Palette.dark
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                val monthSelected = period == WholesalerReport.Period.Month
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(7.dp))
+                        .background(if (monthSelected) Color.White else Color.Transparent)
+                        .clickable {
+                            period = WholesalerReport.Period.Month
+                            currentIndex = 0
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "This Month",
+                        style = Typography.santoshi(13.sp),
+                        fontWeight = if (monthSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = Palette.dark
+                    )
+                }
+            }
+        }
+
+        // Card Stack Area
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (loading || report == null) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(32.dp),
+                    color = Palette.dark
+                )
+            } else {
+                val rep = report!!
+                val activeKind = cards.getOrElse(currentIndex) { ReportCardKind.Summary }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .offset { IntOffset(dragOffset.roundToInt(), 0) }
+                        .pointerInput(cards.size) {
+                            detectHorizontalDragGestures(
+                                onDragEnd = {
+                                    if (dragOffset < -100f && currentIndex < cards.size - 1) {
+                                        currentIndex++
+                                    } else if (dragOffset > 100f && currentIndex > 0) {
+                                        currentIndex--
+                                    }
+                                    dragOffset = 0f
+                                },
+                                onDragCancel = { dragOffset = 0f },
+                                onHorizontalDrag = { _, dragAmount ->
+                                    dragOffset += dragAmount
+                                }
+                            )
+                        }
+                        .clickable {
+                            currentIndex = (currentIndex + 1) % cards.size
+                        }
+                ) {
+                    when (activeKind) {
+                        ReportCardKind.Summary -> SummaryCardFace(rep, period)
+                        ReportCardKind.Liked1 -> LikedCardFace(rep.topLiked.firstOrNull(), 1, period)
+                        ReportCardKind.Liked2 -> LikedCardFace(rep.topLiked.getOrNull(1), 2, period)
+                        ReportCardKind.Orders -> OrdersCardFace(rep)
+                        ReportCardKind.Attention -> AttentionCardFace(rep)
+                        ReportCardKind.Reach -> ReachCardFace(rep)
+                        ReportCardKind.End -> EndCardFace(period)
+                    }
+                }
+            }
+        }
+
+        // Progress Dots
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(bottom = 8.dp)
+        ) {
+            cards.indices.forEach { i ->
+                val active = i == currentIndex
+                Box(
+                    modifier = Modifier
+                        .size(width = if (active) 18.dp else 6.dp, height = 6.dp)
+                        .clip(CircleShape)
+                        .background(if (active) Palette.dark else Color(0xFFD1D5DB))
+                )
             }
         }
     }
 }
 
 @Composable
-private fun KpiCard(
-    title: String,
-    value: String,
-    prev: Int,
-    modifier: Modifier = Modifier
+private fun SummaryCardFace(
+    report: WholesalerReport,
+    period: WholesalerReport.Period
+) {
+    val top = report.topLiked.firstOrNull()
+    val headline = if (top != null) {
+        "${top.name} was your star, with ${top.likes ?: 0} likes."
+    } else {
+        "Your collection was viewed by stores."
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color(0xFF1F1B16), Color(0xFF4A3B28))
+                )
+            )
+            .padding(24.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    text = "YOUR ${period.rawValue.uppercase()} ON JEWEL INDIA",
+                    style = Typography.santoshi(11.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFCBB284),
+                    letterSpacing = 1.sp
+                )
+
+                Text(
+                    text = headline,
+                    style = Typography.cirka(30.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    lineHeight = 36.sp
+                )
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    StatNumber(value = report.likes, label = "likes")
+                    StatNumber(value = report.ordersNew, label = "new orders")
+                    StatNumber(value = report.stores, label = "stores")
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PanTool,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.6f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = "Swipe for more",
+                        style = Typography.santoshi(12.sp),
+                        color = Color.White.copy(alpha = 0.6f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatNumber(value: Int, label: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text = "$value",
+            style = Typography.cirka(34.sp),
+            fontWeight = FontWeight.Bold,
+            color = Color.White
+        )
+        Text(
+            text = label,
+            style = Typography.santoshi(13.sp),
+            color = Color.White.copy(alpha = 0.8f)
+        )
+    }
+}
+
+@Composable
+private fun LikedCardFace(
+    design: WholesalerReport.Design?,
+    rank: Int,
+    period: WholesalerReport.Period
 ) {
     Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(Palette.cream)
-            .border(1.dp, Palette.border, RoundedCornerShape(14.dp))
-            .padding(16.dp)
-    ) {
-        Column {
-            Text(
-                text = title,
-                style = Typography.santoshi(12.sp),
-                color = Palette.muted
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color(0xFFFFF7ED), Color(0xFDE7C7))
+                )
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            .padding(24.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             Text(
-                text = value,
-                style = Typography.cirka(24.sp),
+                text = if (rank == 1) "TOP DESIGN THIS ${period.rawValue.uppercase()}" else "#$rank MOST LIKED",
+                style = Typography.santoshi(11.sp),
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF9A3412),
+                letterSpacing = 1.sp
+            )
+
+            val url = design?.imageURL
+            if (!url.isNullOrBlank()) {
+                CachedImage(
+                    url = url,
+                    contentDescription = design.name,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(210.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(210.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.White),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = design?.name ?: "Jewellery", style = Typography.cirka(18.sp), color = Palette.dark)
+                }
+            }
+
+            Text(
+                text = "${design?.name ?: "Your design"} got ${design?.likes ?: 0} likes",
+                style = Typography.cirka(26.sp),
                 fontWeight = FontWeight.Bold,
                 color = Palette.dark
             )
-            Spacer(modifier = Modifier.height(4.dp))
+
             Text(
-                text = "vs $prev prev",
-                style = Typography.santoshi(11.sp),
+                text = if (rank == 1) "It did really well this week. Stores are noticing it." else "Liked by stores and their staff.",
+                style = Typography.santoshi(13.sp),
                 color = Palette.muted
             )
         }
+    }
+}
+
+@Composable
+private fun OrdersCardFace(report: WholesalerReport) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color.White, Color(0xFFEEF2FF))
+                )
+            )
+            .padding(24.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "ORDERS",
+                    style = Typography.santoshi(11.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF4338CA),
+                    letterSpacing = 1.sp
+                )
+                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "${report.ordersNew}", style = Typography.cirka(64.sp), fontWeight = FontWeight.Bold, color = Palette.dark)
+                    Text(text = "new orders", style = Typography.santoshi(16.sp), fontWeight = FontWeight.SemiBold, color = Palette.dark, modifier = Modifier.padding(bottom = 12.dp))
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                ReportMetricRow(label = "Accepted", value = report.ordersAccepted)
+                ReportMetricRow(label = "Completed", value = report.ordersCompleted)
+                ReportMetricRow(label = "Rejected", value = report.ordersRejected)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AttentionCardFace(report: WholesalerReport) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color.White, Color(0xFFECFDF5))
+                )
+            )
+            .padding(24.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "VIEWS & QUESTIONS",
+                    style = Typography.santoshi(11.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF047857),
+                    letterSpacing = 1.sp
+                )
+                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "${report.views}", style = Typography.cirka(64.sp), fontWeight = FontWeight.Bold, color = Palette.dark)
+                    Text(text = "design views", style = Typography.santoshi(16.sp), fontWeight = FontWeight.SemiBold, color = Palette.dark, modifier = Modifier.padding(bottom = 12.dp))
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                ReportMetricRow(label = "Questions from stores", value = report.questions)
+                ReportMetricRow(label = "Conversations", value = report.conversations)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReachCardFace(report: WholesalerReport) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color.White, Color(0xFFFDF2F8))
+                )
+            )
+            .padding(24.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "STORE REACH",
+                    style = Typography.santoshi(11.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFBE185D),
+                    letterSpacing = 1.sp
+                )
+                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "${report.stores}", style = Typography.cirka(64.sp), fontWeight = FontWeight.Bold, color = Palette.dark)
+                    Text(text = "stores", style = Typography.santoshi(16.sp), fontWeight = FontWeight.SemiBold, color = Palette.dark, modifier = Modifier.padding(bottom = 12.dp))
+                }
+            }
+
+            Text(
+                text = "Different stores that liked, opened, asked about or ordered your designs.",
+                style = Typography.santoshi(13.sp),
+                color = Palette.muted
+            )
+        }
+    }
+}
+
+@Composable
+private fun EndCardFace(period: WholesalerReport.Period) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color(0xFF1F1B16), Color(0xFF4A3B28))
+                )
+            )
+            .padding(24.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "THAT'S YOUR ${period.rawValue.uppercase()}",
+                    style = Typography.santoshi(11.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFCBB284),
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    text = "Upload new designs to give stores more to like.",
+                    style = Typography.cirka(28.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+            Text(
+                text = "Swipe to start again",
+                style = Typography.santoshi(12.sp),
+                color = Color.White.copy(alpha = 0.6f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReportMetricRow(label: String, value: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = label, style = Typography.santoshi(14.sp), color = Palette.dark)
+        Text(text = "$value", style = Typography.cirka(18.sp), fontWeight = FontWeight.Bold, color = Palette.dark)
     }
 }

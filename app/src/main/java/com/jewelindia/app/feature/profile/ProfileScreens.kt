@@ -1,8 +1,8 @@
-// Port of: wholesaler ios/JewelIndia/Sources/Features/Profile/ProfileViews.swift
+// Port of: wholesaler ios/JewelIndia/Sources/Features/Profile/ProfileViews.swift (WholesalerProfileView)
 package com.jewelindia.app.feature.profile
 
-import android.content.Intent
-import android.net.Uri
+import android.content.Context
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,14 +25,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.filled.Help
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PanTool
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -46,11 +47,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jewelindia.app.R
 import com.jewelindia.app.core.legal.LegalLinks
 import com.jewelindia.app.core.model.Wholesaler
 import com.jewelindia.app.core.session.SessionStore
@@ -64,7 +69,9 @@ import kotlinx.coroutines.launch
 fun WholesalerProfileScreen(
     wholesaler: Wholesaler?,
     sessionStore: SessionStore,
-    onBack: () -> Unit
+    onBack: (() -> Unit)? = null,
+    onOpenTreasureChest: () -> Unit = {},
+    onInviteRetailer: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -76,27 +83,35 @@ fun WholesalerProfileScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Palette.background)
+            .background(Color(0xFFF2F2F7))
             .statusBarsPadding()
     ) {
-        Row(
+        // Centered iOS Profile title
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .height(44.dp)
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
         ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Palette.dark
-                )
+            if (onBack != null) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Palette.dark
+                    )
+                }
             }
             Text(
-                text = "Profile & Settings",
-                style = Typography.cirka(20.sp),
+                text = "Profile",
+                style = Typography.santoshi(17.sp),
                 fontWeight = FontWeight.Bold,
-                color = Palette.dark
+                color = Palette.dark,
+                textAlign = TextAlign.Center
             )
         }
 
@@ -104,112 +119,182 @@ fun WholesalerProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Business Details Card
-            Box(
+            // Profile Header
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Palette.cream)
-                    .border(1.dp, Palette.border, RoundedCornerShape(16.dp))
-                    .padding(20.dp)
+                    .padding(vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(Palette.goldPrimary.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = (wholesaler?.businessName?.firstOrNull() ?: wholesaler?.fullName?.firstOrNull() ?: 'W').uppercase(),
-                            style = Typography.cirka(24.sp),
-                            fontWeight = FontWeight.Bold,
-                            color = Palette.goldPrimary
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            text = wholesaler?.businessName ?: wholesaler?.fullName ?: "Wholesaler",
-                            style = Typography.cirka(18.sp),
-                            fontWeight = FontWeight.Bold,
-                            color = Palette.dark
-                        )
-                        wholesaler?.fullName?.let {
-                            Text(text = it, style = Typography.santoshi(14.sp), color = Palette.muted)
-                        }
-                        wholesaler?.city?.let { city ->
-                            val loc = listOfNotNull(city, wholesaler.state).joinToString(", ")
-                            Text(text = loc, style = Typography.santoshi(12.sp), color = Palette.muted)
-                        }
-                    }
+                // Circle Avatar 76dp
+                Box(
+                    modifier = Modifier
+                        .size(76.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF8E7571))
+                        .border(1.dp, Color(0xFFE5E7EB), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "JI",
+                        style = Typography.cirka(32.sp),
+                        fontWeight = FontWeight.Normal,
+                        color = Color.White
+                    )
+                }
+
+                Text(
+                    text = wholesaler?.businessName ?: "Parash Jewels",
+                    style = Typography.cirka(24.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1C1917),
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
+                    text = wholesaler?.fullName ?: "Parash Rautela",
+                    style = Typography.santoshi(13.sp),
+                    color = Color(0xFF78716C),
+                    textAlign = TextAlign.Center
+                )
+
+                // Verified green pill
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(Color(0xFFD1FAE5))
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Verified",
+                        style = Typography.santoshi(11.sp),
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF047857)
+                    )
                 }
             }
 
-            // Legal & Information
-            Text(
-                text = "Legal & Support",
-                style = Typography.santoshi(13.sp),
-                fontWeight = FontWeight.Bold,
-                color = Palette.muted,
-                modifier = Modifier.padding(start = 4.dp, top = 8.dp)
-            )
+            // Account Section
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "Account",
+                    style = Typography.santoshi(13.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF6B7280),
+                    modifier = Modifier.padding(start = 16.dp)
+                )
 
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White)
+                ) {
+                    ProfileDataRow(
+                        label = "Email",
+                        value = wholesaler?.email ?: "parash@example.com"
+                    )
+                    HorizontalDivider(thickness = 0.5.dp, color = Color(0xFFF2F2F2), modifier = Modifier.padding(start = 16.dp))
+                    ProfileDataRow(
+                        label = "Location",
+                        value = listOfNotNull(wholesaler?.city ?: "Bengaluru", wholesaler?.state ?: "Karnataka").joinToString(", ")
+                    )
+                    HorizontalDivider(thickness = 0.5.dp, color = Color(0xFFF2F2F2), modifier = Modifier.padding(start = 16.dp))
+                    ProfileDataRow(
+                        label = "Member since",
+                        value = "September 2026"
+                    )
+                }
+            }
+
+            // Shortcuts Section (Treasure Chest & Invite a Retailer)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Palette.cream)
-                    .border(1.dp, Palette.border, RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White)
             ) {
-                ProfileMenuItem(
-                    icon = Icons.Default.Description,
-                    title = "Terms & Conditions",
-                    onClick = { LegalLinks.open(context, LegalLinks.terms) }
+                ProfileNavRow(
+                    icon = Icons.Default.AutoAwesome,
+                    title = "Treasure Chest",
+                    showChevron = true,
+                    onClick = onOpenTreasureChest
                 )
-                ProfileMenuItem(
-                    icon = Icons.Default.Lock,
-                    title = "Privacy Policy",
-                    onClick = { LegalLinks.open(context, LegalLinks.privacy) }
-                )
-                ProfileMenuItem(
-                    icon = Icons.Default.Help,
-                    title = "Support & Help",
-                    onClick = { LegalLinks.open(context, LegalLinks.support) }
+                HorizontalDivider(thickness = 0.5.dp, color = Color(0xFFF2F2F2), modifier = Modifier.padding(start = 52.dp))
+                ProfileNavRow(
+                    icon = Icons.Default.PersonAdd,
+                    title = "Invite a Retailer",
+                    showChevron = false,
+                    onClick = onInviteRetailer
                 )
             }
 
-            // Account Actions
-            Text(
-                text = "Account",
-                style = Typography.santoshi(13.sp),
-                fontWeight = FontWeight.Bold,
-                color = Palette.muted,
-                modifier = Modifier.padding(start = 4.dp, top = 8.dp)
-            )
-
+            // Legal Section
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Palette.cream)
-                    .border(1.dp, Palette.border, RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White)
             ) {
-                ProfileMenuItem(
-                    icon = Icons.Default.ExitToApp,
-                    title = "Log Out",
-                    titleColor = Palette.dark,
-                    onClick = { showSignOutDialog = true }
+                ProfileNavRow(
+                    icon = Icons.Default.Description,
+                    title = "Terms & Conditions",
+                    showChevron = false,
+                    onClick = { LegalLinks.open(context, LegalLinks.terms) }
                 )
-                ProfileMenuItem(
-                    icon = Icons.Default.Delete,
-                    title = "Delete Account",
-                    titleColor = Palette.accentRed,
-                    onClick = { showDeleteDialog = true }
+                HorizontalDivider(thickness = 0.5.dp, color = Color(0xFFF2F2F2), modifier = Modifier.padding(start = 52.dp))
+                ProfileNavRow(
+                    icon = Icons.Default.PanTool,
+                    title = "Privacy Policy",
+                    showChevron = false,
+                    onClick = { LegalLinks.open(context, LegalLinks.privacy) }
+                )
+            }
+
+            // Delete Account Section
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White)
+                ) {
+                    ProfileNavRow(
+                        icon = Icons.Default.Delete,
+                        title = "Delete account",
+                        titleColor = Color(0xFFEF4444),
+                        iconTint = Color(0xFFEF4444),
+                        showChevron = false,
+                        onClick = { showDeleteDialog = true }
+                    )
+                }
+                Text(
+                    text = "Permanently deletes your account and associated catalogue data.",
+                    style = Typography.santoshi(12.sp),
+                    color = Color(0xFF8E8E93),
+                    modifier = Modifier.padding(start = 16.dp)
+                )
+            }
+
+            // Log Out Section
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White)
+            ) {
+                ProfileNavRow(
+                    icon = Icons.Default.ExitToApp,
+                    title = Copy.logoutConfirm,
+                    titleColor = Color(0xFFEF4444),
+                    iconTint = Color(0xFFEF4444),
+                    showChevron = false,
+                    onClick = { showSignOutDialog = true }
                 )
             }
 
@@ -220,8 +305,8 @@ fun WholesalerProfileScreen(
     if (showSignOutDialog) {
         AlertDialog(
             onDismissRequest = { showSignOutDialog = false },
-            title = { Text("Log Out", style = Typography.cirka(18.sp), fontWeight = FontWeight.Bold) },
-            text = { Text("Are you sure you want to log out of Jewel India?", style = Typography.santoshi(14.sp)) },
+            title = { Text(Copy.logoutTitle, style = Typography.cirka(18.sp), fontWeight = FontWeight.Bold) },
+            text = { Text(Copy.logoutBody, style = Typography.santoshi(14.sp)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -229,12 +314,12 @@ fun WholesalerProfileScreen(
                         scope.launch { sessionStore.signOut() }
                     }
                 ) {
-                    Text("Log Out", color = Palette.accentRed, fontWeight = FontWeight.Bold)
+                    Text(Copy.logoutConfirm, color = Palette.accentRed, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showSignOutDialog = false }) {
-                    Text("Cancel")
+                    Text(Copy.logoutCancel)
                 }
             }
         )
@@ -243,11 +328,11 @@ fun WholesalerProfileScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { if (!deleting) showDeleteDialog = false },
-            title = { Text("Delete Account", style = Typography.cirka(18.sp), fontWeight = FontWeight.Bold) },
+            title = { Text("Delete your account?", style = Typography.cirka(18.sp), fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "Are you sure you want to permanently delete your Jewel India account? All your catalogues, products, and details will be erased.",
+                        "This permanently deletes your Jewel India account and associated data. This can't be undone.",
                         style = Typography.santoshi(14.sp)
                     )
                     if (deleteError != null) {
@@ -275,7 +360,7 @@ fun WholesalerProfileScreen(
                     if (deleting) {
                         CircularProgressIndicator(modifier = Modifier.size(16.dp))
                     } else {
-                        Text("Delete Permanently", color = Palette.accentRed, fontWeight = FontWeight.Bold)
+                        Text("Delete account permanently", color = Palette.accentRed, fontWeight = FontWeight.Bold)
                     }
                 }
             },
@@ -292,10 +377,80 @@ fun WholesalerProfileScreen(
 }
 
 @Composable
+private fun ProfileDataRow(
+    label: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 13.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = Typography.santoshi(14.sp),
+            color = Color(0xFF8E8E93)
+        )
+        Text(
+            text = value,
+            style = Typography.santoshi(14.sp),
+            color = Palette.dark,
+            textAlign = TextAlign.End
+        )
+    }
+}
+
+@Composable
+private fun ProfileNavRow(
+    icon: ImageVector,
+    title: String,
+    titleColor: Color = Palette.dark,
+    iconTint: Color = Palette.dark,
+    showChevron: Boolean = false,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 13.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(
+                text = title,
+                style = Typography.santoshi(14.sp),
+                fontWeight = FontWeight.Medium,
+                color = titleColor
+            )
+        }
+
+        if (showChevron) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Color(0xFFC7C7CC),
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+@Composable
 fun ProfileMenuItem(
     icon: ImageVector,
     title: String,
-    titleColor: androidx.compose.ui.graphics.Color = Palette.dark,
+    titleColor: Color = Palette.dark,
     onClick: () -> Unit
 ) {
     Row(
@@ -328,4 +483,3 @@ fun ProfileMenuItem(
         )
     }
 }
-

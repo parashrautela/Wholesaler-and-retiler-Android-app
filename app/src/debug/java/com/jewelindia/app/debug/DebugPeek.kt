@@ -283,7 +283,8 @@ object DebugPeek {
             "chats-wholesaler" -> {
                 ChatThreadsScreen(
                     title = "Queries & Chat",
-                    onBack = onBack,
+                    onBack = null,
+                    peekThreads = DebugPeekSamples.chatThreads(),
                     onOpenThread = {}
                 )
             }
@@ -291,7 +292,9 @@ object DebugPeek {
                 val thread = DebugPeekSamples.chatThreads()[0]
                 ChatThreadScreen(
                     thread = thread,
-                    side = "wholesaler",
+                    side = "employee",
+                    title = "Temple Haram",
+                    peekMessages = DebugPeekSamples.chatMessages(),
                     onBack = onBack
                 )
             }
@@ -299,7 +302,7 @@ object DebugPeek {
                 WholesalerProfileScreen(
                     wholesaler = DebugPeekSamples.wholesaler(),
                     sessionStore = graph.sessionStore,
-                    onBack = onBack
+                    onBack = null
                 )
             }
             "invite-card" -> {
@@ -316,15 +319,23 @@ object DebugPeek {
             "invite-gift", "invite-guide" -> {
                 InviteRetailerSheet(
                     sheetState = sheetState,
+                    previewStage = if (id == "invite-gift") 1 else 0,
                     onDismiss = onBack,
                     onViewHistory = {}
                 )
             }
             "manufacturing-offer" -> {
-                WholesalerOfferDetailScreen(
-                    offerId = "offer-0001",
-                    onBack = onBack
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Supply a simulator fixture offer ID.",
+                        color = Color.Black
+                    )
+                }
             }
             "chamak-hub" -> {
                 ChamakHubScreen(
@@ -408,6 +419,8 @@ object DebugPeek {
                 InsufficientCreditsSheet(
                     sheetState = sheetState,
                     shortBy = 120,
+                    required = 200,
+                    balance = 80,
                     onDismiss = onBack,
                     onOpenDailyCredits = onBack
                 )

@@ -7,6 +7,7 @@ import com.jewelindia.app.R
 import com.jewelindia.app.core.model.ManufacturingOffer
 import com.jewelindia.app.core.model.ManufacturingQuote
 import com.jewelindia.app.core.model.ManufacturingRequest
+import com.jewelindia.app.core.model.ChatMessage
 import com.jewelindia.app.core.model.OrderStatus
 import com.jewelindia.app.core.model.Product
 import com.jewelindia.app.core.model.VerificationStatus
@@ -140,12 +141,19 @@ object DebugPeekSamples {
     }
 
     fun dailyCreditWallet(id: String): CreditWallet {
-        return when (id) {
-            "daily-credits-sheet" -> creditWallet(1808)
-            "daily-credits" -> creditWallet(1808)
-            "nocredits" -> creditWallet(0)
-            else -> creditWallet(1808)
-        }
+        return CreditWallet(
+            ok = true,
+            available = 1200,
+            lowBalance = false,
+            lowBalanceThreshold = 300,
+            dailyAllowance = 2000,
+            dailyAvailable = 700,
+            bonusAvailable = 500,
+            mode = "daily",
+            policyType = "daily_allowance",
+            resetsAt = "2026-10-18T00:00:00Z",
+            serverNow = "2026-10-17T17:41:19Z"
+        )
     }
 
     fun creditPrices(): List<CreditPrice> {
@@ -160,28 +168,57 @@ object DebugPeekSamples {
     fun chatThreads(): List<ChatThread> {
         return listOf(
             ChatThread(
-                id = "thread-0001",
+                id = "1",
                 side = "wholesaler",
-                productID = "prod-sample-0001",
-                productTitle = "Temple Haram with Emerald Drops",
+                productTitle = "Temple Haram",
                 productImage = null,
-                storeName = "Kalyan Jewellers Indiranagar",
-                askedBy = "Ramesh",
-                lastMessage = "Can you manufacture this in 24K on special order?",
-                lastAt = "2026-10-17T11:45:00Z",
+                storeName = "Parash The Dev",
+                askedBy = "Parash Retailer",
+                lastMessage = "Is this available in 18k?",
+                lastFrom = "employee",
+                lastAt = "2026-09-19T08:12:00.000000+00:00",
                 unread = 2
             ),
             ChatThread(
-                id = "thread-0002",
+                id = "2",
                 side = "wholesaler",
-                productID = "prod-sample-0002",
-                productTitle = "Traditional Floral Choker",
+                productTitle = "Kundan Choker",
                 productImage = null,
-                storeName = "Tanishq Boutique Jayanagar",
-                askedBy = "Priya",
-                lastMessage = "Thanks for confirming the weight. Placed order #ORD-98212.",
-                lastAt = "2026-10-16T15:20:00Z",
+                storeName = "Meera Jewels",
+                askedBy = "Anil",
+                lastMessage = "Yes, 12 days.",
+                lastFrom = "wholesaler",
+                lastAt = "2026-09-17T11:40:00.000000+00:00",
                 unread = 0
+            )
+        )
+    }
+
+    fun chatMessages(): List<ChatMessage> {
+        return listOf(
+            ChatMessage(
+                id = "a",
+                conversationId = "1",
+                senderType = "employee",
+                content = "Is this available in 18k?",
+                isRead = true,
+                createdAt = "2026-09-19T08:12:00.000000+00:00"
+            ),
+            ChatMessage(
+                id = "b",
+                conversationId = "1",
+                senderType = "wholesaler",
+                content = "Yes — 18k takes about 12 days. Do you need the matching earrings too?",
+                isRead = false,
+                createdAt = "2026-09-19T08:15:00.000000+00:00"
+            ),
+            ChatMessage(
+                id = "c",
+                conversationId = "1",
+                senderType = "employee",
+                content = "Yes please, send me the weight.",
+                isRead = false,
+                createdAt = "2026-09-19T08:16:00.000000+00:00"
             )
         )
     }

@@ -22,9 +22,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Badge
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -38,12 +39,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.images.CachedImage
+import com.jewelindia.app.core.time.ChatTime
 import com.jewelindia.app.data.api.ChatApi
 import com.jewelindia.app.data.api.ChatThread
 import com.jewelindia.app.design.Palette
@@ -57,14 +61,20 @@ fun ChatThreadsScreen(
     emptyMessage: String = "When stores ask about your designs, their questions will appear here.",
     onBack: (() -> Unit)? = null,
     onOpenThread: (ChatThread) -> Unit,
-    onUnreadChange: ((Int) -> Unit)? = null
+    onUnreadChange: ((Int) -> Unit)? = null,
+    peekThreads: List<ChatThread>? = null
 ) {
-    var threads by remember { mutableStateOf<List<ChatThread>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
+    var threads by remember { mutableStateOf<List<ChatThread>>(peekThreads ?: emptyList()) }
+    var loading by remember { mutableStateOf(peekThreads == null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     fun load() {
+        if (peekThreads != null) {
+            threads = peekThreads
+            loading = false
+            return
+        }
         scope.launch {
             loading = true
             errorMessage = null
@@ -81,25 +91,34 @@ fun ChatThreadsScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        load()
+    LaunchedEffect(peekThreads) {
+        if (peekThreads != null) {
+            threads = peekThreads
+            loading = false
+        } else {
+            load()
+        }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Palette.background)
+            .background(Color.White)
             .statusBarsPadding()
     ) {
-        // Header
-        Row(
+        // iOS Centered Inline Title Bar
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .height(44.dp)
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
         ) {
             if (onBack != null) {
-                IconButton(onClick = onBack) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
@@ -109,19 +128,17 @@ fun ChatThreadsScreen(
             }
             Text(
                 text = title,
-                style = Typography.cirka(22.sp),
+                style = Typography.santoshi(17.sp),
                 fontWeight = FontWeight.Bold,
                 color = Palette.dark,
-                modifier = Modifier.weight(1f)
+                textAlign = TextAlign.Center
             )
-            IconButton(onClick = { load() }) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Refresh",
-                    tint = Palette.muted
-                )
-            }
         }
+
+        HorizontalDivider(
+            thickness = 0.5.dp,
+            color = Color(0xFFE5E7EB)
+        )
 
         Box(
             modifier = Modifier
@@ -135,7 +152,7 @@ fun ChatThreadsScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(
-                            color = Palette.goldPrimary,
+                            color = Palette.dark,
                             strokeWidth = 2.dp
                         )
                     }
@@ -180,7 +197,7 @@ fun ChatThreadsScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = emptyTitle,
-                            style = Typography.cirka(18.sp),
+                            style = Typography.cirka(20.sp),
                             fontWeight = FontWeight.SemiBold,
                             color = Palette.dark
                         )
@@ -189,6 +206,7 @@ fun ChatThreadsScreen(
                             text = emptyMessage,
                             style = Typography.santoshi(14.sp),
                             color = Palette.muted,
+                            textAlign = TextAlign.Center,
                             modifier = Modifier.padding(horizontal = 24.dp)
                         )
                     }
@@ -201,6 +219,11 @@ fun ChatThreadsScreen(
                             ChatThreadRow(
                                 thread = thread,
                                 onClick = { onOpenThread(thread) }
+                            )
+                            HorizontalDivider(
+                                thickness = 0.5.dp,
+                                color = Color(0xFFF2F2F2),
+                                modifier = Modifier.padding(start = 76.dp)
                             )
                         }
                     }
@@ -219,7 +242,7 @@ fun ChatThreadRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         val imgUrl = thread.imageURL
@@ -228,23 +251,23 @@ fun ChatThreadRow(
                 url = imgUrl,
                 contentDescription = thread.productTitle,
                 modifier = Modifier
-                    .size(52.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(10.dp)),
                 contentScale = ContentScale.Crop
             )
         } else {
             Box(
                 modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .background(Palette.cream),
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFFF7F7F7)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = (thread.storeName?.firstOrNull() ?: thread.title.firstOrNull() ?: 'J').uppercase(),
-                    style = Typography.cirka(18.sp),
-                    fontWeight = FontWeight.Bold,
-                    color = Palette.goldPrimary
+                Icon(
+                    imageVector = Icons.Default.Image,
+                    contentDescription = null,
+                    tint = Color(0xFF9CA3AF),
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
@@ -261,44 +284,75 @@ fun ChatThreadRow(
             ) {
                 Text(
                     text = thread.title,
-                    style = Typography.santoshi(15.sp),
-                    fontWeight = if (thread.unread > 0) FontWeight.Bold else FontWeight.Medium,
+                    style = Typography.santoshi(14.sp),
+                    fontWeight = FontWeight.Bold,
                     color = Palette.dark,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false)
                 )
 
-                if (thread.unread > 0) {
-                    Badge(
-                        containerColor = Palette.goldPrimary,
-                        contentColor = Palette.light,
+                val shortTime = ChatTime.short(thread.lastAt)
+                if (shortTime != null) {
+                    Text(
+                        text = shortTime,
+                        style = Typography.santoshi(11.sp),
+                        color = Color(0xFF8E8E93),
                         modifier = Modifier.padding(start = 8.dp)
-                    ) {
-                        Text(text = "${thread.unread}")
-                    }
+                    )
                 }
             }
 
             if (!thread.subtitle.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = thread.subtitle ?: "",
                     style = Typography.santoshi(12.sp),
-                    color = Palette.muted,
+                    color = Color(0xFF8E8E93),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            if (!thread.lastMessage.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(3.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val preview = when {
+                    thread.lastMessage.isNullOrBlank() -> "No messages yet"
+                    thread.lastFrom == thread.side -> "You: ${thread.lastMessage}"
+                    else -> thread.lastMessage
+                }
+
                 Text(
-                    text = thread.lastMessage ?: "",
+                    text = preview,
                     style = Typography.santoshi(13.sp),
-                    color = if (thread.unread > 0) Palette.dark else Palette.muted,
+                    fontWeight = if (thread.unread > 0) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (thread.unread > 0) Palette.dark else Color(0xFF8E8E93),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
+
+                if (thread.unread > 0) {
+                    Box(
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .clip(CircleShape)
+                            .background(Palette.dark)
+                            .padding(horizontal = 7.dp, vertical = 2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${thread.unread}",
+                            style = Typography.santoshi(11.sp),
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
             }
         }
     }

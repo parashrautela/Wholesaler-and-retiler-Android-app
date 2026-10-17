@@ -2,6 +2,7 @@
 package com.jewelindia.app.feature.chat
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,20 +22,21 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -48,13 +50,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jewelindia.app.core.images.CachedImage
 import com.jewelindia.app.core.model.ChatMessage
+import com.jewelindia.app.core.time.ChatTime
 import com.jewelindia.app.data.api.ChatApi
 import com.jewelindia.app.data.api.ChatThread
 import com.jewelindia.app.design.Palette
@@ -65,12 +68,14 @@ import kotlinx.coroutines.launch
 fun ChatThreadScreen(
     thread: ChatThread,
     side: String, // "wholesaler", "retailer", "employee"
+    title: String? = null,
+    peekMessages: List<ChatMessage>? = null,
     onBack: () -> Unit
 ) {
-    var messages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
+    var messages by remember { mutableStateOf<List<ChatMessage>>(peekMessages ?: emptyList()) }
     var inputText by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
-    var loading by remember { mutableStateOf(true) }
+    var loading by remember { mutableStateOf(peekMessages == null) }
     var showMenu by remember { mutableStateOf(false) }
     var reportingMessage by remember { mutableStateOf<ChatMessage?>(null) }
     var reportReason by remember { mutableStateOf("") }
@@ -79,20 +84,31 @@ fun ChatThreadScreen(
 
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val displayTitle = title ?: thread.title
 
     suspend fun loadMessages() {
+        if (peekMessages != null) {
+            messages = peekMessages
+            loading = false
+            return
+        }
         try {
             messages = ChatApi.fetchMessages(thread.id)
             ChatApi.markRead(thread.id)
         } catch (_: Exception) {}
     }
 
-    LaunchedEffect(thread.id) {
-        loading = true
-        loadMessages()
-        loading = false
+    LaunchedEffect(thread.id, peekMessages) {
+        if (peekMessages != null) {
+            messages = peekMessages
+            loading = false
+        } else {
+            loading = true
+            loadMessages()
+            loading = false
+        }
         if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
+            listState.scrollToItem(messages.size - 1)
         }
     }
 
@@ -103,9 +119,20 @@ fun ChatThreadScreen(
             sending = true
             errorMessage = null
             try {
-                ChatApi.send(thread.id, text)
+                if (peekMessages != null) {
+                    messages = messages + ChatMessage(
+                        id = "local-${System.currentTimeMillis()}",
+                        conversationId = thread.id,
+                        senderType = side,
+                        content = text,
+                        isRead = true,
+                        createdAt = java.time.Instant.now().toString()
+                    )
+                } else {
+                    ChatApi.send(thread.id, text)
+                    loadMessages()
+                }
                 inputText = ""
-                loadMessages()
                 if (messages.isNotEmpty()) {
                     listState.animateScrollToItem(messages.size - 1)
                 }
@@ -125,82 +152,84 @@ fun ChatThreadScreen(
             .navigationBarsPadding()
             .imePadding()
     ) {
-        // App bar
-        Row(
+        // iOS Navigation Bar: Close pill on left, Centered title, Ellipsis button on right
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Palette.light)
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .height(48.dp)
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
         ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Palette.dark
-                )
-            }
-
-            if (!thread.imageURL.isNullOrBlank()) {
-                CachedImage(
-                    url = thread.imageURL ?: "",
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-            }
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = thread.title,
-                    style = Typography.santoshi(16.sp),
-                    fontWeight = FontWeight.Bold,
-                    color = Palette.dark,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (!thread.subtitle.isNullOrBlank()) {
+            Surface(
+                onClick = onBack,
+                shape = CircleShape,
+                color = Color.White,
+                shadowElevation = 2.dp,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .height(34.dp)
+            ) {
+                Box(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = thread.subtitle ?: "",
-                        style = Typography.santoshi(12.sp),
-                        color = Palette.muted,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        text = "Close",
+                        style = Typography.santoshi(14.sp),
+                        fontWeight = FontWeight.SemiBold,
+                        color = Palette.dark
                     )
                 }
             }
 
-            Box {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Options",
-                        tint = Palette.dark
-                    )
+            Text(
+                text = displayTitle,
+                style = Typography.santoshi(16.sp),
+                fontWeight = FontWeight.Bold,
+                color = Palette.dark,
+                textAlign = TextAlign.Center
+            )
+
+            Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+                Surface(
+                    onClick = { showMenu = true },
+                    shape = CircleShape,
+                    color = Color.White,
+                    shadowElevation = 2.dp,
+                    modifier = Modifier.size(34.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.MoreHoriz,
+                            contentDescription = "Options",
+                            tint = Palette.dark,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
+
                 DropdownMenu(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Block contact") },
+                        text = { Text("Report latest message") },
                         onClick = {
                             showMenu = false
-                            scope.launch {
-                                try {
-                                    ChatApi.block(thread.id)
-                                    onBack()
-                                } catch (_: Exception) {}
-                            }
+                            val latestIncoming = messages.lastOrNull { it.senderType != side }
+                            reportingMessage = latestIncoming
                         }
                     )
                 }
             }
         }
 
-        // Error banner
+        HorizontalDivider(
+            thickness = 0.5.dp,
+            color = Color(0xFFE5E7EB)
+        )
+
+        // Error banner if any
         if (errorMessage != null) {
             Box(
                 modifier = Modifier
@@ -225,21 +254,30 @@ fun ChatThreadScreen(
             if (loading) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
-                    color = Palette.goldPrimary
+                    color = Palette.dark
                 )
+            } else if (messages.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Say hello — ask about availability, purity or delivery.",
+                        style = Typography.santoshi(13.sp),
+                        color = Color(0xFF8E8E93),
+                        textAlign = TextAlign.Center
+                    )
+                }
             } else {
                 LazyColumn(
                     state = listState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     items(messages, key = { it.id }) { msg ->
-                        val isMine = when (side) {
-                            "wholesaler" -> msg.senderType == "wholesaler"
-                            else -> msg.senderType in listOf("store", "retailer", "employee")
-                        }
+                        val isMine = msg.senderType == side
                         ChatBubble(
                             message = msg,
                             isMine = isMine,
@@ -250,30 +288,43 @@ fun ChatThreadScreen(
             }
         }
 
-        // Input row
+        HorizontalDivider(
+            thickness = 0.5.dp,
+            color = Color(0xFFE5E7EB)
+        )
+
+        // iOS Inset Rounded Composer Row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Palette.light)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .background(Palette.background)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            OutlinedTextField(
-                value = inputText,
-                onValueChange = { inputText = it },
-                placeholder = { Text("Type a message...", style = Typography.santoshi(14.sp), color = Palette.muted) },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(24.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Palette.goldPrimary,
-                    unfocusedBorderColor = Palette.border,
-                    focusedContainerColor = Palette.cream.copy(alpha = 0.3f),
-                    unfocusedContainerColor = Palette.cream.copy(alpha = 0.3f)
-                ),
-                maxLines = 4,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = { sendMessage() })
-            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.White)
+                    .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(20.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+            ) {
+                if (inputText.isEmpty()) {
+                    Text(
+                        text = "Type a message…",
+                        style = Typography.santoshi(14.sp),
+                        color = Color(0xFF8E8E93)
+                    )
+                }
+                BasicTextField(
+                    value = inputText,
+                    onValueChange = { inputText = it },
+                    textStyle = Typography.santoshi(14.sp).copy(color = Palette.dark),
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(onSend = { sendMessage() })
+                )
+            }
 
             Spacer(modifier = Modifier.width(8.dp))
 
@@ -281,22 +332,22 @@ fun ChatThreadScreen(
                 onClick = { sendMessage() },
                 enabled = inputText.isNotBlank() && !sending,
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
-                    .background(if (inputText.isNotBlank()) Palette.goldPrimary else Palette.muted.copy(alpha = 0.3f))
+                    .background(if (inputText.isNotBlank()) Palette.dark else Color(0xFFC7C7CC))
             ) {
                 if (sending) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = Palette.light,
+                        modifier = Modifier.size(16.dp),
+                        color = Color.White,
                         strokeWidth = 2.dp
                     )
                 } else {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Send",
-                        tint = Palette.light,
-                        modifier = Modifier.size(20.dp)
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
@@ -358,38 +409,35 @@ fun ChatBubble(
     isMine: Boolean,
     onReport: () -> Unit
 ) {
-    var showMenu by remember { mutableStateOf(false) }
-
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start
+        horizontalAlignment = if (isMine) Alignment.End else Alignment.Start
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth(0.78f)
-                .wrapContentWidth(if (isMine) Alignment.End else Alignment.Start)
-        ) {
-            Box(
-                modifier = Modifier
-                    .clip(
-                        RoundedCornerShape(
-                            topStart = 16.dp,
-                            topEnd = 16.dp,
-                            bottomStart = if (isMine) 16.dp else 4.dp,
-                            bottomEnd = if (isMine) 4.dp else 16.dp
-                        )
-                    )
-                    .background(if (isMine) Palette.goldPrimary else Palette.cream)
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-            ) {
-                Text(
-                    text = message.content ?: "",
-                    style = Typography.santoshi(14.sp),
-                    color = if (isMine) Palette.light else Palette.dark
+                .clip(RoundedCornerShape(16.dp))
+                .background(if (isMine) Palette.dark else Color.White)
+                .then(
+                    if (!isMine) Modifier.border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(16.dp))
+                    else Modifier
                 )
-            }
+                .padding(horizontal = 14.dp, vertical = 10.dp)
+        ) {
+            Text(
+                text = message.content ?: "",
+                style = Typography.santoshi(14.sp),
+                color = if (isMine) Color.White else Palette.dark
+            )
+        }
+
+        val fullTime = ChatTime.full(message.createdAt)
+        if (fullTime != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = fullTime,
+                style = Typography.santoshi(10.sp),
+                color = Color(0xFF8E8E93)
+            )
         }
     }
 }
-
-private fun Modifier.wrapContentWidth(align: Alignment.Horizontal): Modifier = this

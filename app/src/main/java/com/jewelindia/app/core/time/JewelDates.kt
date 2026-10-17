@@ -34,7 +34,7 @@ object ChatTime {
         .withZone(JewelDates.indiaZone)
     private val dayMonthFormat = DateTimeFormatter.ofPattern("d MMM", JewelDates.indiaLocale)
         .withZone(JewelDates.indiaZone)
-    private val fullDateTimeFormat = DateTimeFormatter.ofPattern("d MMM, h:mm a", JewelDates.indiaLocale)
+    private val fullDateTimeFormat = DateTimeFormatter.ofPattern("d MMM 'at' h:mm a", JewelDates.indiaLocale)
         .withZone(JewelDates.indiaZone)
 
     fun date(raw: String?): Instant? = JewelDates.parse(raw)

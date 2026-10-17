@@ -1,33 +1,35 @@
-// Port of: wholesaler ios/JewelIndia/Sources/Features/Wholesaler/InviteRetailerCard.swift
+// Port of: wholesaler ios/JewelIndia/Sources/Features/Wholesaler/InviteRetailerSheet.swift (InviteRetailerCard)
 package com.jewelindia.app.feature.wholesaler
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jewelindia.app.design.Palette
+import com.jewelindia.app.R
 import com.jewelindia.app.design.Typography
 
 @Composable
@@ -38,54 +40,66 @@ fun InviteRetailerCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Palette.cream)
-            .border(1.dp, Palette.border, RoundedCornerShape(16.dp))
+            .height(98.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                Brush.horizontalGradient(
+                    listOf(Color(0xFFF1F2F3), Color(0xFFFED77D))
+                )
+            )
+            .border(1.dp, Color(0xFFD0D0D0), RoundedCornerShape(22.dp))
             .clickable(onClick = onClick)
-            .padding(18.dp)
     ) {
+        // Artwork on right edge
+        Image(
+            painter = painterResource(id = R.drawable.invite_card_artwork),
+            contentDescription = null,
+            contentScale = ContentScale.FillHeight,
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight()
+                .clip(
+                    RoundedCornerShape(
+                        topStart = 0.dp,
+                        bottomStart = 0.dp,
+                        topEnd = 22.dp,
+                        bottomEnd = 22.dp
+                    )
+                )
+        )
+
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Palette.goldPrimary.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PersonAdd,
-                        contentDescription = null,
-                        tint = Palette.goldPrimary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(14.dp))
-                Column {
-                    Text(
-                        text = "Invite Retailers",
-                        style = Typography.cirka(16.sp),
-                        fontWeight = FontWeight.Bold,
-                        color = Palette.dark
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Share exclusive invitation code & gift credits",
-                        style = Typography.santoshi(13.sp),
-                        color = Palette.muted
-                    )
-                }
-            }
-
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            Image(
+                painter = painterResource(id = R.drawable.ic_invite_user_plus),
                 contentDescription = null,
-                tint = Palette.muted
+                modifier = Modifier.size(54.dp, 55.dp)
             )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(
+                modifier = Modifier.width(175.dp)
+            ) {
+                Text(
+                    text = "Invite retailers",
+                    style = Typography.cirka(24.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2E2D2A)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Invite Retailer to join your\nnetwork on JewelIndia",
+                    style = Typography.santoshi(14.sp),
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF949494),
+                    lineHeight = 17.5.sp
+                )
+            }
         }
     }
 }
