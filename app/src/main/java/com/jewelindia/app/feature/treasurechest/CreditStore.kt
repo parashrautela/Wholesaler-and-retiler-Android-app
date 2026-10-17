@@ -78,4 +78,9 @@ class CreditStore(private val scope: CoroutineScope) {
     fun hasEntitlement(key: String): Boolean {
         return _entitlements.value.contains(key.lowercase())
     }
+
+    fun seedForPeek(wallet: CreditWallet, rateCard: List<CreditPrice> = emptyList()) {
+        _walletState.value = WalletState.Available(wallet)
+        _rateCard.value = rateCard
+    }
 }

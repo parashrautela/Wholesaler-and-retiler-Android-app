@@ -65,6 +65,7 @@ private val ORDER_TABS = listOf("Pending", "Active", "History")
 fun WholesalerOrdersScreen(
     wholesalerUserId: String = "",
     wholesaler: Wholesaler? = null,
+    peekOrders: List<WholesalerOrder>? = null,
     onOrderCountChange: (Int) -> Unit = {}
 ) {
     val resolvedUserId = wholesalerUserId.ifBlank {
@@ -80,14 +81,20 @@ fun WholesalerOrdersScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     LaunchedEffect(resolvedUserId) {
-        viewModel.load()
+        if (peekOrders == null) {
+            viewModel.load()
+        }
     }
 
-    val (orders, loading) = when (val s = ordersState) {
-        is OrdersUiState.Content -> s.orders to false
-        is OrdersUiState.Empty -> emptyList<WholesalerOrder>() to false
-        is OrdersUiState.Loading -> emptyList<WholesalerOrder>() to true
-        is OrdersUiState.Error -> emptyList<WholesalerOrder>() to false
+    val (orders, loading) = if (peekOrders != null) {
+        peekOrders to false
+    } else {
+        when (val s = ordersState) {
+            is OrdersUiState.Content -> s.orders to false
+            is OrdersUiState.Empty -> emptyList<WholesalerOrder>() to false
+            is OrdersUiState.Loading -> emptyList<WholesalerOrder>() to true
+            is OrdersUiState.Error -> emptyList<WholesalerOrder>() to false
+        }
     }
 
     LaunchedEffect(orders) {

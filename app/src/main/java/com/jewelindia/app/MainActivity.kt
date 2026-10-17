@@ -18,26 +18,38 @@ import com.jewelindia.app.design.JewelTheme
 import com.jewelindia.app.navigation.RootScreen
 import io.github.jan.supabase.auth.handleDeeplinks
 
+import com.jewelindia.app.debug.DebugPeek
+
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // §16c.1 App switcher snapshot protection
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            setRecentsScreenshotEnabled(false)
+        val peekId = DebugPeek.getPeekId(intent)
+
+        // §16c.1 App switcher snapshot protection (disabled for debug peek capture)
+        if (peekId != null) {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                setRecentsScreenshotEnabled(true)
+            }
         } else {
-            // On older APIs, permanently set FLAG_SECURE
-            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                setRecentsScreenshotEnabled(false)
+            } else {
+                window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            }
         }
 
         val graph = (application as JewelApplication).graph
         handleIncomingIntent(intent, graph)
 
         setContent {
+            val currentPeekId = remember { peekId }
             val screenSecurity = remember {
                 ScreenSecurity { isSecure ->
+                    if (currentPeekId != null) return@ScreenSecurity
                     if (isSecure) {
                         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
                     } else {
@@ -53,11 +65,15 @@ class MainActivity : ComponentActivity() {
                 LocalScreenSecurity provides screenSecurity
             ) {
                 JewelTheme {
-                    RootScreen(
-                        sessionStore = graph.sessionStore,
-                        signupFlow = graph.signupFlow,
-                        authRouter = graph.authRouter
-                    )
+                    if (currentPeekId != null) {
+                        DebugPeek.PeekScreen(id = currentPeekId, onBack = { finish() })
+                    } else {
+                        RootScreen(
+                            sessionStore = graph.sessionStore,
+                            signupFlow = graph.signupFlow,
+                            authRouter = graph.authRouter
+                        )
+                    }
                 }
             }
         }
@@ -66,6 +82,10 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (DebugPeek.getPeekId(intent) != null) {
+            recreate()
+            return
+        }
         val graph = (application as JewelApplication).graph
         handleIncomingIntent(intent, graph)
     }

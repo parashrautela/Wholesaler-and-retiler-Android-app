@@ -69,9 +69,14 @@ enum class WholesalerTab(val label: String, val icon: ImageVector) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WholesalerShell(sessionStore: SessionStore) {
-    var selectedTab by remember { mutableStateOf(WholesalerTab.Home) }
-    var wholesaler by remember { mutableStateOf<Wholesaler?>(null) }
+fun WholesalerShell(
+    sessionStore: SessionStore,
+    initialTab: WholesalerTab = WholesalerTab.Home,
+    previewCreditStore: CreditStore? = null,
+    previewWholesaler: Wholesaler? = null
+) {
+    var selectedTab by remember { mutableStateOf(initialTab) }
+    var wholesaler by remember { mutableStateOf<Wholesaler?>(previewWholesaler) }
     var pendingOrderCount by remember { mutableIntStateOf(0) }
     var unreadChatCount by remember { mutableIntStateOf(0) }
 
@@ -89,12 +94,13 @@ fun WholesalerShell(sessionStore: SessionStore) {
     var selectedCatalogueCategory by remember { mutableStateOf<String?>(null) }
 
     val scope = rememberCoroutineScope()
-    val creditStore = remember { CreditStore(scope) }
+    val creditStore = previewCreditStore ?: remember { CreditStore(scope) }
 
     val user = sessionStore.user.value
     val wholesalerUserId = user?.id ?: ""
 
     LaunchedEffect(wholesalerUserId) {
+        if (previewWholesaler != null) return@LaunchedEffect
         if (wholesalerUserId.isBlank()) return@LaunchedEffect
         creditStore.refresh()
         val email = sessionStore.user.value?.email

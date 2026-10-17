@@ -82,6 +82,7 @@ fun WholesalerCatalogScreen(
     wholesalerUserId: String = "",
     wholesaler: Wholesaler? = null,
     sessionStore: SessionStore,
+    peekProducts: List<Product>? = null,
     onOpenUploadHistory: (() -> Unit)? = null
 ) {
     val resolvedUserId = wholesalerUserId.ifBlank {
@@ -110,16 +111,20 @@ fun WholesalerCatalogScreen(
     }
 
     LaunchedEffect(resolvedUserId) {
-        if (resolvedUserId.isNotBlank()) {
+        if (peekProducts == null && resolvedUserId.isNotBlank()) {
             viewModel.load()
         }
     }
 
-    val (products, loading) = when (val s = catalogState) {
-        is CatalogUiState.Content -> s.products to false
-        is CatalogUiState.Empty -> emptyList<Product>() to false
-        is CatalogUiState.Loading -> emptyList<Product>() to true
-        is CatalogUiState.Error -> emptyList<Product>() to false
+    val (products, loading) = if (peekProducts != null) {
+        peekProducts to false
+    } else {
+        when (val s = catalogState) {
+            is CatalogUiState.Content -> s.products to false
+            is CatalogUiState.Empty -> emptyList<Product>() to false
+            is CatalogUiState.Loading -> emptyList<Product>() to true
+            is CatalogUiState.Error -> emptyList<Product>() to false
+        }
     }
 
     val filtered = remember(products, query) {

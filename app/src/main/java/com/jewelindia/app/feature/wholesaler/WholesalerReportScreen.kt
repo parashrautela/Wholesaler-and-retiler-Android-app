@@ -48,13 +48,17 @@ import com.jewelindia.app.design.Typography
 import kotlinx.coroutines.launch
 
 @Composable
-fun WholesalerReportScreen(onBack: () -> Unit) {
+fun WholesalerReportScreen(
+    onBack: () -> Unit,
+    peekReport: WholesalerReport? = null
+) {
     var period by remember { mutableStateOf(WholesalerReport.Period.Week) }
-    var report by remember { mutableStateOf<WholesalerReport?>(null) }
-    var loading by remember { mutableStateOf(true) }
+    var report by remember { mutableStateOf<WholesalerReport?>(peekReport) }
+    var loading by remember { mutableStateOf(peekReport == null) }
     val scope = rememberCoroutineScope()
 
     fun load() {
+        if (peekReport != null) return
         scope.launch {
             loading = true
             report = try {
@@ -67,7 +71,9 @@ fun WholesalerReportScreen(onBack: () -> Unit) {
     }
 
     LaunchedEffect(period) {
-        load()
+        if (peekReport == null) {
+            load()
+        }
     }
 
     Column(

@@ -58,18 +58,21 @@ data class ChamakLaunch(
 fun ChamakHubScreen(
     wholesalerId: String,
     catalogueSource: ChamakCatalogueSource = ChamakCatalogueSource.OwnProducts,
+    previewViewModel: ChamakViewModel? = null,
     onClose: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var launch by remember { mutableStateOf<ChamakLaunch?>(null) }
-    val galleryVm = remember {
+    val galleryVm = previewViewModel ?: remember {
         ChamakViewModel().apply {
             this.catalogueSource = catalogueSource
         }
     }
 
     LaunchedEffect(wholesalerId) {
-        galleryVm.refreshGallery(wholesalerId)
+        if (previewViewModel == null) {
+            galleryVm.refreshGallery(wholesalerId)
+        }
     }
 
     val activeLaunch = launch
