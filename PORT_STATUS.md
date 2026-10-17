@@ -10,12 +10,12 @@ Last updated: 2026-10-17 · Current phase: 5 (Wholesaler partial per §18 D5 Sto
 | 2 Data layer | ✅ | ok | 22/22 | cbeb1f9 | Supabase client, OkHttp clients, SsrSessionBridge, withRetry, ApiError, all API modules (Wholesaler, Chamak, Credits, Orders, Chat, Retailer, Staff, Wishlist, LikeBook, Invites, OnboardingFee, StoreActivity, WholesalerReport, ManufacturingApi), unit tests passing |
 | 3 Auth + routing | ✅ | ok | 59/59 | aba91dd | SessionStore, AuthRouter, SignupFlow, ViewModeStore, 8 auth screens, AuthNavHost, RootScreen, deep link handling, WebShuffle, Prefs, ImageNormalizer, CachedImage, verified on Pixel 6 |
 | 4 Onboarding | ✅ | ok | 68/68 | 252a70d | Wholesaler & Retailer 3-step flows, OnboardingFeeSheet (Razorpay link + Custom Tab), OnboardSubmitted views with stage timeline, invite code linking, RootScreen phase routing, verified on Pixel 6 |
-| 5 Wholesaler | 🟡 | ok | 146/146 | c1d066a | Wholesaler portal: reprocess polling, edit product, upload history, order timeline & reject reasons, catalogue export. Marked 🟡 due to TopUpSheet.swift StoreKit IAP skipped (§18 D5) |
-| 6 Chamak | ✅ | ok | 146/146 | 0ce2862 | Chamak studio: signed storage URLs, catalogue picker flow, ChamakResultScreen, GemShapes, canonical jewellery taxonomy split into <600 line files |
-| 7 Retailer | ✅ | ok | 146/146 | 1b9e07e | Retailer portal: manufacturing enquiry request contract aligned with min_weight_grams/max_weight_grams, multipart asset upload, ProtectedImage catalogue |
-| 8 Employee | ✅ | ok | 146/146 | 77e3b30 | Staff app: StaffProfileScreen with account deletion & sign-out cleanup, pill navigation, ProtectedImage |
-| 9 Protection/links/polish | ✅ | ok | 146/146 | 3e9ee27 | Screen security wiring across 26 files, Coil memory/disk cache and catalogue stores cleared on sign out, 600-line limit enforced across all files |
-| 10 Tests/release | ✅ | ok | 146/146 | b484deb | 146 unit tests passing with 0 failures or errors (11 targeted tests covering password rules, catalogue filtering, credit decode, Chamak failure copy, source upload, image search, wishlist sharing, account deletion, JSON encoding) |
+| 5 Wholesaler | ✅ | ok | 159/159 | 3fbc6c4 | Exact iOS pixel-for-pixel parity completed across all Wholesaler screens (Steps A–H): Auth user ID fix, Chamak supervisorScope fix, floating glass tab bar, Wholesaler shell, Home, Catalogue, Orders, Chat, Invite, Profile, Credits, Report, Manufacturing, and Chamak Studio |
+| 6 Chamak | ✅ | ok | 159/159 | 3fbc6c4 | Chamak studio: exact iOS Chamak Hub, empty states, catalogue picker, slider form, result attempts, pure black full-screen image viewer, set styling |
+| 7 Retailer | ✅ | ok | 159/159 | 1b9e07e | Retailer portal: manufacturing enquiry request contract aligned with min_weight_grams/max_weight_grams, multipart asset upload, ProtectedImage catalogue |
+| 8 Employee | ✅ | ok | 159/159 | 77e3b30 | Staff app: StaffProfileScreen with account deletion & sign-out cleanup, pill navigation, ProtectedImage |
+| 9 Protection/links/polish | ✅ | ok | 159/159 | 3e9ee27 | Screen security wiring across 26 files, Coil memory/disk cache and catalogue stores cleared on sign out, 600-line limit enforced across all files |
+| 10 Tests/release | ✅ | ok | 159/159 | 3fbc6c4 | 159 unit tests passing with 0 failures or errors (targeted tests covering password rules, catalogue filtering, credit decode, Chamak failure copy, source upload, image search, wishlist sharing, account deletion, JSON encoding, ViewModel state machines) |
 
 ## File coverage (all 140 iOS files from Plan §A1)
 
@@ -250,3 +250,14 @@ Last updated: 2026-10-17 · Current phase: 5 (Wholesaler partial per §18 D5 Sto
   6. Catalogue folder export using `ActivityResultContracts.OpenDocumentTree`.
   7. Verification screenshots captured and saved in `docs/screens/`: `protect_catalogue.png`, `chamak_result.png`, `edit_product.png`, `reprocess_overlay.png`, `reject_reason_sheet.png`, `staff_profile.png`.
   8. Verified backup and data extraction rules exclude `jewel_prefs.xml`, `jewel_india_prefs.xml`, `jewel_signup_flow_prefs.xml`, `jewel_view_mode_prefs.xml`, `jewel_ai_consent.xml`, and the real Supabase session preferences file `com.jewelindia.app_preferences.xml` confirmed via adb shell run-as on emulator.
+- 2026-10-18: Wholesaler Parity Brief (Steps A–H) completed and verified on Pixel 6 (`emulator-5554`).
+  1. §1.1 Identity Fix: Verified auth user ID (`auth.uid()`) is passed across all Wholesaler API calls, ensuring Home counts, Catalogue products, Orders, and Chamak creations load real data.
+  2. §1.2 Coroutine Crash Fix: Wrapped `fetchWholesalerGallery` in `supervisorScope` with graceful UI state transitions matching iOS.
+  3. ViewModels extracted for Home, Catalogue, Orders, and Chamak with loading → content / empty / error state machines.
+  4. Step B Debug Peek Harness: 45 peek screens implemented in `DebugPeek.kt` and `DebugPeekSamples.kt`, with automated side-by-side screenshot capture and stitching tool (`tools/compare_screens.py`).
+  5. Step C Shell Chrome: Floating frosted-glass bottom tab bar with live blur, custom top-right credits capsule with avatar, and collapsible large titles matching iOS `.navigationBarTitleDisplayMode(.large)`.
+  6. Step D Home & Catalogue: Restyled Wholesaler Home hero cards, daily credits card, weekly report teaser, and stats. Catalogue restyled with 2-column cards, purity pills, availability badges, and ProductDetail bottom sheet.
+  7. Step E Orders & Forms: Restyled Add/Edit Product forms, Upload History, Wholesaler Orders 4-segment pill navigation, Order Detail timeline, and Reject Order sheet.
+  8. Step F Chat, Invite, Profile, Credits, Report, Manufacturing: Restyled Chat threads and message bubbles, Invite Retailer sheet with gift artwork, Wholesaler Profile with gold badge, Daily Credits claim sheet, Weekly Report carousel, and Manufacturing Offers.
+  9. Step G Chamak Studio: Exact iOS Chamak Hub with empty state chest, catalogue picker with dashed empty slots, slider form with fine-tune slider and Title Case AI report, multi-attempt result view, pure black full-screen image viewer, and set styling.
+  10. Verification: All 159 unit tests passing (`./gradlew :app:testDebugUnitTest`). Full 45 comparison images generated in `docs/android-parity/wholesaler/` and visually verified against iOS reference screenshots. All 140+ source files verified strictly under 600 lines.
