@@ -1,6 +1,6 @@
 # Jewel India Android — Port Status
 
-Last updated: 2026-10-17 · Current phase: 3 (Complete) · iOS reference build: 40 (feat/retailer-monetisation)
+Last updated: 2026-10-17 · Current phase: 4 (Complete) · iOS reference build: 40 (feat/retailer-monetisation)
 
 ## Phase checklist
 | Phase | Status | Build | Tests | Commit | Notes |
@@ -8,8 +8,8 @@ Last updated: 2026-10-17 · Current phase: 3 (Complete) · iOS reference build: 
 | 0 Scaffold | ✅ | ok | 0/0 | cb3e2a7 | Empty Compose app running on Pixel 6 AVD, displaying LaunchScreen with Cirka 32 |
 | 1 Design + core | ✅ | ok | 10/10 | b751b94 | Tokens (Palette, Typography, Layout, Motion), core models, Copy, Credentials, JewelDates, components, and unit tests passing |
 | 2 Data layer | ✅ | ok | 22/22 | cbeb1f9 | Supabase client, OkHttp clients, SsrSessionBridge, withRetry, ApiError, all API modules (Wholesaler, Chamak, Credits, Orders, Chat, Retailer, Staff, Wishlist, LikeBook, Invites, OnboardingFee, StoreActivity, WholesalerReport, ManufacturingApi), unit tests passing |
-| 3 Auth + routing | ✅ | ok | 59/59 | | SessionStore, AuthRouter, SignupFlow, ViewModeStore, 8 auth screens, AuthNavHost, RootScreen, deep link handling, WebShuffle, Prefs, ImageNormalizer, CachedImage, verified on Pixel 6 |
-| 4 Onboarding | ⬜ | | | | |
+| 3 Auth + routing | ✅ | ok | 59/59 | aba91dd | SessionStore, AuthRouter, SignupFlow, ViewModeStore, 8 auth screens, AuthNavHost, RootScreen, deep link handling, WebShuffle, Prefs, ImageNormalizer, CachedImage, verified on Pixel 6 |
+| 4 Onboarding | ✅ | ok | 68/68 | | Wholesaler & Retailer 3-step flows, OnboardingFeeSheet (Razorpay link + Custom Tab), OnboardSubmitted views with stage timeline, invite code linking, RootScreen phase routing, verified on Pixel 6 |
 | 5 Wholesaler | ⬜ | | | | |
 | 6 Chamak | ⬜ | | | | |
 | 7 Retailer | ⬜ | | | | |
@@ -38,3 +38,4 @@ Last updated: 2026-10-17 · Current phase: 3 (Complete) · iOS reference build: 
 - 2026-10-17: Phase 1 verified with 10 unit tests in `CredentialsTest`, `JewelDatesTest`, and `ProductModelTest`. `./gradlew :app:assembleDebug :app:lintDebug` passed with 0 errors.
 - 2026-10-17: Phase 2 verified with 22 unit tests across `SsrSessionBridgeTest`, `ApiErrorTest`, `MarketplaceContractTest`, and core model suites. `./gradlew :app:testDebugUnitTest :app:assembleDebug` passed with 0 errors.
 - 2026-10-17: Phase 3 verified with 59 unit tests across `AuthRouterTest`, `SignupFlowTest`, `SessionEventMappingTest`, `WebShuffleTest`, `PrefsTest`, `ImageNormalizerTest`, and `DbRefusalTest`. Installed and launched on Pixel 6 emulator: verified launch crossfade, RoleChoiceScreen rendering with 3 doors, navigation to Sign In and EntryScreen, and back navigation (`docs/screens/role_choice.png`, `docs/screens/entry_signin.png`).
+- 2026-10-17: Phase 4 verified with 68 unit tests (+9 in `OnboardFlowTest` and `RetailerOnboardFlowTest`). Wholesaler and Retailer 3-step flows, Razorpay onboarding fee sheet with Custom Tabs, submitted verification screens with animated timelines, invite code linking, and JVM fallback for Supabase session storage. `./gradlew :app:testDebugUnitTest :app:assembleDebug` clean; verified install and launch on Pixel 6 emulator (`docs/screens/phase4_screen.png`).

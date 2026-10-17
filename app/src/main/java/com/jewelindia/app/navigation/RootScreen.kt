@@ -159,19 +159,10 @@ fun RootScreen(
                         UnreachableScreen(sessionStore = sessionStore)
                     }
                     is AppDestination.WholesalerOnboarding -> {
-                        PhaseGatePlaceholder(
-                            title = "Wholesaler Application",
-                            note = "Wholesaler onboarding workflow will be available in Phase 4.",
-                            onSignOut = { scope.launch { sessionStore.signOut() } }
-                        )
+                        com.jewelindia.app.feature.onboarding.OnboardCoordinator(sessionStore = sessionStore)
                     }
                     is AppDestination.WholesalerSubmitted -> {
-                        PhaseGatePlaceholder(
-                            title = "Wholesaler Application Submitted",
-                            note = "Your application is currently under review by Jewel India admin.",
-                            onSignOut = { scope.launch { sessionStore.signOut() } },
-                            onRefresh = { scope.launch { sessionStore.refreshDestination() } }
-                        )
+                        com.jewelindia.app.feature.onboarding.OnboardSubmittedScreen(sessionStore = sessionStore)
                     }
                     is AppDestination.WholesalerDashboard -> {
                         PhaseGatePlaceholder(
@@ -181,19 +172,13 @@ fun RootScreen(
                         )
                     }
                     is AppDestination.RetailerOnboarding -> {
-                        PhaseGatePlaceholder(
-                            title = "Retailer Application",
-                            note = "Retailer onboarding workflow will be available in Phase 4.",
-                            onSignOut = { scope.launch { sessionStore.signOut() } }
+                        com.jewelindia.app.feature.retailer_onboarding.RetailerOnboardCoordinator(
+                            sessionStore = sessionStore,
+                            signupFlow = signupFlow
                         )
                     }
                     is AppDestination.RetailerSubmitted -> {
-                        PhaseGatePlaceholder(
-                            title = "Retailer Application Submitted",
-                            note = "Your application is currently under review by Jewel India admin.",
-                            onSignOut = { scope.launch { sessionStore.signOut() } },
-                            onRefresh = { scope.launch { sessionStore.refreshDestination() } }
-                        )
+                        com.jewelindia.app.feature.retailer_onboarding.RetailerOnboardSubmittedScreen(sessionStore = sessionStore)
                     }
                     is AppDestination.RetailerDashboard -> {
                         PhaseGatePlaceholder(

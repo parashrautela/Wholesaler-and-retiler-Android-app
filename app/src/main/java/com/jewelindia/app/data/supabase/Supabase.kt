@@ -45,6 +45,16 @@ fun createJewelSupabase(): SupabaseClient = createSupabaseClient(
         flowType = FlowType.PKCE
         alwaysAutoRefresh = true
         autoLoadFromStorage = true
+        sessionManager = try {
+            io.github.jan.supabase.auth.SettingsSessionManager()
+        } catch (_: Throwable) {
+            io.github.jan.supabase.auth.MemorySessionManager()
+        }
+        codeVerifierCache = try {
+            io.github.jan.supabase.auth.SettingsCodeVerifierCache()
+        } catch (_: Throwable) {
+            io.github.jan.supabase.auth.MemoryCodeVerifierCache()
+        }
     }
     install(Postgrest)
     install(Storage)
