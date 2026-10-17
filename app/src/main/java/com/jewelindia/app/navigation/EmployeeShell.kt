@@ -86,6 +86,7 @@ import com.jewelindia.app.feature.employee.EmployeeStyle
 import com.jewelindia.app.feature.employee.EmployeeTab
 import com.jewelindia.app.feature.employee.LocalEmployeeStyle
 import com.jewelindia.app.feature.employee.RequestSentScreen
+import com.jewelindia.app.feature.profile.StaffProfileScreen
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -113,6 +114,7 @@ fun EmployeeShell(sessionStore: SessionStore) {
     var selectedProductForDetail by remember { mutableStateOf<Product?>(null) }
     var activeChatThread by remember { mutableStateOf<ChatThread?>(null) }
     var showStylePicker by remember { mutableStateOf(false) }
+    var showProfile by remember { mutableStateOf(false) }
 
     when (val phase = state.phase) {
         is EmployeePhase.Loading -> {
@@ -170,6 +172,21 @@ fun EmployeeShell(sessionStore: SessionStore) {
             val session = phase.session
 
             CompositionLocalProvider(LocalEmployeeStyle provides state.style) {
+                // Staff Profile overlay
+                if (showProfile) {
+                    StaffProfileScreen(
+                        session = session,
+                        sessionStore = sessionStore,
+                        onDismiss = { showProfile = false },
+                        onBackToDashboard = {
+                            showProfile = false
+                            appGraph.viewModeStore.set(ViewMode.retailer, userId)
+                            scope.launch { sessionStore.refreshDestination() }
+                        }
+                    )
+                    return@CompositionLocalProvider
+                }
+
                 // Active Chat Thread overlay
                 activeChatThread?.let { thread ->
                     ChatThreadScreen(
@@ -257,7 +274,8 @@ fun EmployeeShell(sessionStore: SessionStore) {
                                         onOpenCatalogue = { store.selectTab(EmployeeTab.Catalogue) },
                                         onOpenCanvas = { store.openRoute(EmployeeRoute.Canvas) },
                                         onOpenDetail = { selectedProductForDetail = it },
-                                        onOpenStylePicker = { showStylePicker = true }
+                                        onOpenStylePicker = { showStylePicker = true },
+                                        onOpenProfile = { showProfile = true }
                                     )
                                 }
 

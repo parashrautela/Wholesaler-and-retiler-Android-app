@@ -67,6 +67,7 @@ import com.jewelindia.app.data.api.EmployeeApi
 import com.jewelindia.app.data.api.EmployeeSession
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
+import com.jewelindia.app.feature.profile.StaffProfileButton
 import kotlinx.coroutines.launch
 
 @Composable
@@ -77,6 +78,7 @@ fun EmployeeHomeScreen(
     onOpenCanvas: () -> Unit,
     onOpenDetail: (Product) -> Unit,
     onOpenStylePicker: () -> Unit,
+    onOpenProfile: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
@@ -180,20 +182,26 @@ fun EmployeeHomeScreen(
                             }
                         }
 
-                        Surface(
-                            onClick = onOpenStylePicker,
-                            color = Color.Black.copy(alpha = 0.45f),
-                            shape = CircleShape,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(modifier = Modifier.size(36.dp), contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.Palette,
-                                    contentDescription = "Personal Style",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                            Surface(
+                                onClick = onOpenStylePicker,
+                                color = Color.Black.copy(alpha = 0.45f),
+                                shape = CircleShape,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+                            ) {
+                                Box(modifier = Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Palette,
+                                        contentDescription = "Personal Style",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
+                            StaffProfileButton(action = onOpenProfile)
                         }
                     }
 

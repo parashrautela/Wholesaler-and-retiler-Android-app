@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.legal.LegalLinks
 import com.jewelindia.app.core.model.Wholesaler
 import com.jewelindia.app.core.session.SessionStore
+import com.jewelindia.app.core.text.Copy
 import com.jewelindia.app.data.api.AccountApi
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
@@ -327,3 +328,4 @@ fun ProfileMenuItem(
         )
     }
 }
+

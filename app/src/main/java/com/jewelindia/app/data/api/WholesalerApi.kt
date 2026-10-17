@@ -512,6 +512,8 @@ object WholesalerApi {
         }
         return db.storage.from(bucket).publicUrl(path)
     }
+
+    suspend fun deleteMyAccount() = AccountApi.deleteMyAccount()
 }
 
 object AccountApi {
