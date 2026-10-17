@@ -4,6 +4,7 @@ package com.jewelindia.app
 import android.app.Application
 import android.content.Context
 import androidx.compose.runtime.staticCompositionLocalOf
+import coil3.SingletonImageLoader
 import com.jewelindia.app.core.session.AuthRouter
 import com.jewelindia.app.core.session.SessionStore
 import com.jewelindia.app.core.session.SignupFlow
@@ -24,6 +25,7 @@ import com.jewelindia.app.data.api.WholesalerApi
 import com.jewelindia.app.data.api.WholesalerReport
 import com.jewelindia.app.data.api.WishlistApi
 import com.jewelindia.app.data.supabase.JewelSupabase
+import com.jewelindia.app.feature.retailer.MarketplaceCatalogueStore
 
 /**
  * Manual dependency injection container for Jewel India Android app.
@@ -40,7 +42,7 @@ class AppGraph(val app: Application) {
         viewModeStore = viewModeStore,
         supabase = JewelSupabase.client,
         onSignOutCleanup = {
-            LikeBook.clear()
+            performSignOutCleanup(app, viewModeStore)
         }
     ).apply {
         start()
@@ -62,6 +64,23 @@ class AppGraph(val app: Application) {
     val storeActivity = StoreActivity
     val wholesalerReport = WholesalerReport
     val likeBook = LikeBook
+
+    companion object {
+        fun performSignOutCleanup(
+            context: Context,
+            viewModeStore: ViewModeStore? = null,
+            imageLoader: coil3.ImageLoader? = null
+        ) {
+            LikeBook.clear()
+            viewModeStore?.clear()
+            MarketplaceCatalogueStore.clear(context)
+            try {
+                val loader = imageLoader ?: SingletonImageLoader.get(context)
+                loader.memoryCache?.clear()
+                loader.diskCache?.clear()
+            } catch (_: Throwable) {}
+        }
+    }
 }
 
 val LocalAppGraph = staticCompositionLocalOf<AppGraph> {

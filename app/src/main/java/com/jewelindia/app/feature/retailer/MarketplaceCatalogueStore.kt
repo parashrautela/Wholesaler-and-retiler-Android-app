@@ -237,4 +237,12 @@ class MarketplaceCatalogueStore(
         cacheFile.delete()
         _state.value = MarketplaceUiState()
     }
+
+    companion object {
+        fun clear(context: Context) {
+            try {
+                File(context.filesDir, "MarketplaceCatalogueCache").deleteRecursively()
+            } catch (_: Exception) {}
+        }
+    }
 }
