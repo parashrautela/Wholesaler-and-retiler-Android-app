@@ -1,6 +1,8 @@
 // Port of: wholesaler ios/JewelIndia/Sources/ScreenProtection/SecureLayerHost.swift
 package com.jewelindia.app.core.security
 
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.runtime.compositionLocalOf
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -17,15 +19,37 @@ class ScreenSecurity(
     fun acquire() {
         val count = counter.incrementAndGet()
         if (count == 1) {
-            onSecureChange(true)
+            notifyChange(true)
         }
     }
 
     fun release() {
-        val count = counter.decrementAndGet()
-        if (count <= 0) {
-            counter.set(0)
-            onSecureChange(false)
+        var transitionedToZero = false
+        counter.updateAndGet { current ->
+            if (current > 0) {
+                if (current == 1) transitionedToZero = true
+                current - 1
+            } else {
+                0
+            }
+        }
+        if (transitionedToZero) {
+            notifyChange(false)
+        }
+    }
+
+    private fun notifyChange(isSecure: Boolean) {
+        try {
+            val looper = Looper.getMainLooper()
+            if (looper != null && Looper.myLooper() == looper) {
+                onSecureChange(isSecure)
+            } else if (looper != null) {
+                Handler(looper).post { onSecureChange(isSecure) }
+            } else {
+                onSecureChange(isSecure)
+            }
+        } catch (_: Throwable) {
+            onSecureChange(isSecure)
         }
     }
 
@@ -35,3 +59,4 @@ class ScreenSecurity(
 val LocalScreenSecurity = compositionLocalOf<ScreenSecurity> {
     ScreenSecurity {}
 }
+

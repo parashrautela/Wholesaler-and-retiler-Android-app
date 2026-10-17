@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jewelindia.app.core.security.ProtectedImage
 import coil3.compose.AsyncImage
 import com.jewelindia.app.core.model.Product
 import com.jewelindia.app.core.model.Wholesaler
@@ -93,7 +94,7 @@ fun WholesalerCatalogScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    com.jewelindia.app.core.security.CaptureProtected(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -248,8 +249,8 @@ fun ProductCard(
             .clickable(onClick = onClick)
     ) {
         if (imageUrl != null) {
-            AsyncImage(
-                model = imageUrl,
+            ProtectedImage(
+                url = imageUrl,
                 contentDescription = product.title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()

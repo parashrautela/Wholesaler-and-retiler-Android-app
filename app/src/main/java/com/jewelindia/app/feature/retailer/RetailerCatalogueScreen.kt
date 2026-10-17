@@ -63,6 +63,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.images.CachedImage
+import com.jewelindia.app.core.security.ProtectedImage
 import com.jewelindia.app.data.api.RetailerApi
 import com.jewelindia.app.data.api.RetailerDesign
 import com.jewelindia.app.design.Palette
@@ -328,7 +329,7 @@ fun StoreDesignCard(
                     .aspectRatio(1f)
                     .background(Palette.surface)
             ) {
-                CachedImage(
+                ProtectedImage(
                     url = design.imageLink,
                     contentDescription = design.cardTitle,
                     modifier = Modifier.fillMaxSize(),
@@ -413,7 +414,7 @@ fun StoreDesignDetailSheet(
                     .aspectRatio(1.1f)
                     .background(Palette.surface)
             ) {
-                CachedImage(
+                ProtectedImage(
                     url = design.imageLink,
                     contentDescription = design.cardTitle,
                     modifier = Modifier.fillMaxSize(),

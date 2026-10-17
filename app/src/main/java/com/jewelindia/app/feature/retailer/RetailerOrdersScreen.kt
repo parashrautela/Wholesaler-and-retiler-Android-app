@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.images.CachedImage
+import com.jewelindia.app.core.security.ProtectedImage
 import com.jewelindia.app.core.model.Order
 import com.jewelindia.app.core.model.OrderStatus
 import com.jewelindia.app.core.model.Product
@@ -283,7 +284,7 @@ fun RetailerOrderCard(
                 .clip(RoundedCornerShape(10.dp))
                 .background(Palette.surface)
         ) {
-            CachedImage(
+            ProtectedImage(
                 url = product?.primaryImage,
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
@@ -400,7 +401,7 @@ fun RetailerOrderDetailSheet(
                         .clip(RoundedCornerShape(10.dp))
                         .background(Palette.surfaceElevated)
                 ) {
-                    CachedImage(
+                    ProtectedImage(
                         url = product?.primaryImage,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),

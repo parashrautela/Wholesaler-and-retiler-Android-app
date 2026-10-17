@@ -138,7 +138,7 @@ fun NewArrivalCard(
             .border(1.dp, Palette.surfaceBorder, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
     ) {
-        CachedImage(
+        com.jewelindia.app.core.security.ProtectedImage(
             url = product.primaryImage,
             contentDescription = product.title,
             modifier = Modifier

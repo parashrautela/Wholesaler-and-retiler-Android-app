@@ -71,6 +71,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIncomingIntent(intent: Intent?, graph: AppGraph) {
+        val debugDest = intent?.getStringExtra("DEBUG_DESTINATION")
+        if (debugDest == "WholesalerDashboard") {
+            graph.sessionStore.setDebugDestination(com.jewelindia.app.core.model.AppDestination.WholesalerDashboard)
+            return
+        }
+
         val uri = intent?.data ?: return
 
         // 1. If unauthenticated, check for retailer invitation link

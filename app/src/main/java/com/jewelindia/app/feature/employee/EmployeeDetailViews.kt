@@ -62,6 +62,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.images.CachedImage
+import com.jewelindia.app.core.security.ProtectedImage
 import com.jewelindia.app.core.model.Product
 import com.jewelindia.app.data.api.ChatApi
 import com.jewelindia.app.data.api.ChatThread
@@ -127,7 +128,7 @@ fun EmployeeDetailSheet(
                     modifier = Modifier.fillMaxSize()
                 ) { page ->
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CachedImage(
+                        ProtectedImage(
                             url = images[page],
                             contentDescription = product.displayTitle,
                             modifier = Modifier.fillMaxSize(),

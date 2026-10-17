@@ -79,6 +79,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.images.CachedImage
+import com.jewelindia.app.core.security.ProtectedImage
 import com.jewelindia.app.core.model.Product
 import com.jewelindia.app.data.api.ChatApi
 import com.jewelindia.app.data.api.ChatThread
@@ -113,7 +114,7 @@ fun MarketplaceProductCard(
                     .aspectRatio(1f)
                     .background(Palette.surface)
             ) {
-                CachedImage(
+                ProtectedImage(
                     url = product.primaryImage,
                     contentDescription = product.title,
                     modifier = Modifier.fillMaxSize(),
@@ -234,7 +235,7 @@ fun MarketplaceProductDetailSheet(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize()
                 ) { page ->
-                    CachedImage(
+                    ProtectedImage(
                         url = images[page],
                         contentDescription = product.title,
                         modifier = Modifier.fillMaxSize(),
@@ -513,7 +514,7 @@ fun RetailerOrderRequestSheet(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    CachedImage(
+                    ProtectedImage(
                         url = product.primaryImage,
                         contentDescription = null,
                         modifier = Modifier.size(54.dp).clip(RoundedCornerShape(8.dp)),

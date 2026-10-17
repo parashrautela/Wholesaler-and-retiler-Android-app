@@ -1,6 +1,6 @@
 # Jewel India Android — Port Status
 
-Last updated: 2026-10-17 · Current phase: 10 (Complete) · iOS reference build: 40 (feat/retailer-monetisation)
+Last updated: 2026-10-17 · Current phase: 5 (Fix brief in-progress) · iOS reference build: 40 (feat/retailer-monetisation)
 
 ## Phase checklist
 | Phase | Status | Build | Tests | Commit | Notes |
@@ -9,13 +9,13 @@ Last updated: 2026-10-17 · Current phase: 10 (Complete) · iOS reference build:
 | 1 Design + core | ✅ | ok | 10/10 | b751b94 | Tokens (Palette, Typography, Layout, Motion), core models, Copy, Credentials, JewelDates, components, and unit tests passing |
 | 2 Data layer | ✅ | ok | 22/22 | cbeb1f9 | Supabase client, OkHttp clients, SsrSessionBridge, withRetry, ApiError, all API modules (Wholesaler, Chamak, Credits, Orders, Chat, Retailer, Staff, Wishlist, LikeBook, Invites, OnboardingFee, StoreActivity, WholesalerReport, ManufacturingApi), unit tests passing |
 | 3 Auth + routing | ✅ | ok | 59/59 | aba91dd | SessionStore, AuthRouter, SignupFlow, ViewModeStore, 8 auth screens, AuthNavHost, RootScreen, deep link handling, WebShuffle, Prefs, ImageNormalizer, CachedImage, verified on Pixel 6 |
-| 4 Onboarding | ✅ | ok | 68/68 | | Wholesaler & Retailer 3-step flows, OnboardingFeeSheet (Razorpay link + Custom Tab), OnboardSubmitted views with stage timeline, invite code linking, RootScreen phase routing, verified on Pixel 6 |
-| 5 Wholesaler | ✅ | ok | 68/68 | | Wholesaler dashboard, catalogue, product forms (add/edit/delete/in-stock), image picker/cropper, PDF export, order management with status workflow, retail invite links, and performance reports |
-| 6 Chamak | ✅ | ok | 68/68 | | Chamak Studio: prompt builder, studio style presets (Courtyard, Velvet, Royal), credit balance check, generation polling with retry/exponential backoff, product image assignment, and gallery view |
-| 7 Retailer | ✅ | ok | 68/68 | | Retailer Portal: discovery feed, category browsing, product detail view, like/unlike with optimistic sync, custom wishlist management, shareable wishlist links, enquiry chat, manufacturing request builder with reference image upload, quotes review, store custom theme switcher, and staff employee management |
-| 8 Employee | ✅ | ok | 68/68 | | Staff/Employee App: personal styling (Classic/Sarvam/Modern), courtyard arch shape, jali lattice canvas backdrop, endless infinite canvas, 2-column masonry grid, 0.5s long-press selection, bottom review drawer, batch order submission up to 20 pieces, enquiry chat, orders tracking, and custom floating pill navigation with notification dots |
-| 9 Protection/links/polish | ✅ | ok | 68/68 | | Screen security (LocalScreenSecurity, CaptureProtected, ProtectedImage), FLAG_SECURE / setRecentsScreenshotEnabled(false), deep link dispatcher, push intent handling, edge-to-edge layout, and typography/motion polish |
-| 10 Tests/release | ✅ | ok | 68/68 | | 68 unit tests passing, debug APK assembled, installed and verified on Pixel 6 AVD (`emulator-5554`), screen verification screenshots saved to `docs/screens/` |
+| 4 Onboarding | ✅ | ok | 68/68 | 252a70d | Wholesaler & Retailer 3-step flows, OnboardingFeeSheet (Razorpay link + Custom Tab), OnboardSubmitted views with stage timeline, invite code linking, RootScreen phase routing, verified on Pixel 6 |
+| 5 Wholesaler | 🟡 | ok | 68/68 | | Wholesaler portal under fix brief revision (reprocess, edit product, upload history, order timeline/reject chips) |
+| 6 Chamak | 🟡 | ok | 68/68 | | Chamak studio revision (signed URLs, catalogue picker, missing screens, GemShapes) |
+| 7 Retailer | 🟡 | ok | 68/68 | | Retailer portal revision (manufacturing enquiry API contract, ProtectedImage) |
+| 8 Employee | 🟡 | ok | 68/68 | | Staff app revision (StaffProfileScreen, ProtectedImage) |
+| 9 Protection/links/polish | 🟡 | ok | 68/68 | | Screen security wiring, image cache clearing on sign-out, size & fidelity sweep |
+| 10 Tests/release | 🟡 | ok | 68/68 | | Additional Phase 5-10 tests and verification sweep |
 
 ## Deviations from iOS
 - None.

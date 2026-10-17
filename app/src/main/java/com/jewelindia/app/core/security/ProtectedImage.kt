@@ -20,6 +20,7 @@ fun ProtectedImage(
         CachedImage(
             url = url,
             contentDescription = contentDescription,
+            modifier = Modifier.matchParentSize(),
             contentScale = contentScale
         )
     }

@@ -70,6 +70,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.images.CachedImage
+import com.jewelindia.app.core.security.ProtectedImage
 import com.jewelindia.app.core.images.ImageNormalizer
 import com.jewelindia.app.core.model.Product
 import com.jewelindia.app.core.model.Wholesaler
@@ -489,7 +490,7 @@ private fun ChamakHub(
                             .clickable { onSelectGeneration(gen) }
                     ) {
                         if (!img.isNullOrBlank()) {
-                            CachedImage(
+                            ProtectedImage(
                                 url = img,
                                 contentDescription = null,
                                 modifier = Modifier.fillMaxSize(),
@@ -678,7 +679,7 @@ private fun ChamakPicker(
                                 .clickable { onSelectProduct(activeSlot, prod) }
                         ) {
                             if (!url.isNullOrBlank()) {
-                                CachedImage(
+                                ProtectedImage(
                                     url = url,
                                     contentDescription = prod.title,
                                     modifier = Modifier.fillMaxSize(),
@@ -737,7 +738,7 @@ fun PickerSlot(
         if (item != null) {
             val url = item.imageURL
             if (!url.isNullOrBlank()) {
-                CachedImage(
+                ProtectedImage(
                     url = url,
                     contentDescription = item.title,
                     modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
@@ -1030,7 +1031,7 @@ private fun ChamakResultView(
             contentAlignment = Alignment.Center
         ) {
             if (!imgUrl.isNullOrBlank()) {
-                CachedImage(
+                ProtectedImage(
                     url = imgUrl,
                     contentDescription = "Chamak Output",
                     modifier = Modifier.fillMaxSize(),
@@ -1115,7 +1116,7 @@ private fun ChamakGalleryView(
                             .clickable { onSelect(gen) }
                     ) {
                         if (!url.isNullOrBlank()) {
-                            CachedImage(
+                            ProtectedImage(
                                 url = url,
                                 contentDescription = null,
                                 modifier = Modifier.fillMaxSize(),

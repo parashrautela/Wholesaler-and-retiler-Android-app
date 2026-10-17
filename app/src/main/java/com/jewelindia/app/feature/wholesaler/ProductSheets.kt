@@ -106,8 +106,8 @@ fun ProductDetailSheet(
                 contentPadding = PaddingValues(vertical = 4.dp)
             ) {
                 items(images) { url ->
-                    AsyncImage(
-                        model = url,
+                    com.jewelindia.app.core.security.ProtectedImage(
+                        url = url,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier

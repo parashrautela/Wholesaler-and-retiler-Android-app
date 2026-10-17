@@ -51,6 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.images.CachedImage
+import com.jewelindia.app.core.security.ProtectedImage
 import com.jewelindia.app.data.api.EmployeeApi
 import com.jewelindia.app.data.api.EmployeeSession
 import com.jewelindia.app.data.api.RetailerDesign
@@ -199,7 +200,7 @@ fun EmployeeDesignsScreen(
                                             .aspectRatio(1f)
                                             .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
                                     ) {
-                                        CachedImage(
+                                        ProtectedImage(
                                             url = design.imageLink,
                                             contentDescription = design.cardTitle,
                                             modifier = Modifier.fillMaxSize(),

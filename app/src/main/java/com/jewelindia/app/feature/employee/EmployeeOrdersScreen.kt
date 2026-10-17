@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.images.CachedImage
+import com.jewelindia.app.core.security.ProtectedImage
 import com.jewelindia.app.core.model.OrderStatus
 import com.jewelindia.app.core.time.ChatTime
 import com.jewelindia.app.data.api.OrdersApi
@@ -192,7 +193,7 @@ fun EmployeeOrdersScreen(
                                             .size(70.dp)
                                             .clip(RoundedCornerShape(10.dp))
                                     ) {
-                                        CachedImage(
+                                        ProtectedImage(
                                             url = order.product?.image,
                                             contentDescription = order.product?.title,
                                             modifier = Modifier.fillMaxSize(),
@@ -268,7 +269,7 @@ fun EmployeeOrdersScreen(
                                 .size(64.dp)
                                 .clip(RoundedCornerShape(10.dp))
                         ) {
-                            CachedImage(
+                            ProtectedImage(
                                 url = order.product?.image,
                                 contentDescription = null,
                                 modifier = Modifier.fillMaxSize(),

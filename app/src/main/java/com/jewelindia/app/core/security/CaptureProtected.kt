@@ -2,6 +2,7 @@
 package com.jewelindia.app.core.security
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
@@ -13,7 +14,7 @@ import androidx.compose.ui.Modifier
 @Composable
 fun CaptureProtected(
     modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
+    content: @Composable BoxScope.() -> Unit
 ) {
     val security = LocalScreenSecurity.current
 

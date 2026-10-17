@@ -60,6 +60,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.images.CachedImage
+import com.jewelindia.app.core.security.ProtectedImage
 import com.jewelindia.app.core.model.Product
 import com.jewelindia.app.data.api.EmployeeApi
 import com.jewelindia.app.data.api.JewelApi
@@ -282,7 +283,7 @@ fun EmployeeReviewScreen(
                                         .size(80.dp)
                                         .clip(RoundedCornerShape(10.dp))
                                 ) {
-                                    CachedImage(
+                                    ProtectedImage(
                                         url = product.primaryImage,
                                         contentDescription = product.displayTitle,
                                         modifier = Modifier.fillMaxSize(),
