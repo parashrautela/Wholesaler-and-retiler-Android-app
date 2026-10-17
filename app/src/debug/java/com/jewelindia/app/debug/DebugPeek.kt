@@ -2,10 +2,17 @@ package com.jewelindia.app.debug
 
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -16,12 +23,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.jewelindia.app.LocalAppGraph
+import com.jewelindia.app.core.model.Product
 import com.jewelindia.app.core.model.UserRole
 import com.jewelindia.app.data.api.ChamakMode
 import com.jewelindia.app.design.Palette
+import com.jewelindia.app.feature.wholesaler.CatalogueProductCard
+import com.jewelindia.app.feature.wholesaler.LatestCreationsSection
 import com.jewelindia.app.feature.auth.EntryScreen
 import com.jewelindia.app.feature.auth.RoleChoiceScreen
 import com.jewelindia.app.feature.auth.SetPasswordScreen
@@ -119,15 +130,19 @@ object DebugPeek {
                 }
             }
             "home-creations" -> {
-                Box(
+                val vm = remember { DebugPeekSamples.galleryVM(context) }
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(Palette.background)
                         .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
-                    contentAlignment = Alignment.TopCenter
+                        .padding(16.dp)
                 ) {
-                    ChamakPromoCard(onClick = {})
+                    LatestCreationsSection(
+                        wholesalerUserId = "w-peek-0001",
+                        onSeeAll = {},
+                        peekGenerations = vm.galleryGenerations
+                    )
                 }
             }
             "home-lowbalance" -> {
@@ -144,14 +159,17 @@ object DebugPeek {
                 )
             }
             "report-teaser" -> {
-                Box(
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Palette.background)
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
+                        .background(Color.White)
+                        .statusBarsPadding()
+                        .padding(16.dp)
                 ) {
-                    WholesalerReportTeaser(onClick = {})
+                    WholesalerReportTeaser(
+                        onClick = {},
+                        peekReport = DebugPeekSamples.sampleReport(context)
+                    )
                 }
             }
             "report" -> {
@@ -161,15 +179,53 @@ object DebugPeek {
                 )
             }
             "catalogue-cards" -> {
-                WholesalerCatalogScreen(
-                    wholesalerUserId = "w-peek-0001",
-                    wholesaler = DebugPeekSamples.wholesaler(),
-                    sessionStore = graph.sessionStore,
-                    peekProducts = DebugPeekSamples.products(context)
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Palette.background)
+                        .statusBarsPadding()
+                ) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        contentPadding = PaddingValues(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(DebugPeekSamples.products(context)) { product ->
+                            CatalogueProductCard(
+                                product = product,
+                                onClick = {},
+                                onEdit = {},
+                                onDelete = {}
+                            )
+                        }
+                    }
+                }
             }
             "productdetail" -> {
-                val p = DebugPeekSamples.products(context)[0]
+                val p = Product(
+                    id = "00000000-0000-0000-0000-000000000001",
+                    wholesalerId = null,
+                    wholesalerEmail = null,
+                    title = "Antique Kundan Necklace",
+                    jewelleryType = "necklace",
+                    category = "gold",
+                    style = "antique",
+                    size = "m",
+                    stockAvailable = true,
+                    makeToOrderDays = null,
+                    metalPurity = "22k",
+                    netWeight = 18.4,
+                    grossWeight = 21.1,
+                    stoneWeight = 2.7,
+                    rawImageURL = null,
+                    processedImageURL = null,
+                    imageURL = null,
+                    generatedImageURLs = emptyList(),
+                    isPublished = true,
+                    createdAt = null
+                )
                 ProductDetailSheet(
                     product = p,
                     wholesalerId = "w-peek-0001",

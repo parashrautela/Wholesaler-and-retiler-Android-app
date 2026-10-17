@@ -123,8 +123,8 @@ fun ChamakGalleryCard(
 
             // Stacked source designs in the corner
             val sources = listOfNotNull(
-                generation.sourceImage1URL.takeIf { it.startsWith("http") },
-                generation.sourceImage2URL.takeIf { it.startsWith("http") }
+                generation.sourceImage1URL.takeIf { it.isNotBlank() },
+                generation.sourceImage2URL.takeIf { it.isNotBlank() }
             )
             if (sources.isNotEmpty()) {
                 Row(

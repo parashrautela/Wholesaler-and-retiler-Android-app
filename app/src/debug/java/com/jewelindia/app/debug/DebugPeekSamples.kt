@@ -58,34 +58,35 @@ object DebugPeekSamples {
     fun products(context: Context): List<Product> {
         val rows = listOf(
             Tuple5("Temple Haram with Emerald Drops", "cat_haram", "gold", true, null),
-            Tuple5("Traditional Floral Choker", "cat_necklace", "gold", true, 7),
-            Tuple5("Layered Polki Pendant", "cat_pendants", "diamond", true, null),
-            Tuple5("Auspicious Mangalsutra Chain", "cat_mangalsutras", "gold", true, null),
-            Tuple5("Kada Bangle with Ruby Accents", "cat_bangles", "gold", false, 14),
-            Tuple5("Cocktail Solitaire Ring", "cat_rings", "diamond", true, null),
-            Tuple5("Jhumka Earrings with Pearls", "cat_earrings", "gold", true, null),
-            Tuple5("Twisted Rope Gold Chain", "cat_chains", "gold", true, null),
-            Tuple5("Delicate Floral Nosepin", "cat_nosepins", "diamond", false, 3)
+            Tuple5("Kundan Choker", "cat_necklace", "gold", true, null),
+            Tuple5("Solitaire Pendant", "cat_pendants", "diamond", false, 12),
+            Tuple5("Traditional Mangalsutra", "cat_mangalsutras", "gold", true, null),
+            Tuple5("Antique Bangles Pair", "cat_bangles", "gold", false, 7),
+            Tuple5("Cocktail Ring", "cat_rings", "diamond", true, null)
         )
 
-        return rows.mapIndexed { idx, (title, asset, mat, inStock, mtoDays) ->
-            val id = "prod-sample-%04d".format(idx + 1)
+        return rows.mapIndexed { idx, (title, asset, category, inStock, mtoDays) ->
             Product(
-                id = id,
-                wholesalerId = "w-peek-0001",
+                id = "00000000-0000-0000-0000-00000000000$idx",
+                wholesalerId = null,
+                wholesalerEmail = null,
                 title = title,
-                category = "jewellery",
-                jewelleryType = asset.removePrefix("cat_"),
-                metalPurity = if (mat == "gold") "22K" else "18K",
-                grossWeight = 32.5 + idx * 4.2,
-                netWeight = 30.1 + idx * 4.0,
+                jewelleryType = "necklace",
+                category = category,
+                style = null,
+                size = null,
                 stockAvailable = inStock,
                 makeToOrderDays = mtoDays,
-                isPublished = true,
-                imageURL = fileUrl(context, asset),
-                rawImageURL = fileUrl(context, asset),
+                metalPurity = if (idx % 2 == 0) "22k" else "24k",
+                netWeight = 12.0 + idx * 3.5,
+                grossWeight = null,
+                stoneWeight = null,
+                rawImageURL = null,
                 processedImageURL = fileUrl(context, asset),
-                createdAt = "2026-09-01T12:00:00Z"
+                imageURL = null,
+                generatedImageURLs = emptyList(),
+                isPublished = true,
+                createdAt = null
             )
         }
     }
@@ -209,32 +210,46 @@ object DebugPeekSamples {
     }
 
     fun sampleReport(context: Context): WholesalerReport {
-        val top = products(context).take(3).map {
+        val top = listOf(
             WholesalerReport.Design(
-                productId = it.id,
-                title = it.title,
-                image = it.imageURL,
-                likes = 42,
-                views = 312
+                productId = "a",
+                title = "Temple Haram",
+                image = fileUrl(context, "cat_haram"),
+                likes = 20,
+                views = 64
+            ),
+            WholesalerReport.Design(
+                productId = "b",
+                title = "Kundan Choker",
+                image = fileUrl(context, "cat_necklace"),
+                likes = 9,
+                views = 42
+            ),
+            WholesalerReport.Design(
+                productId = "c",
+                title = "Solitaire Pendant",
+                image = fileUrl(context, "cat_pendants"),
+                likes = 5,
+                views = 28
             )
-        }
+        )
         return WholesalerReport(
-            likes = 124,
-            likesPrev = 98,
+            likes = 34,
+            likesPrev = 21,
             topLiked = top,
-            views = 1420,
-            viewsPrev = 1180,
+            views = 212,
+            viewsPrev = 180,
             topViewed = top.firstOrNull(),
-            ordersNew = 24,
-            ordersNewPrev = 19,
-            ordersAccepted = 18,
-            ordersCompleted = 14,
-            ordersRejected = 2,
-            questions = 15,
-            questionsPrev = 8,
-            conversations = 12,
-            stores = 68,
-            storesPrev = 55
+            ordersNew = 6,
+            ordersNewPrev = 4,
+            ordersAccepted = 5,
+            ordersCompleted = 3,
+            ordersRejected = 1,
+            questions = 9,
+            questionsPrev = 12,
+            conversations = 4,
+            stores = 11,
+            storesPrev = 8
         )
     }
 
@@ -313,6 +328,7 @@ object DebugPeekSamples {
             wholesalerId = "w1",
             sourceImage1URL = fileUrl(context, "cat_necklace"),
             sourceImage2URL = fileUrl(context, "cat_haram"),
+            outputImageURL = fileUrl(context, "cat_pendants"),
             status = ChamakStatus.Done,
             mode = ChamakMode.Fusion,
             createdAt = "2026-09-10T10:30:00Z"
@@ -322,6 +338,7 @@ object DebugPeekSamples {
             wholesalerId = "w1",
             sourceImage1URL = fileUrl(context, "cat_earrings"),
             sourceImage2URL = fileUrl(context, "cat_necklace"),
+            outputImageURL = fileUrl(context, "cat_mangalsutras"),
             status = ChamakStatus.Done,
             mode = ChamakMode.SetCreation,
             createdAt = "2026-09-10T10:25:00Z"
