@@ -7,7 +7,7 @@ Last updated: 2026-10-17 · Current phase: 1 (Complete) · iOS reference build: 
 |---|---|---|---|---|---|
 | 0 Scaffold | ✅ | ok | 0/0 | cb3e2a7 | Empty Compose app running on Pixel 6 AVD, displaying LaunchScreen with Cirka 32 |
 | 1 Design + core | ✅ | ok | 10/10 | b751b94 | Tokens (Palette, Typography, Layout, Motion), core models, Copy, Credentials, JewelDates, components, and unit tests passing |
-| 2 Data layer | ✅ | ok | 22/22 | pending | Supabase client, OkHttp clients, SsrSessionBridge, withRetry, ApiError, all API modules (Wholesaler, Chamak, Credits, Orders, Chat, Retailer, Staff, Wishlist, LikeBook, Invites, OnboardingFee, StoreActivity, WholesalerReport), unit tests passing |
+| 2 Data layer | ✅ | ok | 22/22 | cbeb1f9 | Supabase client, OkHttp clients, SsrSessionBridge, withRetry, ApiError, all API modules (Wholesaler, Chamak, Credits, Orders, Chat, Retailer, Staff, Wishlist, LikeBook, Invites, OnboardingFee, StoreActivity, WholesalerReport), unit tests passing |
 | 3 Auth + routing | ⬜ | | | | |
 | 4 Onboarding | ⬜ | | | | |
 | 5 Wholesaler | ⬜ | | | | |
