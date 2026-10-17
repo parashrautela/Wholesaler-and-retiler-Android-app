@@ -51,7 +51,7 @@ data class WholesalerOrder(
     @SerialName("placed_by") val placedBy: String? = null,
     @SerialName("placed_by_staff") val placedByStaff: Boolean = false
 ) {
-    val shortId: String get() = id.take(8).uppercase()
+    val shortId: String get() = id.take(8).lowercase()
     val imageURL: String? get() = productImage?.trim()?.nilIfEmpty
     val designTitle: String
         get() = productTitle?.trim()?.nilIfEmpty

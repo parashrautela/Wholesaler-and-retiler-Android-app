@@ -18,54 +18,65 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.PrimaryScrollableTabRow
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.model.OrderStatus
 import com.jewelindia.app.core.model.Wholesaler
-import androidx.compose.runtime.collectAsState
 import com.jewelindia.app.data.api.WholesalerOrder
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
-import kotlinx.coroutines.launch
 
-private val ORDER_TABS = listOf("Pending", "Active", "History")
+enum class OrderTab(val title: String) {
+    New("New Orders"),
+    Active("Active Orders"),
+    Completed("Completed"),
+    Rejected("Rejected");
 
-@OptIn(ExperimentalMaterial3Api::class)
+    fun contains(status: OrderStatus?): Boolean {
+        return when (this) {
+            New -> status == OrderStatus.pending
+            Active -> status in listOf(
+                OrderStatus.accepted,
+                OrderStatus.inProduction,
+                OrderStatus.packed,
+                OrderStatus.dispatched
+            )
+            Completed -> status in listOf(OrderStatus.received, OrderStatus.completed)
+            Rejected -> status == OrderStatus.rejected
+        }
+    }
+}
+
 @Composable
 fun WholesalerOrdersScreen(
     wholesalerUserId: String = "",
     wholesaler: Wholesaler? = null,
     peekOrders: List<WholesalerOrder>? = null,
+    peekError: String? = null,
     onOrderCountChange: (Int) -> Unit = {}
 ) {
     val resolvedUserId = wholesalerUserId.ifBlank {
@@ -76,24 +87,23 @@ fun WholesalerOrdersScreen(
     }
     val ordersState by viewModel.uiState.collectAsState()
 
-    var selectedTabIdx by remember { mutableStateOf(0) }
-    var selectedOrder by remember { mutableStateOf<WholesalerOrder?>(null) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var selectedTab by remember { mutableStateOf(OrderTab.New) }
+    var openedOrder by remember { mutableStateOf<WholesalerOrder?>(null) }
 
     LaunchedEffect(resolvedUserId) {
-        if (peekOrders == null) {
+        if (peekOrders == null && peekError == null) {
             viewModel.load()
         }
     }
 
-    val (orders, loading) = if (peekOrders != null) {
-        peekOrders to false
-    } else {
-        when (val s = ordersState) {
-            is OrdersUiState.Content -> s.orders to false
-            is OrdersUiState.Empty -> emptyList<WholesalerOrder>() to false
-            is OrdersUiState.Loading -> emptyList<WholesalerOrder>() to true
-            is OrdersUiState.Error -> emptyList<WholesalerOrder>() to false
+    val (orders, loading, errorMessage) = when {
+        peekError != null -> Triple(emptyList<WholesalerOrder>(), false, peekError)
+        peekOrders != null -> Triple(peekOrders, false, null)
+        else -> when (val s = ordersState) {
+            is OrdersUiState.Content -> Triple(s.orders, false, null)
+            is OrdersUiState.Empty -> Triple(emptyList<WholesalerOrder>(), false, null)
+            is OrdersUiState.Loading -> Triple(emptyList<WholesalerOrder>(), true, null)
+            is OrdersUiState.Error -> Triple(emptyList<WholesalerOrder>(), false, s.message)
         }
     }
 
@@ -101,19 +111,8 @@ fun WholesalerOrdersScreen(
         onOrderCountChange(orders.count { it.status == OrderStatus.pending })
     }
 
-    val tabOrders = remember(orders, selectedTabIdx) {
-        when (selectedTabIdx) {
-            0 -> orders.filter { it.status == OrderStatus.pending }
-            1 -> orders.filter {
-                it.status in listOf(
-                    OrderStatus.accepted, OrderStatus.inProduction,
-                    OrderStatus.packed, OrderStatus.dispatched
-                )
-            }
-            else -> orders.filter {
-                it.status in listOf(OrderStatus.received, OrderStatus.completed, OrderStatus.rejected)
-            }
-        }
+    val filteredOrders = remember(orders, selectedTab) {
+        orders.filter { selectedTab.contains(it.status) }
     }
 
     Column(
@@ -122,315 +121,270 @@ fun WholesalerOrdersScreen(
             .background(Palette.background)
             .statusBarsPadding()
     ) {
-        Text(
-            text = "Orders",
-            style = Typography.cirka(22.sp),
-            color = Palette.textPrimary,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-        )
-
-        PrimaryScrollableTabRow(
-            selectedTabIndex = selectedTabIdx,
-            containerColor = Palette.background,
-            contentColor = Palette.goldPrimary,
-            edgePadding = 16.dp
+        // iOS Navigation Bar: Centered inline title "Orders"
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp),
+            contentAlignment = Alignment.Center
         ) {
-            ORDER_TABS.forEachIndexed { idx, label ->
-                Tab(
-                    selected = selectedTabIdx == idx,
-                    onClick = { selectedTabIdx = idx },
-                    text = {
-                        Text(
-                            text = label,
-                            style = Typography.santoshi(14.sp, FontWeight.SemiBold),
-                            color = if (selectedTabIdx == idx) Palette.textPrimary else Palette.textSecondary
-                        )
-                    }
-                )
+            Text(
+                text = "Orders",
+                style = Typography.santoshi(17.sp, FontWeight.SemiBold),
+                color = Palette.foreground
+            )
+        }
+
+        // iOS Segmented Control
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .height(36.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFFEEEEEE))
+                .padding(2.dp)
+        ) {
+            OrderTab.entries.forEach { tab ->
+                val isSelected = selectedTab == tab
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (isSelected) Color.White else Color.Transparent)
+                        .clickable { selectedTab = tab },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = tab.title,
+                        style = Typography.santoshi(
+                            12.sp,
+                            if (isSelected) FontWeight.SemiBold else FontWeight.Medium
+                        ),
+                        color = if (isSelected) Palette.foreground else Palette.muted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
 
-        HorizontalDivider(color = Palette.surfaceBorder)
-
+        // Content
         if (loading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Palette.goldPrimary)
-            }
-        } else if (tabOrders.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "No ${ORDER_TABS[selectedTabIdx].lowercase()} orders",
-                    style = Typography.santoshi(15.sp),
-                    color = Palette.textSecondary
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    color = Palette.dark,
+                    strokeWidth = 2.dp,
+                    modifier = Modifier.size(36.dp)
                 )
+            }
+        } else if (errorMessage != null && orders.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(horizontal = 32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = Color.Red,
+                        modifier = Modifier.size(40.dp)
+                    )
+                    Text(
+                        text = errorMessage,
+                        style = Typography.santoshi(14.sp),
+                        color = Palette.muted,
+                        textAlign = TextAlign.Center
+                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Palette.cream)
+                            .clickable { viewModel.load() }
+                            .padding(horizontal = 20.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "Retry",
+                            style = Typography.santoshi(14.sp, FontWeight.SemiBold),
+                            color = Palette.foreground
+                        )
+                    }
+                }
+            }
+        } else if (filteredOrders.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(horizontal = 32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Archive,
+                        contentDescription = null,
+                        tint = Palette.muted,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Text(
+                        text = "No ${selectedTab.title}",
+                        style = Typography.cirka(24.sp),
+                        color = Palette.foreground
+                    )
+                    Text(
+                        text = if (orders.isEmpty()) {
+                            "Orders from your retailers will show up here. Invite retailers to start receiving them."
+                        } else {
+                            "No orders match this status at the moment."
+                        },
+                        style = Typography.santoshi(14.sp),
+                        color = Palette.muted,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                item { Spacer(Modifier.height(8.dp)) }
-                items(tabOrders, key = { it.id }) { order ->
-                    OrderCard(
+                items(filteredOrders, key = { it.id }) { order ->
+                    WholesalerOrderCard(
                         order = order,
-                        onClick = { selectedOrder = order }
+                        onClick = { openedOrder = order }
                     )
                 }
-                item { Spacer(Modifier.height(16.dp)) }
+                item {
+                    Spacer(modifier = Modifier.height(100.dp))
+                }
             }
         }
     }
 
-    selectedOrder?.let { order ->
-        ModalBottomSheet(
-            onDismissRequest = { selectedOrder = null },
-            sheetState = sheetState,
-            containerColor = Palette.surfaceElevated
-        ) {
-            WholesalerOrderDetailSheet(
-                order = order,
-                onStatusUpdate = { next ->
-                    viewModel.updateStatus(order.id, next, onSuccess = {
-                        selectedOrder = null
-                    })
-                },
-                onReject = { reason ->
-                    viewModel.rejectOrder(order.id, reason, "", onSuccess = {
-                        selectedOrder = null
-                    })
-                },
-                onDismiss = { selectedOrder = null }
-            )
-        }
+    if (openedOrder != null) {
+        WholesalerOrderDetailSheet(
+            order = openedOrder!!,
+            onStatusUpdate = { newStatus ->
+                viewModel.updateStatus(
+                    orderId = openedOrder!!.id,
+                    newStatus = newStatus,
+                    onSuccess = { openedOrder = null },
+                    onError = {}
+                )
+            },
+            onReject = { reason ->
+                viewModel.rejectOrder(
+                    orderId = openedOrder!!.id,
+                    reason = reason,
+                    details = "",
+                    onSuccess = { openedOrder = null },
+                    onError = {}
+                )
+            },
+            onDismiss = { openedOrder = null }
+        )
     }
 }
 
 @Composable
-private fun OrderCard(order: WholesalerOrder, onClick: () -> Unit) {
+fun WholesalerOrderCard(
+    order: WholesalerOrder,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Palette.surface)
-            .border(1.dp, Palette.surfaceBorder, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(12.dp),
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.White)
+            .border(1.dp, Palette.border, RoundedCornerShape(14.dp))
+            .clickable { onClick() }
+            .padding(14.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Top
     ) {
         OrderDesignThumb(
             imageUrl = order.imageURL,
-            modifier = Modifier.size(56.dp)
+            size = 72.dp
         )
 
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = order.designTitle,
-                style = Typography.santoshi(14.sp, FontWeight.SemiBold),
-                color = Palette.textPrimary
-            )
-            Text(
-                text = order.storeLine,
-                style = Typography.santoshi(12.sp),
-                color = Palette.textSecondary
-            )
-            OrderStatusBadge(order.status)
-        }
-
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-            contentDescription = null,
-            tint = Palette.textTertiary,
-            modifier = Modifier.size(18.dp)
-        )
-    }
-}
-
-@Composable
-fun WholesalerOrderDetailSheet(
-    order: WholesalerOrder,
-    onStatusUpdate: (OrderStatus) -> Unit,
-    onReject: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val scope = rememberCoroutineScope()
-    var working by remember { mutableStateOf(false) }
-    var showRejectSheet by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-            .padding(bottom = 36.dp)
-            .navigationBarsPadding(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
-            Text(
-                text = "Order #${order.shortId}",
-                style = Typography.cirka(20.sp),
-                color = Palette.textPrimary
-            )
-            IconButton(onClick = onDismiss) {
-                Icon(Icons.Filled.Close, contentDescription = "Close", tint = Palette.textSecondary)
-            }
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OrderDesignThumb(
-                imageUrl = order.imageURL,
-                modifier = Modifier.size(64.dp)
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
                 Text(
                     text = order.designTitle,
-                    style = Typography.santoshi(15.sp, FontWeight.Bold),
-                    color = Palette.textPrimary
+                    style = Typography.santoshi(14.sp, FontWeight.Bold),
+                    color = Palette.foreground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                if (order.status != null) {
+                    OrderStatusBadge(status = order.status)
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Storefront,
+                    contentDescription = null,
+                    tint = Palette.foreground,
+                    modifier = Modifier.size(14.dp)
                 )
                 Text(
                     text = order.storeLine,
-                    style = Typography.santoshi(13.sp),
-                    color = Palette.textSecondary
-                )
-                OrderStatusBadge(order.status)
-            }
-        }
-
-        if (!order.note.isNullOrBlank()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Palette.surface)
-                    .border(1.dp, Palette.surfaceBorder, RoundedCornerShape(8.dp))
-                    .padding(12.dp)
-            ) {
-                Text(
-                    text = "Customer Note",
-                    style = Typography.santoshi(11.sp, FontWeight.SemiBold),
-                    color = Palette.textSecondary
-                )
-                Text(
-                    text = order.note.orEmpty(),
-                    style = Typography.santoshi(13.sp),
-                    color = Palette.textPrimary
+                    style = Typography.santoshi(12.sp, FontWeight.SemiBold),
+                    color = Palette.foreground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-        }
 
-        if (!order.rejectionReason.isNullOrBlank()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Palette.accentRed.copy(alpha = 0.08f))
-                    .border(1.dp, Palette.accentRed.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
-                    .padding(12.dp)
-            ) {
+            if (!order.note.isNullOrBlank()) {
                 Text(
-                    text = "Rejection Reason",
-                    style = Typography.santoshi(11.sp, FontWeight.SemiBold),
-                    color = Palette.accentRed
-                )
-                Text(
-                    text = order.rejectionReason.orEmpty(),
-                    style = Typography.santoshi(13.sp),
-                    color = Palette.accentRed
+                    text = "“${order.note}”",
+                    style = Typography.santoshi(12.sp),
+                    color = Palette.muted,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-        }
 
-        // Timeline Section
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(Palette.surface)
-                .border(1.dp, Palette.surfaceBorder, RoundedCornerShape(12.dp))
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+            val dateStr = OrderTime.short(order.createdAt)?.let { " · $it" } ?: ""
             Text(
-                text = "Progress",
-                style = Typography.santoshi(14.sp, FontWeight.Bold),
-                color = Palette.textPrimary
+                text = "Order #${order.shortId}$dateStr",
+                style = Typography.santoshi(11.sp),
+                color = Palette.muted
             )
-            OrderTimeline(order = order)
         }
 
-        // Action buttons
-        if (order.status == OrderStatus.pending) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
-                    onClick = {
-                        working = true
-                        onStatusUpdate(OrderStatus.accepted)
-                    },
-                    enabled = !working,
-                    colors = ButtonDefaults.buttonColors(containerColor = Palette.accentGreen, contentColor = Color.White),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.weight(1f).height(48.dp)
-                ) {
-                    Text("Accept", style = Typography.santoshi(14.sp, FontWeight.Bold))
-                }
-
-                Button(
-                    onClick = { showRejectSheet = true },
-                    enabled = !working,
-                    colors = ButtonDefaults.buttonColors(containerColor = Palette.accentRed, contentColor = Color.White),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.weight(1f).height(48.dp)
-                ) {
-                    Text("Reject", style = Typography.santoshi(14.sp, FontWeight.Bold))
-                }
-            }
-        }
-
-        val nextStatus = when (order.status) {
-            OrderStatus.accepted -> OrderStatus.inProduction to "Mark In Production"
-            OrderStatus.inProduction -> OrderStatus.packed to "Mark Packed"
-            OrderStatus.packed -> OrderStatus.dispatched to "Mark Dispatched"
-            else -> null
-        }
-
-        nextStatus?.let { (next, label) ->
-            Button(
-                onClick = {
-                    working = true
-                    onStatusUpdate(next)
-                },
-                enabled = !working,
-                colors = ButtonDefaults.buttonColors(containerColor = Palette.goldPrimary, contentColor = Palette.dark),
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth().height(48.dp)
-            ) {
-                if (working) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Palette.dark, strokeWidth = 2.dp)
-                } else {
-                    Text(label, style = Typography.santoshi(14.sp, FontWeight.Bold))
-                }
-            }
-        }
-    }
-
-    if (showRejectSheet) {
-        RejectOrderSheet(
-            onDismiss = { showRejectSheet = false },
-            onConfirm = { reason ->
-                onReject(reason)
-                showRejectSheet = false
-                onDismiss()
-            }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = Palette.muted,
+            modifier = Modifier
+                .padding(top = 4.dp)
+                .size(16.dp)
         )
     }
 }

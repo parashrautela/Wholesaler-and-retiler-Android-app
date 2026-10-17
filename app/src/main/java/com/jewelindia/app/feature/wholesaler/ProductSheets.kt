@@ -14,11 +14,13 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -27,7 +29,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.ui.text.style.TextAlign
+import com.jewelindia.app.design.Typography
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -79,7 +82,6 @@ private val PURITY_OPTIONS = listOf("18K", "22K", "24K", "Sterling Silver", "Oth
 
 // ─── Add Product Sheet ──────────────────────────────────────────────────────
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddProductSheet(
     wholesalerId: String,
@@ -88,214 +90,74 @@ fun AddProductSheet(
     onAdded: (Product) -> Unit,
     onOpenUploadHistory: (() -> Unit)? = null
 ) {
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    AddProductScreen(
+        wholesalerId = wholesalerId,
+        userId = userId,
+        onClose = onDismiss,
+        onOpenUploadHistory = onOpenUploadHistory,
+        onAdded = onAdded
+    )
+}
 
-    var title by remember { mutableStateOf("") }
-    var jewelleryType by remember { mutableStateOf("") }
-    var typeExpanded by remember { mutableStateOf(false) }
-    var metalPurity by remember { mutableStateOf("22K") }
-    var purityExpanded by remember { mutableStateOf(false) }
-    var selectedUri by remember { mutableStateOf<Uri?>(null) }
-    var submitting by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-
-    val imagePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri -> selectedUri = uri }
-
-    Column(
+/**
+ * Success view matching `/dashboard/wholesaler/add-product/success`.
+ */
+@Composable
+fun AddProductSuccessView(
+    savedAsDraft: Boolean = false,
+    onClose: () -> Unit
+) {
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 20.dp)
+            .fillMaxSize()
+            .background(Color.White)
+            .statusBarsPadding()
             .navigationBarsPadding(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentAlignment = Alignment.Center
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 24.dp)
         ) {
-            Text("Add New Design", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Palette.dark)
-            if (onOpenUploadHistory != null) {
-                IconButton(onClick = onOpenUploadHistory) {
-                    Icon(Icons.Default.History, contentDescription = "Upload History", tint = Palette.dark)
-                }
-            }
-        }
+            Text(
+                text = if (savedAsDraft) "Saved for later" else "Submitted",
+                style = Typography.cirka(44.sp),
+                color = Color.Black,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
 
-        // Image picker
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1.5f)
-                .clip(RoundedCornerShape(12.dp))
-                .background(Palette.cream)
-                .border(1.dp, Palette.border, RoundedCornerShape(12.dp))
-                .clickable { imagePicker.launch("image/*") },
-            contentAlignment = Alignment.Center
-        ) {
-            if (selectedUri != null) {
-                AsyncImage(
-                    model = selectedUri,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxWidth()
+            Text(
+                text = if (savedAsDraft) {
+                    "Your product details are saved as a draft. Add a photo and submit it whenever you're ready."
+                } else {
+                    "Your design is in good hands. We've received your photo and details. Our AI is getting to work — you'll see your studio-ready images within 24 hours."
+                },
+                style = Typography.santoshi(16.sp),
+                color = Color(0xFF6B6B6B),
+                lineHeight = 24.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .width(340.dp)
+                    .padding(bottom = 36.dp)
+            )
+
+            Box(
+                modifier = Modifier
+                    .width(240.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFF0A0A0A))
+                    .clickable { onClose() }
+                    .padding(vertical = 18.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Done",
+                    style = Typography.santoshi(16.sp, FontWeight.SemiBold),
+                    color = Color.White
                 )
-            } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Default.AddPhotoAlternate,
-                        contentDescription = null,
-                        tint = Palette.muted,
-                        modifier = Modifier.size(40.dp)
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text("Tap to choose photo", fontSize = 14.sp, color = Palette.muted)
-                }
             }
-        }
-
-        // Title
-        OutlinedTextField(
-            value = title,
-            onValueChange = { title = it },
-            label = { Text("Design Title *") },
-            singleLine = true,
-            shape = RoundedCornerShape(10.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Palette.goldPrimary,
-                unfocusedContainerColor = Palette.cream
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        // Jewellery type dropdown
-        ExposedDropdownMenuBox(
-            expanded = typeExpanded,
-            onExpandedChange = { typeExpanded = it }
-        ) {
-            OutlinedTextField(
-                value = jewelleryType,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Type *") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(typeExpanded) },
-                shape = RoundedCornerShape(10.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Palette.goldPrimary,
-                    unfocusedContainerColor = Palette.cream
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor()
-            )
-            ExposedDropdownMenu(
-                expanded = typeExpanded,
-                onDismissRequest = { typeExpanded = false }
-            ) {
-                JEWELLERY_TYPES.forEach { type ->
-                    DropdownMenuItem(
-                        text = { Text(type) },
-                        onClick = {
-                            jewelleryType = type
-                            typeExpanded = false
-                        }
-                    )
-                }
-            }
-        }
-
-        // Purity dropdown
-        ExposedDropdownMenuBox(
-            expanded = purityExpanded,
-            onExpandedChange = { purityExpanded = it }
-        ) {
-            OutlinedTextField(
-                value = metalPurity,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Metal Purity") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(purityExpanded) },
-                shape = RoundedCornerShape(10.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Palette.goldPrimary,
-                    unfocusedContainerColor = Palette.cream
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor()
-            )
-            ExposedDropdownMenu(
-                expanded = purityExpanded,
-                onDismissRequest = { purityExpanded = false }
-            ) {
-                PURITY_OPTIONS.forEach { p ->
-                    DropdownMenuItem(
-                        text = { Text(p) },
-                        onClick = { metalPurity = p; purityExpanded = false }
-                    )
-                }
-            }
-        }
-
-        error?.let { msg ->
-            Text(msg, fontSize = 13.sp, color = Palette.accentRed)
-        }
-
-        Button(
-            onClick = {
-                val uri = selectedUri
-                if (title.isBlank()) { error = "Please enter a title."; return@Button }
-                if (jewelleryType.isBlank()) { error = "Please choose a type."; return@Button }
-                if (uri == null) { error = "Please choose a photo."; return@Button }
-
-                scope.launch {
-                    submitting = true
-                    error = null
-                    try {
-                        val bytes = context.contentResolver.openInputStream(uri)?.readBytes()
-                            ?: throw Exception("Could not read image")
-                        val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
-                        val filename = "design_${UUID.randomUUID()}.jpg"
-                        val key = UUID.randomUUID().toString()
-
-                        val response = WholesalerApi.processProduct(
-                            imageData = bytes,
-                            filename = filename,
-                            mimeType = mimeType,
-                            title = title.trim(),
-                            jewelleryType = jewelleryType.lowercase(),
-                            wholesalerId = wholesalerId,
-                            imageCount = 1,
-                            submissionKey = key
-                        )
-
-                        // Poll for the product
-                        var product: Product? = null
-                        repeat(10) {
-                            if (product != null) return@repeat
-                            kotlinx.coroutines.delay(2000)
-                            product = WholesalerApi.fetchProduct(response.productId ?: return@repeat)
-                        }
-                        product?.let(onAdded) ?: run { error = "Upload queued — it'll appear shortly." }
-                    } catch (e: Exception) {
-                        error = e.message ?: "Something went wrong."
-                    }
-                    submitting = false
-                }
-            },
-            enabled = !submitting,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Palette.goldPrimary,
-                contentColor = Palette.light
-            ),
-            shape = RoundedCornerShape(10.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (submitting) CircularProgressIndicator(Modifier.size(18.dp), color = Palette.light, strokeWidth = 2.dp)
-            else Text("Upload & Process", fontWeight = FontWeight.SemiBold)
         }
     }
 }
+
+

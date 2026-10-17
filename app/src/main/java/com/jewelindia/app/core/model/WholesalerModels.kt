@@ -66,7 +66,7 @@ data class Order(
     @SerialName("created_at") val createdAt: String? = null
 ) {
     val shortId: String
-        get() = id.take(8).uppercase()
+        get() = id.take(8).lowercase()
 }
 
 // MARK: - Chat

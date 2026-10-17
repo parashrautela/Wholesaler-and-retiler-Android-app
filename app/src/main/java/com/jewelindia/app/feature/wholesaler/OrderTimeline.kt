@@ -27,8 +27,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import com.jewelindia.app.core.model.OrderStatus
 import com.jewelindia.app.core.security.ProtectedImage
 import com.jewelindia.app.data.api.WholesalerOrder
@@ -37,13 +39,24 @@ import com.jewelindia.app.design.Typography
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 object OrderTime {
+    fun short(dateString: String?): String? {
+        if (dateString.isNullOrBlank()) return null
+        return runCatching {
+            val instant = Instant.parse(dateString)
+            DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)
+                .withZone(ZoneId.systemDefault())
+                .format(instant)
+        }.getOrNull()
+    }
+
     fun full(dateString: String?): String? {
         if (dateString.isNullOrBlank()) return null
         return runCatching {
             val instant = Instant.parse(dateString)
-            DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a")
+            DateTimeFormatter.ofPattern("d MMM yyyy 'at' h:mm a", Locale.ENGLISH)
                 .withZone(ZoneId.systemDefault())
                 .format(instant)
         }.getOrNull()
@@ -89,7 +102,7 @@ fun OrderTimeline(
             val isDone = step.at != null
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.Top
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -100,14 +113,14 @@ fun OrderTimeline(
                             .clip(CircleShape)
                             .background(
                                 when {
-                                    step.failed -> Palette.accentRed
+                                    step.failed -> Color(0xFFEF4444)
                                     isDone -> Palette.dark
                                     else -> Color.Transparent
                                 }
                             )
                             .border(
                                 1.5.dp,
-                                if (isDone || step.failed) Color.Transparent else Palette.surfaceBorder,
+                                if (isDone || step.failed) Color.Transparent else Palette.border,
                                 CircleShape
                             )
                     )
@@ -116,8 +129,8 @@ fun OrderTimeline(
                         Box(
                             modifier = Modifier
                                 .width(1.5.dp)
-                                .height(32.dp)
-                                .background(if (nextDone) Palette.dark else Palette.surfaceBorder)
+                                .height(28.dp)
+                                .background(if (nextDone) Palette.dark else Palette.border)
                         )
                     }
                 }
@@ -125,22 +138,22 @@ fun OrderTimeline(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = if (index == steps.size - 1) 0.dp else 12.dp),
+                        .padding(bottom = if (index == steps.size - 1) 0.dp else 10.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Text(
                         text = step.title,
                         style = Typography.santoshi(14.sp, if (isDone) FontWeight.SemiBold else FontWeight.Normal),
                         color = when {
-                            step.failed -> Palette.accentRed
-                            isDone -> Palette.textPrimary
-                            else -> Palette.textSecondary
+                            step.failed -> Color(0xFFEF4444)
+                            isDone -> Palette.foreground
+                            else -> Palette.muted
                         }
                     )
                     Text(
                         text = OrderTime.full(step.at) ?: "Not yet",
                         style = Typography.santoshi(12.sp),
-                        color = Palette.textSecondary
+                        color = Palette.muted
                     )
                 }
             }
@@ -154,27 +167,26 @@ fun OrderStatusBadge(
     modifier: Modifier = Modifier
 ) {
     val currentStatus = status ?: OrderStatus.pending
-    val (bg, fg, label) = when (currentStatus) {
-        OrderStatus.pending -> Triple(Palette.accentOrange.copy(alpha = 0.15f), Palette.accentOrange, "Pending Approval")
-        OrderStatus.accepted -> Triple(Palette.goldPrimary.copy(alpha = 0.15f), Palette.goldPrimary, "Accepted")
-        OrderStatus.inProduction -> Triple(Color(0xFF3B82F6).copy(alpha = 0.15f), Color(0xFF3B82F6), "In Production")
-        OrderStatus.packed -> Triple(Color(0xFF8B5CF6).copy(alpha = 0.15f), Color(0xFF8B5CF6), "Packed")
-        OrderStatus.dispatched -> Triple(Color(0xFF06B6D4).copy(alpha = 0.15f), Color(0xFF06B6D4), "Dispatched")
-        OrderStatus.received -> Triple(Palette.accentGreen.copy(alpha = 0.15f), Palette.accentGreen, "Received")
-        OrderStatus.completed -> Triple(Palette.accentGreen.copy(alpha = 0.15f), Palette.accentGreen, "Completed")
-        OrderStatus.rejected -> Triple(Palette.accentRed.copy(alpha = 0.15f), Palette.accentRed, "Rejected")
+    val label = currentStatus.name.replace("_", " ").replaceFirstChar { it.uppercase() }
+
+    val (bg, fg) = when (currentStatus) {
+        OrderStatus.pending -> Color(0xFFF59E0B).copy(alpha = 0.15f) to Color(0xFFD97706)
+        OrderStatus.accepted, OrderStatus.inProduction -> Color(0xFF3B82F6).copy(alpha = 0.15f) to Color(0xFF2563EB)
+        OrderStatus.packed, OrderStatus.dispatched -> Color(0xFFA855F7).copy(alpha = 0.15f) to Color(0xFF9333EA)
+        OrderStatus.received, OrderStatus.completed -> Color(0xFF22C55E).copy(alpha = 0.15f) to Color(0xFF16A34A)
+        OrderStatus.rejected -> Color(0xFFEF4444).copy(alpha = 0.15f) to Color(0xFFDC2626)
     }
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(CircleShape)
             .background(bg)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .padding(horizontal = 8.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = label,
-            style = Typography.santoshi(11.sp, FontWeight.SemiBold),
+            style = Typography.santoshi(11.sp, FontWeight.Bold),
             color = fg
         )
     }
@@ -183,28 +195,29 @@ fun OrderStatusBadge(
 @Composable
 fun OrderDesignThumb(
     imageUrl: String?,
+    size: Dp = 72.dp,
     modifier: Modifier = Modifier
 ) {
-    if (!imageUrl.isNullOrBlank()) {
-        ProtectedImage(
-            url = imageUrl,
-            contentDescription = null,
-            modifier = modifier
-                .clip(RoundedCornerShape(8.dp)),
-            contentScale = ContentScale.Crop
-        )
-    } else {
-        Box(
-            modifier = modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(Palette.surfaceElevated),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Image,
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color(0xFFF7F7F7)),
+        contentAlignment = Alignment.Center
+    ) {
+        if (!imageUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = imageUrl,
                 contentDescription = null,
-                tint = Palette.textTertiary,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(size),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.Image,
+                contentDescription = null,
+                tint = Palette.muted,
+                modifier = Modifier.size(size / 3)
             )
         }
     }

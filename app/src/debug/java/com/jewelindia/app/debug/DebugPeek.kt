@@ -51,6 +51,7 @@ import com.jewelindia.app.feature.profile.WholesalerProfileScreen
 import com.jewelindia.app.feature.treasurechest.CreditStore
 import com.jewelindia.app.feature.treasurechest.DailyCreditsSheet
 import com.jewelindia.app.feature.treasurechest.InsufficientCreditsSheet
+import com.jewelindia.app.feature.wholesaler.AddProductScreen
 import com.jewelindia.app.feature.wholesaler.AddProductSheet
 import com.jewelindia.app.feature.wholesaler.ChamakPromoCard
 import com.jewelindia.app.feature.wholesaler.HeroUploadCard
@@ -233,19 +234,31 @@ object DebugPeek {
                     onPublishToggle = {}
                 )
             }
-            "addproduct", "addproduct-sheet" -> {
-                AddProductSheet(
+            "addproduct" -> {
+                AddProductScreen(
                     wholesalerId = "w-peek-0001",
                     userId = "w-peek-0001",
-                    onDismiss = onBack,
-                    onAdded = { onBack() }
+                    onClose = null,
+                    onOpenUploadHistory = null,
+                    onAdded = { onBack() },
+                    previewBalance = 1808
+                )
+            }
+            "addproduct-sheet" -> {
+                AddProductScreen(
+                    wholesalerId = "w-peek-0001",
+                    userId = "w-peek-0001",
+                    onClose = onBack,
+                    onOpenUploadHistory = { },
+                    onAdded = { onBack() },
+                    previewBalance = 1808
                 )
             }
             "wholesaler-orders" -> {
                 WholesalerOrdersScreen(
                     wholesalerUserId = "w-peek-0001",
                     wholesaler = DebugPeekSamples.wholesaler(),
-                    peekOrders = DebugPeekSamples.wholesalerOrders(context)
+                    peekError = "permission denied for function wholesaler_orders"
                 )
             }
             "order-detail-new" -> {

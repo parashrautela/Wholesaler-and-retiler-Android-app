@@ -3,7 +3,6 @@ package com.jewelindia.app.feature.wholesaler
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,8 +10,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,34 +19,21 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -79,58 +63,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
-
-data class FormOption(val value: String, val label: String)
-
-object WholesalerProductOptions {
-    val types = listOf(
-        FormOption("necklace", "Necklace"),
-        FormOption("chain", "Chains"),
-        FormOption("rings", "Rings"),
-        FormOption("earrings", "Earrings"),
-        FormOption("haram", "Haram"),
-        FormOption("pendant", "Pendant"),
-        FormOption("bangles", "Bangles"),
-        FormOption("nosepins", "Nosepins"),
-        FormOption("mangalsutra", "Mangalsutra")
-    )
-
-    val categories = listOf(
-        FormOption("gold", "Gold"),
-        FormOption("silver", "Silver"),
-        FormOption("diamond", "Diamond"),
-        FormOption("platinum", "Platinum"),
-        FormOption("gemstone", "Gemstone"),
-        FormOption("pearl", "Pearl")
-    )
-
-    val styles = listOf(
-        FormOption("traditional", "Traditional"),
-        FormOption("modern", "Modern"),
-        FormOption("fusion", "Fusion"),
-        FormOption("antique", "Antique"),
-        FormOption("minimalist", "Minimalist"),
-        FormOption("bridal", "Bridal")
-    )
-
-    val sizes = listOf(
-        FormOption("xs", "XS"),
-        FormOption("s", "S"),
-        FormOption("m", "M"),
-        FormOption("l", "L"),
-        FormOption("xl", "XL"),
-        FormOption("freesize", "Free Size")
-    )
-
-    val purities = listOf(
-        FormOption("24k", "24K (999)"),
-        FormOption("22k", "22K (916)"),
-        FormOption("18k", "18K (750)"),
-        FormOption("14k", "14K (585)"),
-        FormOption("925", "925 Silver"),
-        FormOption("950pt", "950 Platinum")
-    )
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -171,7 +103,7 @@ fun EditProductScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val imagePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
+        contract = ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
             val owner = product.wholesalerId ?: return@rememberLauncherForActivityResult
@@ -260,303 +192,340 @@ fun EditProductScreen(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = Palette.surfaceElevated
+        containerColor = Color.White
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 36.dp)
-                .verticalScroll(rememberScrollState())
-                .imePadding()
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .navigationBarsPadding()
         ) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            // iOS Top Bar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.Center
             ) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .clickable(enabled = !isSaving) { onDismiss() }
+                        .padding(vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "Cancel",
+                        style = Typography.santoshi(16.sp, FontWeight.Medium),
+                        color = Color(0xFF111827)
+                    )
+                }
+
                 Text(
                     text = "Edit Product",
-                    style = Typography.cirka(20.sp),
-                    color = Palette.textPrimary
+                    style = Typography.santoshi(17.sp, FontWeight.SemiBold),
+                    color = Color(0xFF111827)
                 )
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.Filled.Close, contentDescription = "Close", tint = Palette.textSecondary)
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .clickable(enabled = !isSaving) { saveChanges() }
+                        .padding(vertical = 4.dp)
+                ) {
+                    if (isSaving) {
+                        CircularProgressIndicator(
+                            color = Palette.dark,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    } else {
+                        Text(
+                            text = "Save",
+                            style = Typography.santoshi(16.sp, FontWeight.Bold),
+                            color = Color(0xFF111827)
+                        )
+                    }
                 }
             }
 
-            if (errorMessage != null) {
-                Text(
-                    text = errorMessage.orEmpty(),
-                    style = Typography.santoshi(13.sp),
-                    color = Palette.accentRed
-                )
-            }
+            HorizontalDivider(color = Color(0xFFE5E5E5), thickness = 1.dp)
 
-            // Product Info Section
-            Text(text = "Product Info", style = Typography.santoshi(14.sp, FontWeight.Bold), color = Palette.textPrimary)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+                    .imePadding(),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                if (errorMessage != null) {
+                    ErrorBanner(message = errorMessage!!)
+                }
 
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("Product Title") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Palette.goldPrimary,
-                    unfocusedBorderColor = Palette.surfaceBorder
-                )
-            )
+                // Section: Product Info
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "PRODUCT INFO",
+                        style = Typography.santoshi(12.sp, FontWeight.Bold),
+                        letterSpacing = 0.8.sp,
+                        color = Color(0xFF6B7280)
+                    )
 
-            FormDropdownPicker("Jewellery Type", jewelleryType, WholesalerProductOptions.types) { jewelleryType = it }
-            FormDropdownPicker("Material", category, WholesalerProductOptions.categories) { category = it }
-            FormDropdownPicker("Style", style, WholesalerProductOptions.styles) { style = it }
-            FormDropdownPicker("Size", size, WholesalerProductOptions.sizes) { size = it }
-            FormDropdownPicker("Purity", metalPurity, WholesalerProductOptions.purities) { metalPurity = it }
+                    LabelledField(label = "Product Title") {
+                        JewelTextInput(
+                            value = title,
+                            onValueChange = { title = it },
+                            placeholder = "Product Title"
+                        )
+                    }
 
-            // Specifications Section
-            Text(text = "Specifications", style = Typography.santoshi(14.sp, FontWeight.Bold), color = Palette.textPrimary)
+                    JewelSelect(
+                        label = "Jewellery Type",
+                        options = WholesalerProductOptions.types,
+                        selection = jewelleryType,
+                        onSelectionChange = { jewelleryType = it }
+                    )
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = grossWeight,
-                    onValueChange = { grossWeight = it },
-                    label = { Text("Gross Wt (g)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(10.dp)
-                )
-                OutlinedTextField(
-                    value = stoneWeight,
-                    onValueChange = { stoneWeight = it },
-                    label = { Text("Stone Wt (g)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(10.dp)
-                )
-                OutlinedTextField(
-                    value = netWeight,
-                    onValueChange = { netWeight = it },
-                    label = { Text("Net Wt (g)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(10.dp)
-                )
-            }
+                    JewelSelect(
+                        label = "Material",
+                        options = WholesalerProductOptions.categories,
+                        selection = category,
+                        onSelectionChange = { category = it }
+                    )
 
-            // Showcase Images Section
-            Text(
-                text = "Showcase images (choose up to 4)",
-                style = Typography.santoshi(14.sp, FontWeight.Bold),
-                color = Palette.textPrimary
-            )
+                    JewelSelect(
+                        label = "Style",
+                        options = WholesalerProductOptions.styles,
+                        selection = style,
+                        onSelectionChange = { style = it }
+                    )
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                availableShowcase.forEachIndexed { index, url ->
-                    val isSelected = showcaseImages.contains(url)
+                    JewelSelect(
+                        label = "Size",
+                        options = WholesalerProductOptions.sizes,
+                        selection = size,
+                        onSelectionChange = { size = it }
+                    )
+
+                    JewelSelect(
+                        label = "Purity",
+                        options = WholesalerProductOptions.purities,
+                        selection = metalPurity,
+                        onSelectionChange = { metalPurity = it }
+                    )
+                }
+
+                // Section: Specifications
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "SPECIFICATIONS",
+                        style = Typography.santoshi(12.sp, FontWeight.Bold),
+                        letterSpacing = 0.8.sp,
+                        color = Color(0xFF6B7280)
+                    )
+
+                    InputWithSuffix(
+                        label = "Gross Weight",
+                        suffix = "g",
+                        text = grossWeight,
+                        onTextChange = { grossWeight = it }
+                    )
+
+                    InputWithSuffix(
+                        label = "Stone Weight",
+                        suffix = "g",
+                        text = stoneWeight,
+                        onTextChange = { stoneWeight = it }
+                    )
+
+                    InputWithSuffix(
+                        label = "Net Weight",
+                        suffix = "g",
+                        text = netWeight,
+                        onTextChange = { netWeight = it }
+                    )
+                }
+
+                // Section: Showcase Images
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "SHOWCASE IMAGES (CHOOSE UP TO 4)",
+                        style = Typography.santoshi(12.sp, FontWeight.Bold),
+                        letterSpacing = 0.8.sp,
+                        color = Color(0xFF6B7280)
+                    )
+
+                    availableShowcase.forEachIndexed { index, url ->
+                        val isSelected = showcaseImages.contains(url)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.White)
+                                .border(1.dp, Color(0xFFE5E5E5), RoundedCornerShape(8.dp))
+                                .clickable { toggleShowcase(url) }
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            ProtectedImage(
+                                url = url,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                            val label = when {
+                                customImages.contains(url) -> "My image ${customImages.indexOf(url) + 1}"
+                                product.generatedImageURLs.contains(url) -> "Generated image ${product.generatedImageURLs.indexOf(url) + 1}"
+                                url == product.rawImageURL -> "Original image"
+                                else -> "Product image ${index + 1}"
+                            }
+                            Text(
+                                text = label,
+                                style = Typography.santoshi(13.sp),
+                                color = Color(0xFF111827),
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (isSelected) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clip(CircleShape)
+                                        .background(Palette.dark),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Palette.surface)
-                            .border(
-                                1.dp,
-                                if (isSelected) Palette.goldPrimary else Palette.surfaceBorder,
-                                RoundedCornerShape(10.dp)
-                            )
-                            .clickable { toggleShowcase(url) }
-                            .padding(8.dp),
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFF9FAFB))
+                            .border(1.dp, Color(0xFFE5E5E5), RoundedCornerShape(8.dp))
+                            .clickable(enabled = showcaseImages.size < 4) { imagePicker.launch("image/*") }
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        ProtectedImage(
-                            url = url,
+                        Icon(
+                            imageVector = Icons.Default.AddPhotoAlternate,
                             contentDescription = null,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
+                            tint = if (showcaseImages.size >= 4) Color(0xFF9CA3AF) else Color(0xFF111827),
+                            modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            text = if (customImages.contains(url)) "My image ${customImages.indexOf(url) + 1}"
-                            else if (product.generatedImageURLs.contains(url)) "Generated image ${product.generatedImageURLs.indexOf(url) + 1}"
-                            else if (url == product.rawImageURL) "Original image"
-                            else "Product image ${index + 1}",
-                            style = Typography.santoshi(12.sp),
-                            color = Palette.textPrimary,
-                            modifier = Modifier.weight(1f)
+                            text = "Add my own images",
+                            style = Typography.santoshi(14.sp, FontWeight.Medium),
+                            color = if (showcaseImages.size >= 4) Color(0xFF9CA3AF) else Color(0xFF111827)
                         )
-                        if (isSelected) {
-                            Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clip(CircleShape)
-                                    .background(Palette.goldPrimary),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Filled.Check, contentDescription = null, tint = Palette.dark, modifier = Modifier.size(16.dp))
-                            }
-                        }
                     }
+
+                    Text(
+                        text = "Tap images to select them. The selected images are shown first in the catalogue, in selection order.",
+                        style = Typography.santoshi(11.sp),
+                        color = Color(0xFF6B7280)
+                    )
                 }
 
-                if (showcaseImages.size < 4) {
-                    Box(
+                // Section: Availability
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "AVAILABILITY",
+                        style = Typography.santoshi(12.sp, FontWeight.Bold),
+                        letterSpacing = 0.8.sp,
+                        color = Color(0xFF6B7280)
+                    )
+
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Palette.surface)
-                            .border(1.dp, Palette.surfaceBorder, RoundedCornerShape(10.dp))
-                            .clickable {
-                                imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                            }
-                            .padding(14.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Text(
+                            text = "In Stock",
+                            style = Typography.santoshi(14.sp, FontWeight.SemiBold),
+                            color = Color(0xFF111827)
+                        )
+                        JewelToggle(
+                            isOn = stockAvailable,
+                            onToggle = { stockAvailable = it }
+                        )
+                    }
+
+                    if (!stockAvailable) {
+                        InputWithSuffix(
+                            label = "Production Time",
+                            suffix = "days",
+                            placeholder = "14",
+                            text = makeToOrderDays,
+                            onTextChange = { makeToOrderDays = it },
+                            keyboardType = KeyboardType.Number
+                        )
+                    }
+
+                    if (product.canPublish) {
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Filled.AddPhotoAlternate, contentDescription = null, tint = Palette.goldPrimary)
-                            Text("Add my own images", style = Typography.santoshi(13.sp, FontWeight.SemiBold), color = Palette.textPrimary)
+                            Text(
+                                text = "Published to Catalogue",
+                                style = Typography.santoshi(14.sp, FontWeight.SemiBold),
+                                color = Color(0xFF111827)
+                            )
+                            JewelToggle(
+                                isOn = isPublished,
+                                onToggle = { isPublished = it }
+                            )
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    text = "Published to Catalogue",
+                                    style = Typography.santoshi(14.sp, FontWeight.SemiBold),
+                                    color = Color(0xFF9CA3AF)
+                                )
+                                Text(
+                                    text = "Unlocks once AI generation finishes",
+                                    style = Typography.santoshi(11.sp),
+                                    color = Color(0xFF9CA3AF)
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = Color(0xFF9CA3AF),
+                                modifier = Modifier.size(16.dp)
+                            )
                         }
                     }
                 }
 
-                Text(
-                    text = "Tap images to select them. The selected images are shown first in the catalogue, in selection order.",
-                    style = Typography.santoshi(11.sp),
-                    color = Palette.textSecondary
-                )
-            }
-
-            // Availability Section
-            Text(text = "Availability", style = Typography.santoshi(14.sp, FontWeight.Bold), color = Palette.textPrimary)
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = "In Stock", style = Typography.santoshi(14.sp), color = Palette.textPrimary)
-                Switch(
-                    checked = stockAvailable,
-                    onCheckedChange = { stockAvailable = it },
-                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Palette.goldPrimary)
-                )
-            }
-
-            if (!stockAvailable) {
-                OutlinedTextField(
-                    value = makeToOrderDays,
-                    onValueChange = { makeToOrderDays = it },
-                    label = { Text("Production Time (days)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp)
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(text = "Published to Catalogue", style = Typography.santoshi(14.sp), color = Palette.textPrimary)
-                    if (!product.canPublish) {
-                        Text(
-                            text = "Unlocks once AI generation finishes",
-                            style = Typography.santoshi(12.sp),
-                            color = Palette.textSecondary
-                        )
-                    }
-                }
-                if (product.canPublish) {
-                    Switch(
-                        checked = isPublished,
-                        onCheckedChange = { isPublished = it },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Palette.goldPrimary)
-                    )
-                } else {
-                    Icon(Icons.Filled.Lock, contentDescription = "Locked", tint = Palette.textSecondary)
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            Button(
-                onClick = { saveChanges() },
-                enabled = !isSaving,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Palette.goldPrimary,
-                    contentColor = Palette.dark
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                if (isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Palette.dark)
-                } else {
-                    Text("Save", style = Typography.santoshi(16.sp, FontWeight.Bold))
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FormDropdownPicker(
-    label: String,
-    selectedValue: String,
-    options: List<FormOption>,
-    onSelect: (String) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val displayLabel = options.firstOrNull { it.value.equals(selectedValue, ignoreCase = true) }?.label
-        ?: selectedValue.ifBlank { "Select $label" }
-
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        OutlinedTextField(
-            value = displayLabel,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(label) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
-            shape = RoundedCornerShape(10.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Palette.goldPrimary,
-                unfocusedBorderColor = Palette.surfaceBorder
-            )
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            DropdownMenuItem(
-                text = { Text("Select $label") },
-                onClick = {
-                    onSelect("")
-                    expanded = false
-                }
-            )
-            options.forEach { opt ->
-                DropdownMenuItem(
-                    text = { Text(opt.label) },
-                    onClick = {
-                        onSelect(opt.value)
-                        expanded = false
-                    }
-                )
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }

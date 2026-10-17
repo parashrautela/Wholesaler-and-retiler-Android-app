@@ -92,57 +92,34 @@ object DebugPeekSamples {
     }
 
     fun wholesalerOrders(context: Context): List<WholesalerOrder> {
-        val p = products(context)
+        val image = fileUrl(context, "cat_haram") ?: "https://ljxgwiuvdpuarvdszjts.supabase.co/storage/v1/object/public/plant-images/products/processed/ad07ac3e-a6ea-4ded-9b5d-916d8aa570e1_v1.png"
         return listOf(
             WholesalerOrder(
-                id = "order-0001",
-                productTitle = p[0].title ?: "Temple Haram",
-                productImage = fileUrl(context, "cat_haram"),
-                productType = "Necklace",
+                id = "6b7ecd46-0000",
                 status = OrderStatus.pending,
-                note = "Please pack in velvet presentation box.",
-                storeName = "Kalyan Jewellers Indiranagar",
-                storeCity = "Bengaluru",
-                placedBy = "Ramesh",
-                createdAt = "2026-10-17T09:30:00Z"
+                note = "Need it in 22k, 2 pieces, by Diwali",
+                storeName = "Parash The Dev",
+                storeCity = "Bengaluru, Karnataka",
+                placedBy = "Parash Retailer",
+                productTitle = "Temple Haram",
+                productType = "necklace",
+                productImage = image,
+                createdAt = "2026-09-21T06:12:00.000000+00:00"
             ),
             WholesalerOrder(
-                id = "order-0002",
-                productTitle = p[1].title ?: "Traditional Choker",
-                productImage = fileUrl(context, "cat_necklace"),
-                productType = "Necklace",
-                status = OrderStatus.accepted,
-                acceptedAt = "2026-10-16T14:30:00Z",
-                note = "Urgent delivery needed by Diwali week.",
-                storeName = "Tanishq Boutique Jayanagar",
-                storeCity = "Bengaluru",
-                placedBy = "Priya",
-                createdAt = "2026-10-16T14:15:00Z"
-            ),
-            WholesalerOrder(
-                id = "order-0003",
-                productTitle = p[4].title ?: "Kada Bangle",
-                productImage = fileUrl(context, "cat_bangles"),
-                productType = "Bangles",
-                status = OrderStatus.completed,
-                completedAt = "2026-10-12T10:00:00Z",
-                storeName = "Malabar Gold & Diamonds",
-                storeCity = "Kochi",
-                placedBy = "Suresh",
-                createdAt = "2026-10-10T11:00:00Z"
-            ),
-            WholesalerOrder(
-                id = "order-0004",
-                productTitle = p[5].title ?: "Solitaire Ring",
-                productImage = fileUrl(context, "cat_rings"),
-                productType = "Rings",
-                status = OrderStatus.rejected,
-                rejectedAt = "2026-10-09T09:00:00Z",
-                rejectionReason = "Out of diamond stock.",
-                storeName = "Joyalukkas MG Road",
-                storeCity = "Bengaluru",
-                placedBy = "Anita",
-                createdAt = "2026-10-08T16:45:00Z"
+                id = "72353a1e-0000",
+                status = OrderStatus.dispatched,
+                note = "Yea de do",
+                storeName = "Meera Jewels",
+                storeCity = "Mysuru",
+                placedBy = "Anil",
+                productTitle = "Kundan Choker",
+                productType = "necklace",
+                productImage = image,
+                createdAt = "2026-09-19T08:00:00.000000+00:00",
+                acceptedAt = "2026-09-19T10:30:00.000000+00:00",
+                packedAt = "2026-09-20T12:00:00.000000+00:00",
+                dispatchedAt = "2026-09-21T02:52:00.000000+00:00"
             )
         )
     }
