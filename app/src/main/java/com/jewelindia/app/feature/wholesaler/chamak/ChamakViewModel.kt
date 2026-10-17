@@ -285,14 +285,16 @@ class ChamakViewModel(
 
         try {
             var url1 = d1.imageURL ?: ""
-            if (url1.isEmpty() && d1.localImageData != null) {
-                url1 = ChamakApi.uploadSourceImage(wholesalerId, d1.localImageData!!, 1, mode)
+            val local1 = d1.localImageData
+            if (url1.isEmpty() && local1 != null) {
+                url1 = ChamakApi.uploadSourceImage(wholesalerId, local1, 1, mode)
                 selectedDesign1?.imageURL = url1
             }
 
             var url2 = d2.imageURL ?: ""
-            if (url2.isEmpty() && d2.localImageData != null) {
-                url2 = ChamakApi.uploadSourceImage(wholesalerId, d2.localImageData!!, 2, mode)
+            val local2 = d2.localImageData
+            if (url2.isEmpty() && local2 != null) {
+                url2 = ChamakApi.uploadSourceImage(wholesalerId, local2, 2, mode)
                 selectedDesign2?.imageURL = url2
             }
 
@@ -305,8 +307,9 @@ class ChamakViewModel(
                 for (slot in listOf(3, 4)) {
                     val piece = design(slot) ?: continue
                     var url = piece.imageURL ?: ""
-                    if (url.isEmpty() && piece.localImageData != null) {
-                        url = ChamakApi.uploadSourceImage(wholesalerId, piece.localImageData!!, slot, mode)
+                    val pieceData = piece.localImageData
+                    if (url.isEmpty() && pieceData != null) {
+                        url = ChamakApi.uploadSourceImage(wholesalerId, pieceData, slot, mode)
                         if (slot == 3) selectedDesign3?.imageURL = url else selectedDesign4?.imageURL = url
                     }
                     if (url.isEmpty()) {

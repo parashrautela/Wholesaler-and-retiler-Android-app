@@ -464,12 +464,14 @@ fun ChamakSliderFormScreen(
                                 .background(Color(0xFFF9F9F8))
                                 .padding(12.dp)
                         ) {
-                            ProtectedImage(
-                                url = vm.signedOutputImageURL!!,
-                                contentDescription = "Last Result",
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.fillMaxSize()
-                            )
+                            vm.signedOutputImageURL?.let { url ->
+                                ProtectedImage(
+                                    url = url,
+                                    contentDescription = "Last Result",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
                     }
                 }
@@ -530,9 +532,9 @@ fun ChamakSliderFormScreen(
         }
 
         // Full screen viewer preview
-        if (previewImage != null) {
+        previewImage?.let { img ->
             ChamakImageViewer(
-                images = listOf(previewImage!!),
+                images = listOf(img),
                 startIndex = 0,
                 onDismiss = { previewImage = null }
             )

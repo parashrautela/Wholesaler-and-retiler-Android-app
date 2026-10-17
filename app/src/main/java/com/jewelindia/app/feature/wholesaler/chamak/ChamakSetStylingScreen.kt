@@ -363,9 +363,9 @@ fun ChamakSetStylingScreen(
             }
         }
 
-        if (previewImage != null) {
+        previewImage?.let { img ->
             ChamakImageViewer(
-                images = listOf(previewImage!!),
+                images = listOf(img),
                 startIndex = 0,
                 onDismiss = { previewImage = null }
             )

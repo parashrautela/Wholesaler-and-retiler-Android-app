@@ -52,8 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.model.OrderStatus
 import com.jewelindia.app.core.model.Wholesaler
-import com.jewelindia.app.data.api.OrdersApi
-import com.jewelindia.app.data.api.WholesalerApi
+import androidx.compose.runtime.collectAsState
 import com.jewelindia.app.data.api.WholesalerOrder
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
@@ -64,28 +63,35 @@ private val ORDER_TABS = listOf("Pending", "Active", "History")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WholesalerOrdersScreen(
-    wholesaler: Wholesaler?,
-    onOrderCountChange: (Int) -> Unit
+    wholesalerUserId: String = "",
+    wholesaler: Wholesaler? = null,
+    onOrderCountChange: (Int) -> Unit = {}
 ) {
-    var orders by remember { mutableStateOf<List<WholesalerOrder>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
+    val resolvedUserId = wholesalerUserId.ifBlank {
+        wholesaler?.userId ?: ""
+    }
+    val viewModel = remember(resolvedUserId) {
+        WholesalerOrdersViewModel(wholesalerUserId = resolvedUserId)
+    }
+    val ordersState by viewModel.uiState.collectAsState()
+
     var selectedTabIdx by remember { mutableStateOf(0) }
     var selectedOrder by remember { mutableStateOf<WholesalerOrder?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
 
-    fun loadOrders() {
-        val wid = wholesaler?.id ?: return
-        loading = true
-        scope.launch {
-            orders = try { OrdersApi.fetchWholesalerOrders() } catch (_: Exception) { emptyList() }
-            loading = false
-            onOrderCountChange(orders.count { it.status == OrderStatus.pending })
-        }
+    LaunchedEffect(resolvedUserId) {
+        viewModel.load()
     }
 
-    LaunchedEffect(wholesaler?.id) {
-        loadOrders()
+    val (orders, loading) = when (val s = ordersState) {
+        is OrdersUiState.Content -> s.orders to false
+        is OrdersUiState.Empty -> emptyList<WholesalerOrder>() to false
+        is OrdersUiState.Loading -> emptyList<WholesalerOrder>() to true
+        is OrdersUiState.Error -> emptyList<WholesalerOrder>() to false
+    }
+
+    LaunchedEffect(orders) {
+        onOrderCountChange(orders.count { it.status == OrderStatus.pending })
     }
 
     val tabOrders = remember(orders, selectedTabIdx) {
@@ -176,10 +182,15 @@ fun WholesalerOrdersScreen(
         ) {
             WholesalerOrderDetailSheet(
                 order = order,
-                onStatusUpdate = { updated ->
-                    orders = orders.map { if (it.id == updated.id) updated else it }
-                    onOrderCountChange(orders.count { it.status == OrderStatus.pending })
-                    selectedOrder = null
+                onStatusUpdate = { next ->
+                    viewModel.updateStatus(order.id, next, onSuccess = {
+                        selectedOrder = null
+                    })
+                },
+                onReject = { reason ->
+                    viewModel.rejectOrder(order.id, reason, "", onSuccess = {
+                        selectedOrder = null
+                    })
                 },
                 onDismiss = { selectedOrder = null }
             )
@@ -232,7 +243,8 @@ private fun OrderCard(order: WholesalerOrder, onClick: () -> Unit) {
 @Composable
 fun WholesalerOrderDetailSheet(
     order: WholesalerOrder,
-    onStatusUpdate: (WholesalerOrder) -> Unit,
+    onStatusUpdate: (OrderStatus) -> Unit,
+    onReject: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -354,14 +366,8 @@ fun WholesalerOrderDetailSheet(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(
                     onClick = {
-                        scope.launch {
-                            working = true
-                            try {
-                                WholesalerApi.updateOrderStatus(order.id, OrderStatus.accepted)
-                                onStatusUpdate(order.copy(status = OrderStatus.accepted))
-                            } catch (_: Exception) {}
-                            working = false
-                        }
+                        working = true
+                        onStatusUpdate(OrderStatus.accepted)
                     },
                     enabled = !working,
                     colors = ButtonDefaults.buttonColors(containerColor = Palette.accentGreen, contentColor = Color.White),
@@ -393,14 +399,8 @@ fun WholesalerOrderDetailSheet(
         nextStatus?.let { (next, label) ->
             Button(
                 onClick = {
-                    scope.launch {
-                        working = true
-                        try {
-                            WholesalerApi.updateOrderStatus(order.id, next)
-                            onStatusUpdate(order.copy(status = next))
-                        } catch (_: Exception) {}
-                        working = false
-                    }
+                    working = true
+                    onStatusUpdate(next)
                 },
                 enabled = !working,
                 colors = ButtonDefaults.buttonColors(containerColor = Palette.goldPrimary, contentColor = Palette.dark),
@@ -420,8 +420,7 @@ fun WholesalerOrderDetailSheet(
         RejectOrderSheet(
             onDismiss = { showRejectSheet = false },
             onConfirm = { reason ->
-                WholesalerApi.updateOrderStatus(order.id, OrderStatus.rejected, reason)
-                onStatusUpdate(order.copy(status = OrderStatus.rejected, rejectionReason = reason))
+                onReject(reason)
                 showRejectSheet = false
                 onDismiss()
             }

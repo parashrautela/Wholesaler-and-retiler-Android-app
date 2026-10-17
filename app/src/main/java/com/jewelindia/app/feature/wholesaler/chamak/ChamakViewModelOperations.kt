@@ -14,31 +14,40 @@ import com.jewelindia.app.data.api.SetBackdrop
 import com.jewelindia.app.data.api.WholesalerFormInput
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.supervisorScope
 import java.util.UUID
 
 suspend fun ChamakViewModel.load(wholesalerId: String) {
     isLoadingProducts = true
     try {
-        coroutineScope {
-            val productsDeferred = async { fetchProducts(catalogueSource, wholesalerId) }
-            val galleryDeferred = async { ChamakApi.fetchWholesalerGallery(wholesalerId) }
-
-            catalogProducts = try {
-                productsDeferred.await()
-            } catch (_: Exception) {
-                emptyList()
+        supervisorScope {
+            val productsDeferred = async {
+                runCatching { fetchProducts(catalogueSource, wholesalerId) }
+            }
+            val galleryDeferred = async {
+                runCatching { ChamakApi.fetchWholesalerGallery(wholesalerId) }
             }
 
-            try {
-                galleryGenerations = galleryDeferred.await()
+            catalogProducts = productsDeferred.await().getOrDefault(emptyList())
+
+            val galleryResult = galleryDeferred.await()
+            if (galleryResult.isSuccess) {
+                galleryGenerations = galleryResult.getOrDefault(emptyList())
                 galleryErrorMessage = null
                 signGalleryThumbnails()
-            } catch (e: Exception) {
+            } else {
+                val err = galleryResult.exceptionOrNull()
+                if (err is CancellationException) throw err
                 galleryGenerations = emptyList()
                 galleryErrorMessage = "Couldn't load your gallery. Check your connection and try again."
             }
         }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        catalogProducts = emptyList()
+        galleryGenerations = emptyList()
+        galleryErrorMessage = "Couldn't load your gallery. Check your connection and try again."
     } finally {
         isLoadingProducts = false
     }
@@ -58,8 +67,10 @@ suspend fun ChamakViewModel.refreshGallery(wholesalerId: String) {
         galleryGenerations = ChamakApi.fetchWholesalerGallery(wholesalerId)
         galleryErrorMessage = null
         signGalleryThumbnails()
-    } catch (e: Exception) {
-        if (e is CancellationException) return
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        galleryGenerations = emptyList()
         galleryErrorMessage = "Couldn't load your gallery. Check your connection and try again."
     } finally {
         isRefreshingGallery = false
@@ -72,8 +83,8 @@ suspend fun ChamakViewModel.signGalleryThumbnails() {
     val byId = mutableMapOf<String, String>()
     for (gen in galleryGenerations) {
         val path = gen.outputPath(ImageSize.CARD)
-        if (path != null && signed.containsKey(path)) {
-            byId[gen.id] = signed[path]!!
+        if (path != null) {
+            signed[path]?.let { byId[gen.id] = it }
         }
     }
     galleryThumbnailURLs = byId

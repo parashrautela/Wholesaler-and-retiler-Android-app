@@ -483,16 +483,17 @@ fun ChamakCatalogPickerScreen(
         }
 
         // Preview dialog
-        if (previewImage != null) {
+        previewImage?.let { img ->
             ChamakImageViewer(
-                images = listOf(previewImage!!),
+                images = listOf(img),
                 startIndex = 0,
                 onDismiss = { previewImage = null }
             )
         }
 
         // Direct upload Jewellery Type Picker Sheet (Set Creation)
-        if (showTypePickerSheet && pendingUploadBytes != null) {
+        val uploadBytes = pendingUploadBytes
+        if (showTypePickerSheet && uploadBytes != null) {
             val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             ModalBottomSheet(
                 onDismissRequest = {
@@ -530,7 +531,7 @@ fun ChamakCatalogPickerScreen(
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(if (alreadyUsed) Color(0xFFF9FAFB) else Color.White)
                                 .clickable(enabled = !alreadyUsed) {
-                                    vm.setCustomImage(pendingUploadBytes!!, pendingUploadSlot, canonical.key)
+                                    vm.setCustomImage(uploadBytes, pendingUploadSlot, canonical.key)
                                     showTypePickerSheet = false
                                     pendingUploadBytes = null
                                 }

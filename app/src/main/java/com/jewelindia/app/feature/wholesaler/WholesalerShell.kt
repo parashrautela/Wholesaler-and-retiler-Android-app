@@ -91,19 +91,21 @@ fun WholesalerShell(sessionStore: SessionStore) {
     val scope = rememberCoroutineScope()
     val creditStore = remember { CreditStore(scope) }
 
-    LaunchedEffect(Unit) {
+    val user = sessionStore.user.value
+    val wholesalerUserId = user?.id ?: ""
+
+    LaunchedEffect(wholesalerUserId) {
+        if (wholesalerUserId.isBlank()) return@LaunchedEffect
         creditStore.refresh()
-        val uid = sessionStore.user.value?.id ?: return@LaunchedEffect
         val email = sessionStore.user.value?.email
-        val w = try { WholesalerApi.fetchWholesaler(uid, email) } catch (_: Exception) { null }
+        val w = try { WholesalerApi.fetchWholesaler(wholesalerUserId, email) } catch (_: Exception) { null }
         wholesaler = w
-        if (w != null) {
-            scope.launch {
-                pendingOrderCount = try { WholesalerApi.countPendingOrders(w.id) } catch (_: Exception) { 0 }
-            }
-            scope.launch {
-                unreadChatCount = try { WholesalerApi.countUnreadConversations(w.id) } catch (_: Exception) { 0 }
-            }
+        scope.launch {
+            // Under RLS and schema, orders and conversations store auth UID
+            pendingOrderCount = try { WholesalerApi.countPendingOrders(wholesalerUserId) } catch (_: Exception) { 0 }
+        }
+        scope.launch {
+            unreadChatCount = try { WholesalerApi.countUnreadConversations(wholesalerUserId) } catch (_: Exception) { 0 }
         }
     }
 
@@ -169,7 +171,7 @@ fun WholesalerShell(sessionStore: SessionStore) {
     // Upload History overlay
     if (showUploadHistory) {
         UploadHistoryScreen(
-            wholesalerId = wholesaler?.id ?: "",
+            wholesalerId = wholesalerUserId,
             onBack = { showUploadHistory = false }
         )
         return
@@ -193,6 +195,7 @@ fun WholesalerShell(sessionStore: SessionStore) {
             ) { tab ->
                 when (tab) {
                     WholesalerTab.Home -> WholesalerHomeScreen(
+                        wholesalerUserId = wholesalerUserId,
                         wholesaler = wholesaler,
                         sessionStore = sessionStore,
                         creditStore = creditStore,
@@ -215,15 +218,18 @@ fun WholesalerShell(sessionStore: SessionStore) {
                         onOpenUploadHistory = { showUploadHistory = true }
                     )
                     WholesalerTab.Catalog -> WholesalerCatalogScreen(
+                        wholesalerUserId = wholesalerUserId,
                         wholesaler = wholesaler,
                         sessionStore = sessionStore,
                         onOpenUploadHistory = { showUploadHistory = true }
                     )
                     WholesalerTab.Chamak -> ChamakStudioScreen(
+                        wholesalerUserId = wholesalerUserId,
                         wholesaler = wholesaler,
                         sessionStore = sessionStore
                     )
                     WholesalerTab.Orders -> WholesalerOrdersScreen(
+                        wholesalerUserId = wholesalerUserId,
                         wholesaler = wholesaler,
                         onOrderCountChange = { pendingOrderCount = it }
                     )

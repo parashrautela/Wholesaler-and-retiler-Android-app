@@ -72,18 +72,26 @@ import com.jewelindia.app.data.supabase.JewelJson
 import com.jewelindia.app.design.Palette
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WholesalerCatalogScreen(
-    wholesaler: Wholesaler?,
+    wholesalerUserId: String = "",
+    wholesaler: Wholesaler? = null,
     sessionStore: SessionStore,
     onOpenUploadHistory: (() -> Unit)? = null
 ) {
-    var products by remember { mutableStateOf<List<Product>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
+    val resolvedUserId = wholesalerUserId.ifBlank {
+        wholesaler?.userId ?: sessionStore.user.value?.id ?: ""
+    }
+    val viewModel = remember(resolvedUserId) {
+        WholesalerCatalogViewModel(wholesalerUserId = resolvedUserId)
+    }
+    val catalogState by viewModel.uiState.collectAsState()
+
     var query by remember { mutableStateOf("") }
     var selectedProduct by remember { mutableStateOf<Product?>(null) }
     var productToEdit by remember { mutableStateOf<Product?>(null) }
@@ -101,11 +109,17 @@ fun WholesalerCatalogScreen(
         }
     }
 
-    LaunchedEffect(wholesaler?.id) {
-        val wid = wholesaler?.id ?: return@LaunchedEffect
-        loading = true
-        products = try { WholesalerApi.fetchCatalogue(wid, pageSize = 200).products } catch (_: Exception) { emptyList() }
-        loading = false
+    LaunchedEffect(resolvedUserId) {
+        if (resolvedUserId.isNotBlank()) {
+            viewModel.load()
+        }
+    }
+
+    val (products, loading) = when (val s = catalogState) {
+        is CatalogUiState.Content -> s.products to false
+        is CatalogUiState.Empty -> emptyList<Product>() to false
+        is CatalogUiState.Loading -> emptyList<Product>() to true
+        is CatalogUiState.Error -> emptyList<Product>() to false
     }
 
     val filtered = remember(products, query) {
@@ -247,13 +261,7 @@ fun WholesalerCatalogScreen(
                             onClick = { selectedProduct = product },
                             onEdit = { productToEdit = product },
                             onDelete = {
-                                scope.launch {
-                                    try {
-                                        WholesalerApi.deleteProduct(product.id)
-                                        try { WholesalerApi.deleteProductImages(product) } catch (_: Exception) {}
-                                        products = products.filter { it.id != product.id }
-                                    } catch (_: Exception) {}
-                                }
+                                viewModel.deleteProduct(product)
                             }
                         )
                     }
@@ -283,17 +291,17 @@ fun WholesalerCatalogScreen(
         ) {
             ProductDetailSheet(
                 product = product,
-                wholesalerId = wholesaler?.id ?: "",
+                wholesalerId = resolvedUserId,
                 onDismiss = { selectedProduct = null },
                 onPublishToggle = { updated ->
-                    products = products.map { if (it.id == updated.id) updated else it }
+                    viewModel.togglePublish(product)
                 },
                 onEdit = { p ->
                     selectedProduct = null
                     productToEdit = p
                 },
-                onUpdated = { updated ->
-                    products = products.map { if (it.id == updated.id) updated else it }
+                onUpdated = { _ ->
+                    viewModel.load()
                 }
             )
         }
@@ -308,8 +316,8 @@ fun WholesalerCatalogScreen(
             EditProductScreen(
                 product = prod,
                 onDismiss = { productToEdit = null },
-                onSaved = { updated ->
-                    products = products.map { if (it.id == updated.id) updated else it }
+                onSaved = { _ ->
+                    viewModel.load()
                     productToEdit = null
                 }
             )
@@ -323,11 +331,11 @@ fun WholesalerCatalogScreen(
             sheetState = sheetState
         ) {
             AddProductSheet(
-                wholesalerId = wholesaler?.id ?: "",
-                userId = sessionStore.user.value?.id ?: "",
+                wholesalerId = resolvedUserId,
+                userId = resolvedUserId,
                 onDismiss = { showUploadSheet = false },
-                onAdded = { newProduct ->
-                    products = listOf(newProduct) + products
+                onAdded = { _ ->
+                    viewModel.load()
                     showUploadSheet = false
                 },
                 onOpenUploadHistory = {

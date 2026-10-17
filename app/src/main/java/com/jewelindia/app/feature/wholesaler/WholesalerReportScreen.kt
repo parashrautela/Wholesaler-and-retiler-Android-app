@@ -124,16 +124,16 @@ fun WholesalerReportScreen(onBack: () -> Unit) {
             )
         }
 
+        val rep = report
         if (loading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Palette.goldPrimary)
             }
-        } else if (report == null) {
+        } else if (rep == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Report data unavailable", color = Palette.muted)
             }
         } else {
-            val rep = report!!
             Column(
                 modifier = Modifier
                     .fillMaxSize()

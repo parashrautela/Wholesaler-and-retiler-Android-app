@@ -178,18 +178,29 @@ class RetailerOnboardFlow(
         val stamp = System.currentTimeMillis()
 
         return try {
-            coroutineScope {
-                val frontDeferred = async { upload(frontImage, "aadhaar-documents", "$uid/aadhaar-front-$stamp", "Aadhar Front") }
-                val backDeferred = async { upload(backImage, "aadhaar-documents", "$uid/aadhaar-back-$stamp", "Aadhar Back") }
-                val panDeferred = async { upload(panFile, "pan-documents", "$uid/pan-card-$stamp", "PAN Card") }
-                val gstDeferred = async { upload(gstFile, "gst-documents", "$uid/gst-certificate-$stamp", "GST Certificate") }
-                val logoDeferred = async { upload(logoImage, "business-logos", "$uid/business-logo-$stamp", "Store Logo") }
+            kotlinx.coroutines.supervisorScope {
+                val frontDeferred = async { runCatching { upload(frontImage, "aadhaar-documents", "$uid/aadhaar-front-$stamp", "Aadhar Front") } }
+                val backDeferred = async { runCatching { upload(backImage, "aadhaar-documents", "$uid/aadhaar-back-$stamp", "Aadhar Back") } }
+                val panDeferred = async { runCatching { upload(panFile, "pan-documents", "$uid/pan-card-$stamp", "PAN Card") } }
+                val gstDeferred = async { runCatching { upload(gstFile, "gst-documents", "$uid/gst-certificate-$stamp", "GST Certificate") } }
+                val logoDeferred = async { runCatching { upload(logoImage, "business-logos", "$uid/business-logo-$stamp", "Store Logo") } }
 
-                val frontUrl = frontDeferred.await()
-                val backUrl = backDeferred.await()
-                val panUrl = panDeferred.await()
-                val gstUrl = gstDeferred.await()
-                val logoUrl = logoDeferred.await()
+                val frontRes = frontDeferred.await()
+                if (frontRes.isFailure) throw frontRes.exceptionOrNull() ?: Exception("Failed to upload Aadhar Front")
+                val backRes = backDeferred.await()
+                if (backRes.isFailure) throw backRes.exceptionOrNull() ?: Exception("Failed to upload Aadhar Back")
+                val panRes = panDeferred.await()
+                if (panRes.isFailure) throw panRes.exceptionOrNull() ?: Exception("Failed to upload PAN Card")
+                val gstRes = gstDeferred.await()
+                if (gstRes.isFailure) throw gstRes.exceptionOrNull() ?: Exception("Failed to upload GST Certificate")
+                val logoRes = logoDeferred.await()
+                if (logoRes.isFailure) throw logoRes.exceptionOrNull() ?: Exception("Failed to upload Store Logo")
+
+                val frontUrl = frontRes.getOrNull()
+                val backUrl = backRes.getOrNull()
+                val panUrl = panRes.getOrNull()
+                val gstUrl = gstRes.getOrNull()
+                val logoUrl = logoRes.getOrNull()
 
                 @Serializable
                 data class Row(

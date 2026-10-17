@@ -20,19 +20,22 @@ import com.jewelindia.app.data.api.Stage1Analysis
 
 @Composable
 fun ChamakStudioScreen(
-    wholesaler: Wholesaler?,
-    sessionStore: SessionStore,
+    wholesalerUserId: String = "",
+    wholesaler: Wholesaler? = null,
+    sessionStore: SessionStore? = null,
     catalogueSource: ChamakCatalogueSource = ChamakCatalogueSource.OwnProducts,
     onClose: (() -> Unit)? = null
 ) {
-    val wholesalerId = wholesaler?.id ?: sessionStore.user.value?.id ?: ""
-    if (wholesalerId.isEmpty()) {
+    val resolvedUserId = wholesalerUserId.ifBlank {
+        sessionStore?.user?.value?.id ?: ""
+    }
+    if (resolvedUserId.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("Please sign in to access Chamak Studio.")
         }
     } else {
         ChamakHubScreen(
-            wholesalerId = wholesalerId,
+            wholesalerId = resolvedUserId,
             catalogueSource = catalogueSource,
             onClose = onClose
         )

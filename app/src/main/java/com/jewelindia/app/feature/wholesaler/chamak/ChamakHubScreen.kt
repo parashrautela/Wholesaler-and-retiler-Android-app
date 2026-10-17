@@ -72,11 +72,12 @@ fun ChamakHubScreen(
         galleryVm.refreshGallery(wholesalerId)
     }
 
-    if (launch != null) {
+    val activeLaunch = launch
+    if (activeLaunch != null) {
         ChamakFlowCoordinator(
             wholesalerId = wholesalerId,
-            mode = launch!!.mode,
-            openingGeneration = launch!!.generation,
+            mode = activeLaunch.mode,
+            openingGeneration = activeLaunch.generation,
             catalogueSource = catalogueSource,
             onClose = {
                 launch = null

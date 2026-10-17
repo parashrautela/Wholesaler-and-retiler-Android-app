@@ -62,11 +62,14 @@ import com.jewelindia.app.feature.manufacturing.ManufacturingOffersCard
 import com.jewelindia.app.feature.treasurechest.CreditBalancePill
 import com.jewelindia.app.feature.treasurechest.CreditStore
 import kotlinx.coroutines.async
+import androidx.compose.runtime.collectAsState
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import kotlinx.coroutines.launch
 
 @Composable
 fun WholesalerHomeScreen(
-    wholesaler: Wholesaler?,
+    wholesalerUserId: String = "",
+    wholesaler: Wholesaler? = null,
     sessionStore: SessionStore,
     creditStore: CreditStore,
     onUploadClick: () -> Unit,
@@ -83,37 +86,31 @@ fun WholesalerHomeScreen(
     onOpenUploadHistory: (() -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
-    var productsCount by remember { mutableIntStateOf(0) }
-    var pendingOrdersCount by remember { mutableIntStateOf(0) }
-    var unreadChatsCount by remember { mutableIntStateOf(0) }
-    var uploadUsageText by remember { mutableStateOf("0") }
-    var activeOffersCount by remember { mutableIntStateOf(0) }
-    var loading by remember { mutableStateOf(true) }
+    val resolvedUserId = wholesalerUserId.ifBlank { sessionStore.user.value?.id ?: "" }
+    val homeVm = remember(resolvedUserId) {
+        WholesalerHomeViewModel(
+            wholesalerUserId = resolvedUserId,
+            userEmail = sessionStore.user.value?.email
+        )
+    }
+    val homeState by homeVm.uiState.collectAsState()
+
     var showMenu by remember { mutableStateOf(false) }
     var showSignOutDialog by remember { mutableStateOf(false) }
 
-    fun refreshData() {
-        val wid = wholesaler?.id ?: return
-        scope.launch {
-            loading = true
-            val pDef = async { try { WholesalerApi.countProducts(wid) } catch (_: Exception) { 0 } }
-            val oDef = async { try { WholesalerApi.countPendingOrders(wid) } catch (_: Exception) { 0 } }
-            val cDef = async { try { WholesalerApi.countUnreadConversations(wid) } catch (_: Exception) { 0 } }
-            val uDef = async { try { WholesalerApi.fetchUploadUsage(wid).display } catch (_: Exception) { "0" } }
-            val mDef = async { try { ManufacturingApi.fetchWholesalerOffers("active").size } catch (_: Exception) { 0 } }
-
-            productsCount = pDef.await()
-            pendingOrdersCount = oDef.await()
-            unreadChatsCount = cDef.await()
-            uploadUsageText = uDef.await()
-            activeOffersCount = mDef.await()
-            loading = false
+    LaunchedEffect(resolvedUserId) {
+        if (resolvedUserId.isNotBlank()) {
+            homeVm.load()
         }
     }
 
-    LaunchedEffect(wholesaler?.id) {
-        refreshData()
-    }
+    val homeData = (homeState as? HomeUiState.Content)?.data ?: HomeData()
+    val loading = homeState is HomeUiState.Loading
+    val productsCount = homeData.productCount
+    val pendingOrdersCount = homeData.pendingOrders
+    val unreadChatsCount = homeData.unreadChats
+    val uploadUsageText = homeData.uploadUsage.display
+    val activeOffersCount = homeData.activeOffersCount
 
     Column(
         modifier = Modifier
@@ -194,7 +191,7 @@ fun WholesalerHomeScreen(
                         HorizontalDivider()
                         DropdownMenuItem(
                             text = { Text("Log Out", color = Palette.accentRed) },
-                            leadingIcon = { Icon(Icons.Default.ExitToApp, contentDescription = null, tint = Palette.accentRed) },
+                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = Palette.accentRed) },
                             onClick = {
                                 showMenu = false
                                 showSignOutDialog = true
