@@ -29,7 +29,10 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -68,14 +71,17 @@ import kotlinx.coroutines.launch
 @Composable
 fun WholesalerCatalogScreen(
     wholesaler: Wholesaler?,
-    sessionStore: SessionStore
+    sessionStore: SessionStore,
+    onOpenUploadHistory: (() -> Unit)? = null
 ) {
     var products by remember { mutableStateOf<List<Product>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var query by remember { mutableStateOf("") }
     var selectedProduct by remember { mutableStateOf<Product?>(null) }
+    var productToEdit by remember { mutableStateOf<Product?>(null) }
     var showUploadSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val editSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(wholesaler?.id) {
@@ -176,7 +182,17 @@ fun WholesalerCatalogScreen(
                     items(filtered) { product ->
                         ProductCard(
                             product = product,
-                            onClick = { selectedProduct = product }
+                            onClick = { selectedProduct = product },
+                            onEdit = { productToEdit = product },
+                            onDelete = {
+                                scope.launch {
+                                    try {
+                                        WholesalerApi.deleteProduct(product.id)
+                                        try { WholesalerApi.deleteProductImages(product) } catch (_: Exception) {}
+                                        products = products.filter { it.id != product.id }
+                                    } catch (_: Exception) {}
+                                }
+                            }
                         )
                     }
                 }
@@ -209,6 +225,30 @@ fun WholesalerCatalogScreen(
                 onDismiss = { selectedProduct = null },
                 onPublishToggle = { updated ->
                     products = products.map { if (it.id == updated.id) updated else it }
+                },
+                onEdit = { p ->
+                    selectedProduct = null
+                    productToEdit = p
+                },
+                onUpdated = { updated ->
+                    products = products.map { if (it.id == updated.id) updated else it }
+                }
+            )
+        }
+    }
+
+    // Edit Product Sheet
+    productToEdit?.let { prod ->
+        ModalBottomSheet(
+            onDismissRequest = { productToEdit = null },
+            sheetState = editSheetState
+        ) {
+            EditProductScreen(
+                product = prod,
+                onDismiss = { productToEdit = null },
+                onSaved = { updated ->
+                    products = products.map { if (it.id == updated.id) updated else it }
+                    productToEdit = null
                 }
             )
         }
@@ -227,6 +267,10 @@ fun WholesalerCatalogScreen(
                 onAdded = { newProduct ->
                     products = listOf(newProduct) + products
                     showUploadSheet = false
+                },
+                onOpenUploadHistory = {
+                    showUploadSheet = false
+                    onOpenUploadHistory?.invoke()
                 }
             )
         }
@@ -236,9 +280,12 @@ fun WholesalerCatalogScreen(
 @Composable
 fun ProductCard(
     product: Product,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null
 ) {
     val imageUrl = product.displayImageUrl()
+    var showMenu by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -255,6 +302,54 @@ fun ProductCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
+        }
+
+        // Options Menu
+        if (onEdit != null || onDelete != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x80000000))
+                        .clickable { showMenu = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Options",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    if (onEdit != null) {
+                        DropdownMenuItem(
+                            text = { Text("Edit") },
+                            onClick = {
+                                showMenu = false
+                                onEdit()
+                            }
+                        )
+                    }
+                    if (onDelete != null) {
+                        DropdownMenuItem(
+                            text = { Text("Delete", color = Palette.accentRed) },
+                            onClick = {
+                                showMenu = false
+                                onDelete()
+                            }
+                        )
+                    }
+                }
+            }
         }
 
         // Publication badge

@@ -42,28 +42,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import java.net.URLDecoder
 
-data class PickedFile(
-    val filename: String,
-    val mimeType: String,
-    val data: ByteArray
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-        other as PickedFile
-        if (filename != other.filename) return false
-        if (mimeType != other.mimeType) return false
-        if (!data.contentEquals(other.data)) return false
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = filename.hashCode()
-        result = 31 * result + mimeType.hashCode()
-        result = 31 * result + data.contentHashCode()
-        return result
-    }
-}
+typealias PickedFile = com.jewelindia.app.core.images.PickedFile
 
 object WholesalerApi {
     private val db get() = JewelSupabase.client
@@ -492,6 +471,9 @@ object WholesalerApi {
             }
         }
     }
+
+    const val POLL_TIMEOUT_SECONDS = 300L
+    const val POLL_INTERVAL_MILLIS = 5000L
 
     sealed interface ReprocessPollTick {
         data class Pending(val backgroundRemoved: Boolean) : ReprocessPollTick

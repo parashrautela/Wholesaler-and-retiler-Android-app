@@ -85,6 +85,7 @@ fun WholesalerShell(sessionStore: SessionStore) {
     var showReport by remember { mutableStateOf(false) }
     var showProfile by remember { mutableStateOf(false) }
     var showTreasureChest by remember { mutableStateOf(false) }
+    var showUploadHistory by remember { mutableStateOf(false) }
     var selectedCatalogueCategory by remember { mutableStateOf<String?>(null) }
 
     val scope = rememberCoroutineScope()
@@ -165,6 +166,15 @@ fun WholesalerShell(sessionStore: SessionStore) {
         return
     }
 
+    // Upload History overlay
+    if (showUploadHistory) {
+        UploadHistoryScreen(
+            wholesalerId = wholesaler?.id ?: "",
+            onBack = { showUploadHistory = false }
+        )
+        return
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -201,11 +211,13 @@ fun WholesalerShell(sessionStore: SessionStore) {
                         onSelectCategory = { cat ->
                             selectedCatalogueCategory = cat
                             selectedTab = WholesalerTab.Catalog
-                        }
+                        },
+                        onOpenUploadHistory = { showUploadHistory = true }
                     )
                     WholesalerTab.Catalog -> WholesalerCatalogScreen(
                         wholesaler = wholesaler,
-                        sessionStore = sessionStore
+                        sessionStore = sessionStore,
+                        onOpenUploadHistory = { showUploadHistory = true }
                     )
                     WholesalerTab.Chamak -> ChamakStudioScreen(
                         wholesaler = wholesaler,

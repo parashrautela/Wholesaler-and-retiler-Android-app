@@ -79,7 +79,8 @@ fun WholesalerHomeScreen(
     onReportClick: () -> Unit,
     onTreasureClick: () -> Unit,
     onProfileClick: () -> Unit,
-    onSelectCategory: (String) -> Unit
+    onSelectCategory: (String) -> Unit,
+    onOpenUploadHistory: (() -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
     var productsCount by remember { mutableIntStateOf(0) }
@@ -258,6 +259,7 @@ fun WholesalerHomeScreen(
                     title = "Uploads Today",
                     value = uploadUsageText,
                     icon = Icons.Default.CloudUpload,
+                    onClick = { onOpenUploadHistory?.invoke() },
                     modifier = Modifier.weight(1f)
                 )
             }

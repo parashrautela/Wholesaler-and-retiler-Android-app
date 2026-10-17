@@ -57,8 +57,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.History
 import coil3.compose.AsyncImage
+import com.jewelindia.app.core.images.PickedFile
 import com.jewelindia.app.core.model.Product
+import com.jewelindia.app.core.model.UploadUsage
 import com.jewelindia.app.data.api.WholesalerApi
 import com.jewelindia.app.design.Palette
 import kotlinx.coroutines.launch
@@ -76,120 +80,223 @@ fun ProductDetailSheet(
     product: Product,
     wholesalerId: String,
     onDismiss: () -> Unit,
-    onPublishToggle: (Product) -> Unit
+    onPublishToggle: (Product) -> Unit,
+    onEdit: ((Product) -> Unit)? = null,
+    onUpdated: ((Product) -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
-    var isPublished by remember { mutableStateOf(product.isPublished == true) }
-    var inStock by remember { mutableStateOf(product.stockAvailable != false) }
+    var currentProduct by remember { mutableStateOf(product) }
+    var isPublished by remember { mutableStateOf(currentProduct.isPublished == true) }
+    var inStock by remember { mutableStateOf(currentProduct.stockAvailable != false) }
     var working by remember { mutableStateOf(false) }
+    var usage by remember { mutableStateOf<UploadUsage?>(null) }
+    val reprocess = remember { ReprocessState() }
+    var showReprocessConfirm by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 20.dp)
-            .navigationBarsPadding(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text(
-            text = product.title ?: "Product Details",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = Palette.dark
-        )
+    androidx.compose.runtime.LaunchedEffect(wholesalerId) {
+        if (wholesalerId.isNotBlank()) {
+            usage = try { WholesalerApi.fetchUploadUsage(wholesalerId) } catch (_: Exception) { null }
+        }
+    }
 
-        // Image carousel
-        val images = product.thumbnailUrls()
-        if (images.isNotEmpty()) {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 4.dp)
+    fun startReprocess(baseFile: PickedFile?) {
+        reprocess.status = "Initiating re-upload..."
+        scope.launch {
+            try {
+                reprocess.status = "Clearing old images..."
+                WholesalerApi.clearProductImages(currentProduct.id, wholesalerId)
+
+                reprocess.status = "Queueing AI pipeline..."
+                WholesalerApi.reprocessProduct(currentProduct.id, wholesalerId, baseFile)
+
+                reprocess.status = "AI processing in progress..."
+                val urls = pollReprocess(
+                    productId = currentProduct.id,
+                    onStatusChange = { reprocess.status = it }
+                )
+
+                val updated = currentProduct.copy(
+                    processedImageURL = urls.firstOrNull(),
+                    generatedImageURLs = urls
+                )
+                currentProduct = updated
+                onUpdated?.invoke(updated)
+                usage = try { WholesalerApi.fetchUploadUsage(wholesalerId) } catch (_: Exception) { null }
+
+                reprocess.status = "Processing complete!"
+                kotlinx.coroutines.delay(1500)
+                reprocess.reset()
+            } catch (e: Exception) {
+                reprocess.failure = e.message ?: "Failed to reprocess product."
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 20.dp)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                items(images) { url ->
-                    com.jewelindia.app.core.security.ProtectedImage(
-                        url = url,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(100.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                    )
+                Text(
+                    text = currentProduct.title ?: "Product Details",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Palette.dark
+                )
+                if (onEdit != null) {
+                    androidx.compose.material3.TextButton(onClick = { onEdit(currentProduct) }) {
+                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp), tint = Palette.goldPrimary)
+                        Spacer(Modifier.width(4.dp))
+                        Text("Edit", color = Palette.goldPrimary, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            // Image carousel
+            val images = currentProduct.thumbnailUrls()
+            if (images.isNotEmpty()) {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp)
+                ) {
+                    items(images) { url ->
+                        com.jewelindia.app.core.security.ProtectedImage(
+                            url = url,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(100.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                        )
+                    }
+                }
+            }
+
+            // Metadata
+            InfoRow("Type", currentProduct.jewelleryType ?: "—")
+            InfoRow("Category", currentProduct.category ?: "—")
+            InfoRow("Purity", currentProduct.metalPurity ?: "—")
+            InfoRow("Net weight", currentProduct.netWeight?.let { "${it}g" } ?: "—")
+
+            // Re-upload CTA button
+            val isLimitReached = usage?.let { it.limit != null && it.used >= it.limit } ?: false
+            val ctaTitle = if (isLimitReached) "Daily upload limit reached"
+            else if (images.isNotEmpty() || !currentProduct.imageURL.isNullOrBlank()) "Re-upload to AI"
+            else "Upload Image to AI"
+
+            androidx.compose.material3.OutlinedButton(
+                onClick = { showReprocessConfirm = true },
+                enabled = !isLimitReached,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = if (isLimitReached) Palette.muted else Palette.dark
+                ),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (isLimitReached) Palette.border else Palette.dark
+                )
+            ) {
+                Text(ctaTitle, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            // Toggles
+            ToggleRow(
+                label = "In Stock",
+                checked = inStock,
+                onCheckedChange = { v ->
+                    inStock = v
+                    scope.launch {
+                        working = true
+                        try { WholesalerApi.updateProductFlags(currentProduct.id, inStock = v) } catch (_: Exception) {}
+                        working = false
+                    }
+                }
+            )
+
+            val canPublish = currentProduct.canPublish
+            ToggleRow(
+                label = "Published",
+                checked = isPublished,
+                enabled = canPublish,
+                onCheckedChange = { v ->
+                    isPublished = v
+                    scope.launch {
+                        working = true
+                        try {
+                            WholesalerApi.updateProductFlags(currentProduct.id, isPublished = v)
+                            onPublishToggle(currentProduct.copy(isPublished = v))
+                        } catch (_: Exception) {}
+                        working = false
+                    }
+                }
+            )
+            if (!canPublish) {
+                Text(
+                    text = "Run through Chamak Studio to enable publishing.",
+                    fontSize = 12.sp,
+                    color = Palette.muted
+                )
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            // Delete
+            Button(
+                onClick = {
+                    scope.launch {
+                        working = true
+                        try {
+                            WholesalerApi.deleteProduct(currentProduct.id)
+                            try { WholesalerApi.deleteProductImages(currentProduct) } catch (_: Exception) {}
+                        } catch (_: Exception) {}
+                        onDismiss()
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Palette.accentRed,
+                    contentColor = Palette.light
+                ),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (working) CircularProgressIndicator(Modifier.size(18.dp), color = Palette.light, strokeWidth = 2.dp)
+                else {
+                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Delete Product", fontWeight = FontWeight.SemiBold)
                 }
             }
         }
 
-        // Metadata
-        InfoRow("Type", product.jewelleryType ?: "—")
-        InfoRow("Category", product.category ?: "—")
-        InfoRow("Purity", product.metalPurity ?: "—")
-        InfoRow("Net weight", product.netWeight?.let { "${it}g" } ?: "—")
-
-        Spacer(Modifier.height(4.dp))
-
-        // Toggles
-        ToggleRow(
-            label = "In Stock",
-            checked = inStock,
-            onCheckedChange = { v ->
-                inStock = v
-                scope.launch {
-                    working = true
-                    try { WholesalerApi.updateProductFlags(product.id, inStock = v) } catch (_: Exception) {}
-                    working = false
-                }
-            }
-        )
-
-        val canPublish = product.canPublish
-        ToggleRow(
-            label = "Published",
-            checked = isPublished,
-            enabled = canPublish,
-            onCheckedChange = { v ->
-                isPublished = v
-                scope.launch {
-                    working = true
-                    try {
-                        WholesalerApi.updateProductFlags(product.id, isPublished = v)
-                        onPublishToggle(product.copy(isPublished = v))
-                    } catch (_: Exception) {}
-                    working = false
-                }
-            }
-        )
-        if (!canPublish) {
-            Text(
-                text = "Run through Chamak Studio to enable publishing.",
-                fontSize = 12.sp,
-                color = Palette.muted
+        if (reprocess.isActive) {
+            ReprocessOverlay(
+                state = reprocess,
+                onDismiss = { reprocess.reset() }
             )
         }
+    }
 
-        Spacer(Modifier.height(4.dp))
-
-        // Delete
-        Button(
-            onClick = {
-                scope.launch {
-                    working = true
-                    try { WholesalerApi.deleteProduct(product.id) } catch (_: Exception) {}
-                    onDismiss()
-                }
+    if (showReprocessConfirm) {
+        ReprocessConfirmSheet(
+            hasImages = currentProduct.thumbnailUrls().isNotEmpty() || !currentProduct.imageURL.isNullOrBlank(),
+            onConfirm = { file ->
+                showReprocessConfirm = false
+                startReprocess(file)
             },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Palette.accentRed,
-                contentColor = Palette.light
-            ),
-            shape = RoundedCornerShape(10.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (working) CircularProgressIndicator(Modifier.size(18.dp), color = Palette.light, strokeWidth = 2.dp)
-            else {
-                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Delete Product", fontWeight = FontWeight.SemiBold)
-            }
-        }
+            onDismiss = { showReprocessConfirm = false }
+        )
     }
 }
 
@@ -234,7 +341,8 @@ fun AddProductSheet(
     wholesalerId: String,
     userId: String,
     onDismiss: () -> Unit,
-    onAdded: (Product) -> Unit
+    onAdded: (Product) -> Unit,
+    onOpenUploadHistory: (() -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -260,7 +368,18 @@ fun AddProductSheet(
             .navigationBarsPadding(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Add New Design", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Palette.dark)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Add New Design", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Palette.dark)
+            if (onOpenUploadHistory != null) {
+                IconButton(onClick = onOpenUploadHistory) {
+                    Icon(Icons.Default.History, contentDescription = "Upload History", tint = Palette.dark)
+                }
+            }
+        }
 
         // Image picker
         Box(

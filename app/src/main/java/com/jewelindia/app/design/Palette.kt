@@ -72,6 +72,7 @@ object Palette {
     val accentRed: Color get() = statusRejected
     val borderSubtle: Color get() = border
     val surfaceBorder: Color get() = border
+    val accentOrange: Color get() = statusPending
     val textTertiary: Color get() = muted.copy(alpha = 0.7f)
 }
 
