@@ -1,12 +1,12 @@
 # Jewel India Android — Port Status
 
-Last updated: 2026-10-17 · Current phase: 0 (Complete) · iOS reference build: 40 (feat/retailer-monetisation)
+Last updated: 2026-10-17 · Current phase: 1 (Complete) · iOS reference build: 40 (feat/retailer-monetisation)
 
 ## Phase checklist
 | Phase | Status | Build | Tests | Commit | Notes |
 |---|---|---|---|---|---|
-| 0 Scaffold | ✅ | ok | 0/0 | pending | Empty Compose app running on Pixel 6 AVD, displaying LaunchScreen with Cirka 32 |
-| 1 Design + core | ⬜ | | | | |
+| 0 Scaffold | ✅ | ok | 0/0 | cb3e2a7 | Empty Compose app running on Pixel 6 AVD, displaying LaunchScreen with Cirka 32 |
+| 1 Design + core | ✅ | ok | 10/10 | pending | Tokens (Palette, Typography, Layout, Motion), core models, Copy, Credentials, JewelDates, components, and unit tests passing |
 | 2 Data layer | ⬜ | | | | |
 | 3 Auth + routing | ⬜ | | | | |
 | 4 Onboarding | ⬜ | | | | |
@@ -25,3 +25,4 @@ Last updated: 2026-10-17 · Current phase: 0 (Complete) · iOS reference build: 
 
 ## Verification log
 - 2026-10-17: Phase 0 verified on Pixel_6 emulator (API 34/35). APK installed, launched, and visual inspection of `captures/phase0.png` confirmed centered "Jewel India" in Cirka font against `#FEFEFE` background.
+- 2026-10-17: Phase 1 verified with 10 unit tests in `CredentialsTest`, `JewelDatesTest`, and `ProductModelTest`. `./gradlew :app:assembleDebug :app:lintDebug` passed with 0 errors.
