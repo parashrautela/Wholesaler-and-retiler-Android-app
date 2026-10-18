@@ -72,6 +72,9 @@ import com.jewelindia.app.feature.wholesaler.chamak.ChamakImageViewer
 import com.jewelindia.app.feature.wholesaler.chamak.ChamakResultScreen
 import com.jewelindia.app.feature.wholesaler.chamak.ChamakSetStylingScreen
 import com.jewelindia.app.feature.wholesaler.chamak.ChamakSliderFormScreen
+import com.jewelindia.app.feature.wholesaler.share.CatalogueShareSheet
+import com.jewelindia.app.feature.wholesaler.share.CatalogueShareViewModel
+import com.jewelindia.app.feature.wholesaler.share.SharedLinksScreen
 import com.jewelindia.app.feature.wholesaler.chamak.ChamakViewModel
 import com.jewelindia.app.navigation.EntryMode
 
@@ -498,6 +501,50 @@ object DebugPeek {
                     sessionStore = graph.sessionStore,
                     signupFlow = graph.signupFlow,
                     onPasswordSet = onBack
+                )
+            }
+            "catalogue-select" -> {
+                val sampleProds = remember {
+                    val all = DebugPeekSamples.products(context)
+                    all.mapIndexed { idx, p ->
+                        if (idx == all.lastIndex) p.copy(isPublished = false) else p
+                    }
+                }
+                WholesalerCatalogScreen(
+                    wholesalerUserId = "w-peek-0001",
+                    sessionStore = graph.sessionStore,
+                    peekProducts = sampleProds,
+                    peekIsSelecting = true,
+                    peekSelectionIds = listOf(
+                        sampleProds[0].id,
+                        sampleProds[1].id
+                    )
+                )
+            }
+            "catalogue-share" -> {
+                val vm = remember { DebugPeekSamples.catalogueShareVM(context) }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White)
+                        .statusBarsPadding()
+                ) {
+                    CatalogueShareSheet(
+                        selectedProducts = vm.selectedProducts,
+                        onDismiss = { onBack() },
+                        viewModel = vm
+                    )
+                }
+            }
+            "catalogue-links" -> {
+                val vm = remember {
+                    CatalogueShareViewModel(
+                        api = DebugPeekSamples.FakeCatalogueShareService()
+                    )
+                }
+                SharedLinksScreen(
+                    onBack = onBack,
+                    viewModel = vm
                 )
             }
             else -> {

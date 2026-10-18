@@ -23,6 +23,9 @@ import com.jewelindia.app.data.api.CreditPrice
 import com.jewelindia.app.data.api.CreditWallet
 import com.jewelindia.app.data.api.WholesalerOrder
 import com.jewelindia.app.data.api.WholesalerReport
+import com.jewelindia.app.data.api.CatalogueShare
+import com.jewelindia.app.data.api.CatalogueShareService
+import com.jewelindia.app.feature.wholesaler.share.CatalogueShareViewModel
 import com.jewelindia.app.feature.wholesaler.chamak.ChamakViewerImage
 import com.jewelindia.app.feature.wholesaler.chamak.ChamakViewModel
 import java.io.File
@@ -458,6 +461,89 @@ object DebugPeekSamples {
             imageURL = null
         )
         return vm
+    }
+
+    fun sampleCatalogueShares(): List<CatalogueShare> {
+        return listOf(
+            CatalogueShare(
+                id = "share-active-1",
+                title = "For Mehta Jewellers",
+                itemCount = 12,
+                maxViewers = 5,
+                viewsUsed = 1,
+                expiresAt = "2026-10-19T12:00:00Z",
+                revokedAt = null
+            ),
+            CatalogueShare(
+                id = "share-full-2",
+                title = "Diwali Collection",
+                itemCount = 8,
+                maxViewers = 3,
+                viewsUsed = 3,
+                expiresAt = "2026-10-19T12:00:00Z",
+                revokedAt = null
+            ),
+            CatalogueShare(
+                id = "share-expired-3",
+                title = "Bridal Preview",
+                itemCount = 5,
+                maxViewers = 2,
+                viewsUsed = 1,
+                expiresAt = "2026-10-17T12:00:00Z",
+                revokedAt = null
+            ),
+            CatalogueShare(
+                id = "share-revoked-4",
+                title = "Initial Draft",
+                itemCount = 3,
+                maxViewers = 1,
+                viewsUsed = 0,
+                expiresAt = "2026-10-19T12:00:00Z",
+                revokedAt = "2026-10-18T09:00:00Z"
+            )
+        )
+    }
+
+    fun sampleCreatedShare(): CatalogueShare {
+        return CatalogueShare(
+            id = "share-created-0",
+            title = "For Sharma Jewellers",
+            itemCount = 2,
+            maxViewers = 5,
+            viewsUsed = 0,
+            expiresAt = "2026-10-19T10:00:00Z",
+            linkPath = "/share/catalogue#0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        )
+    }
+
+    class FakeCatalogueShareService(
+        private var sharesList: List<CatalogueShare> = sampleCatalogueShares(),
+        private val createdShareToReturn: CatalogueShare = sampleCreatedShare()
+    ) : CatalogueShareService {
+        override suspend fun createShare(
+            productIds: List<String>,
+            maxViewers: Int,
+            durationMinutes: Int,
+            title: String?
+        ): CatalogueShare = createdShareToReturn
+
+        override suspend fun fetchShares(): List<CatalogueShare> = sharesList
+
+        override suspend fun revokeShare(id: String) {
+            sharesList = sharesList.map {
+                if (it.id == id) it.copy(revokedAt = "2026-10-18T10:00:00Z") else it
+            }
+        }
+    }
+
+    fun catalogueShareVM(context: Context): CatalogueShareViewModel {
+        val prods = products(context).take(2)
+        val fakeApi = FakeCatalogueShareService()
+        return CatalogueShareViewModel(
+            selectedProducts = prods,
+            api = fakeApi,
+            initialCreatedShare = sampleCreatedShare()
+        )
     }
 }
 

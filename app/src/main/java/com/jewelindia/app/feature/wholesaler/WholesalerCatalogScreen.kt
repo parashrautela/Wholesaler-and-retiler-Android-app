@@ -78,6 +78,7 @@ import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.manrope
 import com.jewelindia.app.design.sfPro
 import com.jewelindia.app.feature.wholesaler.share.CatalogueSelection
+import com.jewelindia.app.feature.wholesaler.share.SharedLinksScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
@@ -510,11 +511,24 @@ fun WholesalerCatalogScreen(
     }
 }
 
-    // Share Sheet Preview (M1)
+    // Share Sheet (M2)
     if (showShareSheet) {
-        CatalogSharePreviewSheetHost(
-            selection = selection,
-            onDismiss = { showShareSheet = false }
+        CatalogShareSheetHost(
+            selectedProducts = selection.products,
+            onDismiss = { linkCreated ->
+                showShareSheet = false
+                if (linkCreated) {
+                    viewModel.clearSelection()
+                    viewModel.setSelecting(false)
+                }
+            }
+        )
+    }
+
+    // Shared Links Screen (M2)
+    if (showSharedLinksScreen) {
+        SharedLinksScreen(
+            onBack = { showSharedLinksScreen = false }
         )
     }
 
