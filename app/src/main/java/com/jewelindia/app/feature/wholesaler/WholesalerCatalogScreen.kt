@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -32,10 +33,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DriveFolderUpload
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,9 +58,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,11 +71,13 @@ import com.jewelindia.app.core.model.Product
 import com.jewelindia.app.core.model.Wholesaler
 import com.jewelindia.app.core.security.CaptureProtected
 import com.jewelindia.app.core.session.SessionStore
+import com.jewelindia.app.core.text.Copy
 import com.jewelindia.app.data.supabase.JewelJson
 import com.jewelindia.app.design.JewelWeight
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.manrope
 import com.jewelindia.app.design.sfPro
+import com.jewelindia.app.feature.wholesaler.share.CatalogueSelection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
@@ -83,6 +93,8 @@ fun WholesalerCatalogScreen(
     wholesaler: Wholesaler? = null,
     sessionStore: SessionStore,
     peekProducts: List<Product>? = null,
+    peekIsSelecting: Boolean = false,
+    peekSelectionIds: List<String> = emptyList(),
     onOpenUploadHistory: (() -> Unit)? = null
 ) {
     val resolvedUserId = wholesalerUserId.ifBlank {
@@ -92,6 +104,22 @@ fun WholesalerCatalogScreen(
         WholesalerCatalogViewModel(wholesalerUserId = resolvedUserId)
     }
     val catalogState by viewModel.uiState.collectAsState()
+    val isSelectingByVm by viewModel.isSelecting.collectAsState()
+    val selectionByVm by viewModel.selection.collectAsState()
+
+    val isSelecting = if (peekProducts != null) peekIsSelecting else isSelectingByVm
+    val selection = if (peekProducts != null) {
+        val selectedProds = peekProducts.filter { peekSelectionIds.contains(it.id) }
+        CatalogueSelection(ids = peekSelectionIds, snapshots = selectedProds.associateBy { it.id })
+    } else {
+        selectionByVm
+    }
+
+    val haptic = LocalHapticFeedback.current
+    var actionNotice by remember { mutableStateOf<String?>(null) }
+    var showMoreMenu by remember { mutableStateOf(false) }
+    var showShareSheet by remember { mutableStateOf(false) }
+    var showSharedLinksScreen by remember { mutableStateOf(false) }
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
@@ -103,6 +131,13 @@ fun WholesalerCatalogScreen(
     val context = LocalContext.current
     var isExporting by remember { mutableStateOf(false) }
     var exportFeedback by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(actionNotice) {
+        actionNotice?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            actionNotice = null
+        }
+    }
 
     LaunchedEffect(exportFeedback) {
         exportFeedback?.let {
@@ -176,53 +211,134 @@ fun WholesalerCatalogScreen(
     }
 
     CaptureProtected(modifier = Modifier.fillMaxSize()) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Palette.background)
-                .statusBarsPadding()
         ) {
-            // Navigation Bar Header: Title, Add button, Export button
-            Row(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .fillMaxSize()
+                    .statusBarsPadding()
             ) {
-                Text(
-                    text = "Catalogue",
-                    style = sfPro(34f, JewelWeight.Bold),
-                    color = Palette.dark
-                )
+                // Navigation Bar Header: Title, Actions
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = if (isSelecting) Copy.CatalogueShare.selectCount(selection.count) else "Catalogue",
+                        style = sfPro(34f, JewelWeight.Bold),
+                        color = Palette.dark
+                    )
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = { exportLauncher.launch(null) },
-                        enabled = !isExporting && filteredProducts.isNotEmpty()
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        if (isExporting) {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Palette.dark, strokeWidth = 2.dp)
+                        if (isSelecting) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { viewModel.setSelecting(false) }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = Copy.CatalogueShare.selectCancel,
+                                    style = manrope(15f, JewelWeight.Semibold),
+                                    color = Palette.dark
+                                )
+                            }
                         } else {
-                            Icon(
-                                imageVector = Icons.Default.DriveFolderUpload,
-                                contentDescription = "Export to folder",
-                                tint = Palette.dark
-                            )
+                            // "Select" button
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { viewModel.setSelecting(true) }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = Copy.CatalogueShare.selectButton,
+                                    style = manrope(15f, JewelWeight.Semibold),
+                                    color = Palette.dark
+                                )
+                            }
+
+                            // Add Product (+)
+                            IconButton(
+                                onClick = { showAddProductSheet = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Add product",
+                                    tint = Palette.dark
+                                )
+                            }
+
+                            // More Overflow Menu (Shared links, Export to folder)
+                            Box {
+                                IconButton(onClick = { showMoreMenu = true }) {
+                                    Icon(
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = "More actions",
+                                        tint = Palette.dark
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = showMoreMenu,
+                                    onDismissRequest = { showMoreMenu = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Share,
+                                                    contentDescription = null,
+                                                    tint = Palette.dark,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                                Text(Copy.CatalogueShare.sharedLinksMenu, color = Palette.dark)
+                                            }
+                                        },
+                                        onClick = {
+                                            showMoreMenu = false
+                                            showSharedLinksScreen = true
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.DriveFolderUpload,
+                                                    contentDescription = null,
+                                                    tint = Palette.dark,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                                Text("Export to folder", color = Palette.dark)
+                                            }
+                                        },
+                                        onClick = {
+                                            showMoreMenu = false
+                                            exportLauncher.launch(null)
+                                        },
+                                        enabled = !isExporting && filteredProducts.isNotEmpty()
+                                    )
+                                }
+                            }
                         }
                     }
-
-                    IconButton(
-                        onClick = { showAddProductSheet = true }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add product",
-                            tint = Palette.dark
-                        )
-                    }
                 }
-            }
 
             // Search Bar
             Box(
@@ -318,79 +434,18 @@ fun WholesalerCatalogScreen(
                     )
                 }
             } else if (errorMessage != null && products.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.WarningAmber,
-                        contentDescription = null,
-                        tint = Color(0xFFDC2626),
-                        modifier = Modifier.size(40.dp)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = errorMessage,
-                        style = manrope(14f, JewelWeight.Medium),
-                        color = Palette.muted,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(Palette.cream)
-                            .clickable { viewModel.load() }
-                            .padding(horizontal = 20.dp, vertical = 10.dp)
-                    ) {
-                        Text(
-                            text = "Try Again",
-                            style = manrope(14f, JewelWeight.Semibold),
-                            color = Palette.dark
-                        )
-                    }
-                }
+                CatalogErrorView(message = errorMessage, onRetry = { viewModel.load() })
             } else if (filteredProducts.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.GridView,
-                        contentDescription = null,
-                        tint = Palette.muted,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "No Products Found",
-                        style = manrope(16f, JewelWeight.Bold),
-                        color = Palette.dark
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = if (searchQuery.isNotBlank() || selectedCategory != null) {
-                            "Try adjusting your search or category filter."
-                        } else {
-                            "Tap + above to upload your first jewellery design."
-                        },
-                        style = manrope(13f, JewelWeight.Regular),
-                        color = Palette.muted,
-                        textAlign = TextAlign.Center
-                    )
-                }
+                CatalogEmptyView(hasFilter = searchQuery.isNotBlank() || selectedCategory != null)
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 8.dp,
+                        bottom = if (isSelecting) 160.dp else 96.dp
+                    ),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier
@@ -400,106 +455,105 @@ fun WholesalerCatalogScreen(
                     items(filteredProducts) { product ->
                         CatalogueProductCard(
                             product = product,
-                            onClick = { selectedProduct = product },
+                            onClick = {
+                                if (isSelecting) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    val notice = viewModel.toggleProductSelection(product)
+                                    if (notice != null) {
+                                        actionNotice = notice
+                                    }
+                                } else {
+                                    selectedProduct = product
+                                }
+                            },
                             onEdit = { productToEdit = product },
-                            onDelete = { viewModel.deleteProduct(product) }
+                            onDelete = { viewModel.deleteProduct(product) },
+                            isSelecting = isSelecting,
+                            isSelected = selection.contains(product.id)
                         )
                     }
                 }
             }
         }
+
+        // Bottom floating capsule button above tab bar
+        if (isSelecting) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 84.dp, start = 16.dp, end = 16.dp)
+                    .fillMaxWidth()
+            ) {
+                val count = selection.count
+                val isEnabled = count > 0
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(6.dp, CircleShape)
+                        .clip(CircleShape)
+                        .background(Palette.dark.copy(alpha = if (isEnabled) 1f else 0.45f))
+                        .clickable(enabled = isEnabled) {
+                            showShareSheet = true
+                        }
+                        .padding(vertical = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = Copy.CatalogueShare.shareBarButton(count),
+                        style = manrope(14f, JewelWeight.Bold),
+                        color = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+    // Share Sheet Preview (M1)
+    if (showShareSheet) {
+        CatalogSharePreviewSheetHost(
+            selection = selection,
+            onDismiss = { showShareSheet = false }
+        )
     }
 
     // Product Detail Sheet
     selectedProduct?.let { product ->
-        ModalBottomSheet(
-            onDismissRequest = { selectedProduct = null },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = Color.White
-        ) {
-            ProductDetailSheet(
-                product = product,
-                wholesalerId = resolvedUserId,
-                onDismiss = { selectedProduct = null },
-                onPublishToggle = { updated ->
-                    viewModel.togglePublish(updated)
-                },
-                onEdit = { p ->
-                    selectedProduct = null
-                    productToEdit = p
-                },
-                onUpdated = { _ ->
-                    viewModel.load()
-                }
-            )
-        }
+        CatalogProductDetailSheetHost(
+            product = product,
+            wholesalerId = resolvedUserId,
+            onDismiss = { selectedProduct = null },
+            onPublishToggle = { updated -> viewModel.togglePublish(updated) },
+            onEdit = { p ->
+                selectedProduct = null
+                productToEdit = p
+            },
+            onUpdated = { viewModel.load() }
+        )
     }
 
     // Edit Product Sheet
     productToEdit?.let { prod ->
-        ModalBottomSheet(
-            onDismissRequest = { productToEdit = null },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = Color.White
-        ) {
-            EditProductScreen(
-                product = prod,
-                onDismiss = { productToEdit = null },
-                onSaved = { _ ->
-                    viewModel.load()
-                    productToEdit = null
-                }
-            )
-        }
+        CatalogEditProductSheetHost(
+            product = prod,
+            onDismiss = { productToEdit = null },
+            onSaved = { _ ->
+                viewModel.load()
+                productToEdit = null
+            }
+        )
     }
 
     // Add Product Sheet
     if (showAddProductSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showAddProductSheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = Color.White
-        ) {
-            AddProductSheet(
-                wholesalerId = resolvedUserId,
-                userId = resolvedUserId,
-                onDismiss = { showAddProductSheet = false },
-                onAdded = { _ ->
-                    viewModel.load()
-                    showAddProductSheet = false
-                },
-                onOpenUploadHistory = {
-                    showAddProductSheet = false
-                    onOpenUploadHistory?.invoke()
-                }
-            )
-        }
-    }
-}
-
-@Composable
-private fun CategoryChip(
-    title: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .clip(CircleShape)
-            .background(if (isSelected) Palette.dark else Color.White)
-            .border(
-                width = if (isSelected) 0.dp else 1.dp,
-                color = if (isSelected) Color.Transparent else Palette.border,
-                shape = CircleShape
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = title,
-            style = manrope(13f, if (isSelected) JewelWeight.Bold else JewelWeight.Medium),
-            color = if (isSelected) Color.White else Palette.foreground
+        CatalogAddProductSheetHost(
+            wholesalerId = resolvedUserId,
+            onDismiss = { showAddProductSheet = false },
+            onAdded = { viewModel.load() },
+            onOpenUploadHistory = onOpenUploadHistory
         )
     }
 }
+
+

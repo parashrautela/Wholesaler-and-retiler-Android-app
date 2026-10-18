@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.outlined.Delete
@@ -34,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -54,6 +56,8 @@ fun CatalogueProductCard(
     onClick: () -> Unit = {},
     onEdit: () -> Unit = {},
     onDelete: () -> Unit = {},
+    isSelecting: Boolean = false,
+    isSelected: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -71,11 +75,16 @@ fun CatalogueProductCard(
         parts.joinToString(" · ")
     }
 
+    val cardAlpha = if (isSelecting && product.isPublished != true) 0.45f else 1f
+    val borderColor = if (isSelecting && isSelected) Palette.dark else Color(0xFFF0F0F0)
+    val borderWidth = if (isSelecting && isSelected) 2.dp else 1.dp
+
     Column(
         modifier = modifier
+            .alpha(cardAlpha)
             .clip(RoundedCornerShape(16.dp))
             .background(Color.White)
-            .border(1.dp, Color(0xFFF0F0F0), RoundedCornerShape(16.dp))
+            .border(borderWidth, borderColor, RoundedCornerShape(16.dp))
             .shadow(
                 elevation = 4.dp,
                 shape = RoundedCornerShape(16.dp),
@@ -109,73 +118,99 @@ fun CatalogueProductCard(
                 )
             }
 
-            // Options Menu (•••)
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-            ) {
+            // Selection Checkmark Circle Overlay (Top-Left)
+            if (isSelecting) {
                 Box(
                     modifier = Modifier
-                        .size(28.dp)
+                        .align(Alignment.TopStart)
+                        .padding(10.dp)
+                        .size(26.dp)
                         .shadow(2.dp, CircleShape)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.9f))
-                        .clickable { showMenu = true },
+                        .background(if (isSelected) Palette.dark else Color.Transparent)
+                        .border(2.dp, Color.White, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.MoreHoriz,
-                        contentDescription = "Options",
-                        tint = Palette.dark,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    if (isSelected) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Selected",
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
+            }
 
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
+            // Options Menu (•••) — hidden in select mode
+            if (!isSelecting) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
                 ) {
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Edit,
-                                    contentDescription = null,
-                                    tint = Palette.dark,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text("Edit Details", color = Palette.dark)
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .shadow(2.dp, CircleShape)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.9f))
+                            .clickable { showMenu = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreHoriz,
+                            contentDescription = "Options",
+                            tint = Palette.dark,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Edit,
+                                        contentDescription = null,
+                                        tint = Palette.dark,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text("Edit Details", color = Palette.dark)
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                onEdit()
                             }
-                        },
-                        onClick = {
-                            showMenu = false
-                            onEdit()
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Delete,
-                                    contentDescription = null,
-                                    tint = Color(0xFFDC2626),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text("Delete Product", color = Color(0xFFDC2626))
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Delete,
+                                        contentDescription = null,
+                                        tint = Color(0xFFDC2626),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text("Delete Product", color = Color(0xFFDC2626))
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                onDelete()
                             }
-                        },
-                        onClick = {
-                            showMenu = false
-                            onDelete()
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }

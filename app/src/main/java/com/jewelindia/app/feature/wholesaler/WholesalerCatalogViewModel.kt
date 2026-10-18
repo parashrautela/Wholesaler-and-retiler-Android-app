@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import com.jewelindia.app.core.model.Product
 import com.jewelindia.app.core.util.launchSafely
 import com.jewelindia.app.data.api.WholesalerApi
+import com.jewelindia.app.feature.wholesaler.share.CatalogueSelection
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,12 +24,44 @@ class WholesalerCatalogViewModel(
     private val _uiState = MutableStateFlow<CatalogUiState>(CatalogUiState.Loading)
     val uiState: StateFlow<CatalogUiState> = _uiState.asStateFlow()
 
+    private val _isSelecting = MutableStateFlow(false)
+    val isSelecting: StateFlow<Boolean> = _isSelecting.asStateFlow()
+
+    private val _selection = MutableStateFlow(CatalogueSelection())
+    val selection: StateFlow<CatalogueSelection> = _selection.asStateFlow()
+
     private var currentCategory: String? = null
     private val loadedProducts = mutableListOf<Product>()
     private var totalCount = 0
 
     val allProducts: List<Product>
         get() = loadedProducts.toList()
+
+    fun toggleSelecting() {
+        val next = !_isSelecting.value
+        _isSelecting.value = next
+        if (!next) {
+            _selection.value = CatalogueSelection()
+        }
+    }
+
+    fun setSelecting(value: Boolean) {
+        _isSelecting.value = value
+        if (!value) {
+            _selection.value = CatalogueSelection()
+        }
+    }
+
+    fun toggleProductSelection(product: Product): String? {
+        val (newSelection, message) = _selection.value.toggle(product)
+        _selection.value = newSelection
+        return message
+    }
+
+    fun clearSelection() {
+        _selection.value = CatalogueSelection()
+    }
+
 
     fun load(category: String? = currentCategory, page: Int = 0) {
         currentCategory = category

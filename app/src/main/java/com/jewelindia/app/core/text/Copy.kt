@@ -269,4 +269,52 @@ object Copy {
         val queries = "Queries"
         val orders = "Orders"
     }
+
+    // MARK: - Catalogue Sharing (CONTRACT.md §5)
+
+    object CatalogueShare {
+        const val selectButton = "Select"
+        const val selectCancel = "Cancel"
+        fun selectCount(n: Int): String = "$n selected"
+        fun shareBarButton(n: Int): String = "Share $n ${if (n == 1) "design" else "designs"}"
+        const val selectLimit = "You can share up to 50 designs in one link."
+        const val selectUnpublished = "Publish this design to share it."
+        const val sharedLinksMenu = "Shared links"
+        const val sheetTitle = "Share designs"
+        const val sheetIntro = "No sign-in needed. Each browser gets one viewing session, lasting up to 30 minutes. Opening the link uses a slot."
+        const val titleField = "Title (optional)"
+        const val titlePlaceholder = "Designs for you"
+        fun viewersLabel(n: Int): String = "Maximum viewers: $n"
+        const val validityLabel = "Link validity"
+        const val validity1h = "1 hour"
+        const val validity24h = "24 hours"
+        const val validity7d = "7 days"
+        const val validityCustom = "Custom duration"
+        const val customField = "Minutes (5–10,080)"
+        const val privacyNote = "Shares only the designs you selected, with their photos and names. Your other designs, prices and contact details stay private."
+        const val createButton = "Create link"
+        const val createBusy = "Please wait…"
+        const val readyHeader = "Your link is ready"
+        const val readyShare = "Share link"
+        const val readyCopy = "Copy link"
+        const val readyCopied = "Link copied."
+        fun readyExpires(dateText: String): String = "Expires $dateText"
+        const val readyWarning = "Copy this link now. It cannot be retrieved later."
+        const val listHeader = "Recent links"
+        const val listLoading = "Loading links…"
+        const val listEmpty = "No links created yet."
+        const val listOffline = "Recent links will refresh when your connection is available."
+        const val listRefresh = "Refresh links"
+        fun listRow(itemCount: Int, viewsUsed: Int, maxViewers: Int): String =
+            "$itemCount designs · $viewsUsed / $maxViewers slots used"
+        const val statusActive = "Active"
+        const val statusRevoked = "Revoked"
+        const val statusExpired = "Expired"
+        const val statusFull = "All slots used"
+        const val revokeButton = "Revoke link"
+        const val revokeDone = "Link revoked. Further access is blocked."
+        fun shareText(title: String?, url: String): String =
+            if (!title.isNullOrBlank()) "$title — $url" else url
+    }
 }
+
