@@ -58,9 +58,12 @@ import com.jewelindia.app.core.images.PickedFile
 import com.jewelindia.app.data.api.WholesalerApi
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
+import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 class ReprocessState(
     status: String? = null,
@@ -196,23 +199,41 @@ fun ReprocessConfirmSheet(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var newFile by remember { mutableStateOf<PickedFile?>(null) }
     var imageCount by remember { mutableStateOf(2) }
     var previewUri by remember { mutableStateOf<Uri?>(null) }
+    var isReadingImage by remember { mutableStateOf(false) }
+    var readError by remember { mutableStateOf<String?>(null) }
 
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
-        if (uri != null) {
+        if (uri != null && !isReadingImage) {
             previewUri = uri
-            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            if (bytes != null) {
-                val jpeg = ImageNormalizer.jpeg(bytes, ImageNormalizer.MAX_PRODUCT_DIMENSION) ?: bytes
-                newFile = PickedFile(
-                    data = jpeg,
-                    filename = "reupload.jpg",
-                    mimeType = "image/jpeg"
-                )
+            readError = null
+            isReadingImage = true
+            scope.launch {
+                try {
+                    val jpeg = withContext(Dispatchers.IO) {
+                        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                            ?: error("Couldn't read this photo. Please choose another image.")
+                        ImageNormalizer.jpeg(bytes, ImageNormalizer.MAX_PRODUCT_DIMENSION)
+                            ?: error("Couldn't read this photo. Please choose another image.")
+                    }
+                    newFile = PickedFile(
+                        data = jpeg,
+                        filename = "reupload.jpg",
+                        mimeType = "image/jpeg"
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    newFile = null
+                    readError = e.message ?: "Couldn't read this photo. Please choose another image."
+                } finally {
+                    isReadingImage = false
+                }
             }
         }
     }
@@ -281,12 +302,28 @@ fun ReprocessConfirmSheet(
                     .clip(RoundedCornerShape(16.dp))
                     .background(Palette.surface)
                     .border(1.dp, Palette.surfaceBorder, RoundedCornerShape(16.dp))
-                    .clickable {
+                    .clickable(enabled = !isReadingImage) {
                         picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     },
                 contentAlignment = Alignment.Center
             ) {
-                if (previewUri != null) {
+                if (isReadingImage) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(28.dp),
+                            color = Palette.dark,
+                            strokeWidth = 2.dp
+                        )
+                        Text(
+                            text = "Reading & normalizing photo...",
+                            style = Typography.santoshi(12.sp),
+                            color = Palette.textSecondary
+                        )
+                    }
+                } else if (previewUri != null && newFile != null) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -335,6 +372,14 @@ fun ReprocessConfirmSheet(
                 }
             }
 
+            if (readError != null) {
+                Text(
+                    text = readError!!,
+                    style = Typography.santoshi(12.sp),
+                    color = Palette.accentRed
+                )
+            }
+
             Text("How many enhanced images would you like?", style = Typography.santoshi(14.sp, FontWeight.SemiBold))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 (1..4).forEach { count ->
@@ -361,7 +406,7 @@ fun ReprocessConfirmSheet(
                     Text("Cancel", style = Typography.santoshi(14.sp, FontWeight.SemiBold))
                 }
 
-                val canProceed = hasImages || newFile != null
+                val canProceed = !isReadingImage && (hasImages || newFile != null)
                 Button(
                     onClick = {
                         onConfirm(newFile, imageCount)
@@ -375,10 +420,18 @@ fun ReprocessConfirmSheet(
                     ),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text(
-                        text = if (hasImages && newFile == null) "Re-upload" else "Upload & Process",
-                        style = Typography.santoshi(14.sp, FontWeight.Bold)
-                    )
+                    if (isReadingImage) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            text = if (hasImages && newFile == null) "Re-upload" else "Upload & Process",
+                            style = Typography.santoshi(14.sp, FontWeight.Bold)
+                        )
+                    }
                 }
             }
         }
