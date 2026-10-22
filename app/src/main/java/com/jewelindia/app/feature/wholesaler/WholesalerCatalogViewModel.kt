@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import com.jewelindia.app.core.model.Product
 import com.jewelindia.app.core.util.launchSafely
 import com.jewelindia.app.data.api.WholesalerApi
+import com.jewelindia.app.data.net.userMessage
 import com.jewelindia.app.feature.wholesaler.share.CatalogueSelection
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -148,7 +149,7 @@ class WholesalerCatalogViewModel(
         onError: (String) -> Unit = {}
     ) {
         launchSafely(onError = { e ->
-            onError(e.message ?: "Failed to delete product")
+            onError(e.userMessage())
         }) {
             api.deleteProduct(product.id)
             try {

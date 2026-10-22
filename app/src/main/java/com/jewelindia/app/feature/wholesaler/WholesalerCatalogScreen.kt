@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.WarningAmber
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -142,6 +143,7 @@ fun WholesalerCatalogScreen(
     var selectedCategory by remember { mutableStateOf<String?>(null) }
     var selectedProduct by remember { mutableStateOf<Product?>(null) }
     var productToEdit by remember { mutableStateOf<Product?>(null) }
+    var productToDelete by remember { mutableStateOf<Product?>(null) }
     var showAddProductSheet by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
@@ -524,7 +526,7 @@ fun WholesalerCatalogScreen(
                                 }
                             },
                             onEdit = { productToEdit = product },
-                            onDelete = { viewModel.deleteProduct(product) },
+                            onDelete = { productToDelete = product },
                             isSelecting = isSelecting,
                             isSelected = selection.contains(product.id)
                         )
@@ -623,6 +625,57 @@ fun WholesalerCatalogScreen(
             onDismiss = { showAddProductSheet = false },
             onAdded = { viewModel.load() },
             onOpenUploadHistory = onOpenUploadHistory
+        )
+    }
+
+    // Delete Product Confirmation
+    productToDelete?.let { prod ->
+        AlertDialog(
+            onDismissRequest = { productToDelete = null },
+            title = {
+                Text(
+                    text = "Delete this design?",
+                    style = manrope(18f, JewelWeight.Bold),
+                    color = Palette.foreground
+                )
+            },
+            text = {
+                Text(
+                    text = "This permanently removes the design and its photos from your catalogue and from retailers. This can't be undone.",
+                    style = manrope(14f, JewelWeight.Regular),
+                    color = Palette.muted
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val toDelete = prod
+                        productToDelete = null
+                        viewModel.deleteProduct(
+                            toDelete,
+                            onError = {
+                                android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
+                ) {
+                    Text(
+                        text = "Delete",
+                        style = manrope(15f, JewelWeight.Bold),
+                        color = Color(0xFFDC2626)
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { productToDelete = null }) {
+                    Text(
+                        text = "Cancel",
+                        style = manrope(15f, JewelWeight.Medium),
+                        color = Palette.foreground
+                    )
+                }
+            },
+            containerColor = Color.White
         )
     }
 }
