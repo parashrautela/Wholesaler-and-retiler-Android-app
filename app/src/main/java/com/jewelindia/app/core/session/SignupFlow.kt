@@ -1,6 +1,7 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Core/SignupFlow.swift
 package com.jewelindia.app.core.session
 
+import androidx.core.content.edit
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
@@ -42,53 +43,53 @@ class SignupFlow(private val prefs: SharedPreferences) {
 
     var identity: String?
         get() = prefs.getString(KEY_IDENTITY, null)
-        set(value) = prefs.edit().apply {
+        set(value) = prefs.edit {
             if (value != null) putString(KEY_IDENTITY, value) else remove(KEY_IDENTITY)
-        }.apply()
+        }
 
     var referralCode: String?
         get() = prefs.getString(KEY_REFERRAL_CODE, null)
-        set(value) = prefs.edit().apply {
+        set(value) = prefs.edit {
             if (value != null) putString(KEY_REFERRAL_CODE, value) else remove(KEY_REFERRAL_CODE)
-        }.apply()
+        }
 
     var referralRole: UserRole?
         get() = prefs.getString(KEY_REFERRAL_ROLE, null)?.let {
             runCatching { UserRole.valueOf(it) }.getOrNull()
         }
-        set(value) = prefs.edit().apply {
+        set(value) = prefs.edit {
             if (value != null) putString(KEY_REFERRAL_ROLE, value.name) else remove(KEY_REFERRAL_ROLE)
-        }.apply()
+        }
 
     var chosenRole: UserRole?
         get() = prefs.getString(KEY_CHOSEN_ROLE, null)?.let {
             runCatching { UserRole.valueOf(it) }.getOrNull()
         }
-        set(value) = prefs.edit().apply {
+        set(value) = prefs.edit {
             if (value != null) putString(KEY_CHOSEN_ROLE, value.name) else remove(KEY_CHOSEN_ROLE)
-        }.apply()
+        }
 
     var invitedBy: String?
         get() = prefs.getString(KEY_INVITED_BY, null)
-        set(value) = prefs.edit().apply {
+        set(value) = prefs.edit {
             if (value != null) putString(KEY_INVITED_BY, value) else remove(KEY_INVITED_BY)
-        }.apply()
+        }
 
     var otpSentAt: Long?
         get() = if (prefs.contains(KEY_OTP_SENT_AT)) prefs.getLong(KEY_OTP_SENT_AT, 0L) else null
-        set(value) = prefs.edit().apply {
+        set(value) = prefs.edit {
             if (value != null) putLong(KEY_OTP_SENT_AT, value) else remove(KEY_OTP_SENT_AT)
-        }.apply()
+        }
 
     var remainingResends: Int
         get() = prefs.getInt(KEY_REMAINING_RESENDS, Copy.otpMaxResends)
-        set(value) = prefs.edit().putInt(KEY_REMAINING_RESENDS, value).apply()
+        set(value) = prefs.edit { putInt(KEY_REMAINING_RESENDS, value) }
 
     var lockedUntil: Long?
         get() = if (prefs.contains(KEY_LOCKED_UNTIL)) prefs.getLong(KEY_LOCKED_UNTIL, 0L) else null
-        set(value) = prefs.edit().apply {
+        set(value) = prefs.edit {
             if (value != null) putLong(KEY_LOCKED_UNTIL, value) else remove(KEY_LOCKED_UNTIL)
-        }.apply()
+        }
 
     init {
         // Drop a stale lockout on initialization

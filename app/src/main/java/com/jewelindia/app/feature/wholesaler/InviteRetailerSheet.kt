@@ -1,6 +1,7 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Features/Wholesaler/InviteRetailerSheet.swift
 package com.jewelindia.app.feature.wholesaler
 
+import androidx.compose.ui.platform.LocalConfiguration
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -70,6 +71,7 @@ fun InviteRetailerSheet(
     onDismiss: () -> Unit,
     onViewHistory: () -> Unit = {}
 ) {
+    val locale = LocalConfiguration.current.locales[0]
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var invitation by remember {
@@ -251,7 +253,7 @@ fun InviteRetailerSheet(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = String.format("%,d", pointsOffered),
+                            text = String.format(locale, "%,d", pointsOffered),
                             style = Typography.santoshi(16.sp),
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF2E2D2A)

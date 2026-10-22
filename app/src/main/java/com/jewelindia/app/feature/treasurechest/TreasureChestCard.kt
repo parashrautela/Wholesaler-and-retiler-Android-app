@@ -40,10 +40,10 @@ import com.jewelindia.app.design.manrope
 
 @Composable
 fun TreasureChestCard(
+    modifier: Modifier = Modifier,
     wallet: CreditWallet? = null,
     creditStore: CreditStore? = null,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onClick: () -> Unit
 ) {
     val storeState = creditStore?.walletState?.collectAsState()
     val resolvedWallet = wallet ?: (storeState?.value as? WalletState.Available)?.wallet

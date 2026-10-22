@@ -9,13 +9,10 @@ import com.jewelindia.app.data.api.ChamakCatalogueSource
 import com.jewelindia.app.data.api.ChamakGeneration
 import com.jewelindia.app.data.api.ChamakMode
 import com.jewelindia.app.data.api.ChamakStatus
-import com.jewelindia.app.data.api.InsufficientCreditsException
 import com.jewelindia.app.data.api.SetBackdrop
-import com.jewelindia.app.data.api.WholesalerFormInput
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.supervisorScope
-import java.util.UUID
 
 suspend fun ChamakViewModel.load(wholesalerId: String) {
     isLoadingProducts = true
@@ -28,7 +25,11 @@ suspend fun ChamakViewModel.load(wholesalerId: String) {
                 runCatching { ChamakApi.fetchWholesalerGallery(wholesalerId) }
             }
 
-            catalogProducts = productsDeferred.await().getOrDefault(emptyList())
+            val productsResult = productsDeferred.await()
+            val productsError = productsResult.exceptionOrNull()
+            if (productsError is CancellationException) throw productsError
+            catalogProducts = productsResult.getOrDefault(emptyList())
+            catalogErrorMessage = if (productsError == null) null else "Couldn't load your designs. Check your connection and retry."
 
             val galleryResult = galleryDeferred.await()
             if (galleryResult.isSuccess) {
@@ -38,7 +39,6 @@ suspend fun ChamakViewModel.load(wholesalerId: String) {
             } else {
                 val err = galleryResult.exceptionOrNull()
                 if (err is CancellationException) throw err
-                galleryGenerations = emptyList()
                 galleryErrorMessage = "Couldn't load your gallery. Check your connection and try again."
             }
         }
@@ -46,7 +46,6 @@ suspend fun ChamakViewModel.load(wholesalerId: String) {
         throw e
     } catch (_: Exception) {
         catalogProducts = emptyList()
-        galleryGenerations = emptyList()
         galleryErrorMessage = "Couldn't load your gallery. Check your connection and try again."
     } finally {
         isLoadingProducts = false
@@ -70,7 +69,6 @@ suspend fun ChamakViewModel.refreshGallery(wholesalerId: String) {
     } catch (e: CancellationException) {
         throw e
     } catch (_: Exception) {
-        galleryGenerations = emptyList()
         galleryErrorMessage = "Couldn't load your gallery. Check your connection and try again."
     } finally {
         isRefreshingGallery = false
@@ -78,13 +76,13 @@ suspend fun ChamakViewModel.refreshGallery(wholesalerId: String) {
 }
 
 suspend fun ChamakViewModel.signGalleryThumbnails() {
-    val paths = galleryGenerations.mapNotNull { it.outputPath(ImageSize.CARD) }
+    val paths = galleryGenerations.flatMap { listOfNotNull(it.outputPath(ImageSize.CARD), it.outputImageURL) }
     val signed = ChamakApi.getSignedURLs(paths)
     val byId = mutableMapOf<String, String>()
     for (gen in galleryGenerations) {
         val path = gen.outputPath(ImageSize.CARD)
         if (path != null) {
-            signed[path]?.let { byId[gen.id] = it }
+            (signed[path] ?: signed[gen.outputImageURL])?.let { byId[gen.id] = it }
         }
     }
     galleryThumbnailURLs = byId
@@ -92,24 +90,28 @@ suspend fun ChamakViewModel.signGalleryThumbnails() {
 
 suspend fun ChamakViewModel.signOutputs(generation: ChamakGeneration) {
     selectedAttempt = null
+    retrievalMessage = null
+    // Try the original if its derivative cannot be signed. Thumbnail failure must not hide output.
+    suspend fun resolve(primary: String?, original: String?): String? {
+        for (path in listOfNotNull(primary, original).distinct()) {
+            try { return ChamakApi.getSignedURL(path) }
+            catch (e: CancellationException) { throw e }
+            catch (_: Exception) { }
+        }
+        return null
+    }
+    signedOutputImageURLs = generation.outputImages.mapNotNull {
+        resolve(it.variants[ImageSize.DETAIL.value], it.path)
+    }
+    signedOriginalOutputImageURL = resolve(generation.outputImageURL, null)
+    signedOutputImageURL = resolve(generation.outputPath(ImageSize.DETAIL), generation.outputImageURL)
+        ?: signedOutputImageURLs.firstOrNull()
+    signedFullOutputImageURL = resolve(generation.outputPath(ImageSize.FULL), generation.outputImageURL)
+        ?: signedOutputImageURL
+    if (signedOutputImageURL == null) {
+        retrievalMessage = "Your generation is complete, but its image couldn't be loaded. Retry loading the output."
+    }
     signAttemptThumbnails(generation)
-    val outputPaths = generation.outputImages.map { it.variants[ImageSize.DETAIL.value] ?: it.path }
-    if (outputPaths.isNotEmpty()) {
-        val signed = ChamakApi.getSignedURLs(outputPaths)
-        signedOutputImageURLs = outputPaths.mapNotNull { signed[it] }
-    } else {
-        signedOutputImageURLs = emptyList()
-    }
-
-    val detail = generation.outputPath(ImageSize.DETAIL)
-    signedOutputImageURL = detail?.let { ChamakApi.getSignedURL(it) }
-
-    val full = generation.outputPath(ImageSize.FULL)
-    signedFullOutputImageURL = if (full != null && full != detail) {
-        ChamakApi.getSignedURL(full)
-    } else {
-        signedOutputImageURL
-    }
 }
 
 suspend fun ChamakViewModel.signAttemptThumbnails(generation: ChamakGeneration) {
@@ -130,73 +132,17 @@ suspend fun ChamakViewModel.signAttemptThumbnails(generation: ChamakGeneration) 
 
 suspend fun ChamakViewModel.selectAttempt(attempt: ChamakAttempt) {
     val latest = currentGeneration?.outputHistory?.lastOrNull() ?: return
-    selectedAttempt = if (attempt.attempt == latest.attempt) null else attempt.attempt
-    val detail = attempt.path(ImageSize.DETAIL)
-    signedOutputImageURL = ChamakApi.getSignedURL(detail)
-    val full = attempt.path(ImageSize.FULL)
-    signedFullOutputImageURL = if (full == detail) signedOutputImageURL else ChamakApi.getSignedURL(full)
-}
-
-suspend fun ChamakViewModel.regenerate(wholesalerId: String, onRefreshWallet: (suspend () -> Unit)? = null) {
-    val gen = currentGeneration ?: return
-    pendingGenerateKey = UUID.randomUUID().toString()
-
-    step = ChamakViewModel.Step.Generating
-    startQuoteRotation()
-
-    val formInput = WholesalerFormInput(
-        sliderWeights = sliderValues,
-        attributeContext = buildAttributeContext(),
-        note = noteText.ifEmpty { null }
-    )
-
     try {
-        ChamakApi.submitFormAndGenerate(
-            generationId = gen.id,
-            wholesalerId = wholesalerId,
-            formInput = formInput,
-            note = noteText.ifEmpty { null },
-            idempotencyKey = pendingGenerateKey
-        )
-        startPolling(gen.id, ChamakStatus.Done, onRefreshWallet)
-    } catch (err: InsufficientCreditsException) {
-        insufficientCreditsError = err
-        showInsufficientCreditsSheet = true
-        step = ChamakViewModel.Step.SliderForm
-        stopQuoteRotation()
-    } catch (e: Exception) {
-        errorMessage = e.message ?: "Regeneration failed."
-        step = ChamakViewModel.Step.Failed
-        stopQuoteRotation()
-    }
-}
-
-suspend fun ChamakViewModel.regenerateSet(wholesalerId: String, onRefreshWallet: (suspend () -> Unit)? = null) {
-    val gen = currentGeneration ?: return
-    pendingGenerateKey = UUID.randomUUID().toString()
-
-    step = ChamakViewModel.Step.Generating
-    startQuoteRotation()
-
-    try {
-        ChamakApi.submitSetAndGenerate(
-            generationId = gen.id,
-            wholesalerId = wholesalerId,
-            backdrop = selectedBackdrop,
-            note = noteText.ifEmpty { null },
-            idempotencyKey = pendingGenerateKey
-        )
-        startPolling(gen.id, ChamakStatus.Done, onRefreshWallet)
-    } catch (err: InsufficientCreditsException) {
-        insufficientCreditsError = err
-        showInsufficientCreditsSheet = true
-        step = ChamakViewModel.Step.SetStyling
-        stopQuoteRotation()
-    } catch (e: Exception) {
-        errorMessage = e.message ?: "Regeneration failed."
-        step = ChamakViewModel.Step.Failed
-        stopQuoteRotation()
-    }
+        val detail = ChamakApi.getSignedURL(attempt.path(ImageSize.DETAIL))
+        val full = ChamakApi.getSignedURL(attempt.path(ImageSize.FULL))
+        val original = ChamakApi.getSignedURL(attempt.path)
+        selectedAttempt = if (attempt.attempt == latest.attempt) null else attempt.attempt
+        signedOutputImageURL = detail
+        signedFullOutputImageURL = full
+        signedOriginalOutputImageURL = original
+        retrievalMessage = null
+    } catch (e: CancellationException) { throw e }
+    catch (_: Exception) { retrievalMessage = "Couldn't load that attempt. Retry loading output or choose another attempt." }
 }
 
 suspend fun ChamakViewModel.submitFeedback() {
@@ -209,20 +155,57 @@ suspend fun ChamakViewModel.submitFeedback() {
         )
         feedbackSubmitted = true
         isShowingFeedbackSheet = false
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         errorMessage = e.message
     }
 }
 
-suspend fun ChamakViewModel.openGalleryItem(item: ChamakGeneration) {
-    currentGeneration = item
-    errorMessage = if (item.status == ChamakStatus.Failed) item.failureUserMessage else null
-    mode = item.mode
-    sliderValues = item.wholesalerFormJSON?.sliderWeights ?: emptyMap()
-    noteText = item.noteText ?: ""
-    selectedBackdrop = item.setBackdrop ?: SetBackdrop.VelvetBust
-    selectedStylingChips = emptySet()
-    pendingGenerateKey = null
-    signOutputs(item)
-    step = if (item.status == ChamakStatus.Failed) ChamakViewModel.Step.Failed else ChamakViewModel.Step.Result
+suspend fun ChamakViewModel.openGalleryItem(item: ChamakGeneration) = restoreGeneration(item.id)
+
+suspend fun ChamakViewModel.restoreGeneration(id: String) {
+    val editing = currentGeneration?.id == id && step in listOf(ChamakViewModel.Step.SliderForm, ChamakViewModel.Step.SetStyling)
+    val updated = ChamakApi.fetchGeneration(id)
+    currentGeneration = updated
+    if (editing) return
+    errorMessage = if (updated.status == ChamakStatus.Failed) updated.failureUserMessage else null
+    retrievalMessage = null
+    mode = updated.mode
+    sliderValues = updated.wholesalerFormJSON?.sliderWeights ?: sliderValues
+    if (updated.noteText != null) {
+        noteText = updated.noteText
+        selectedStylingChips = emptySet()
+    }
+    selectedBackdrop = updated.setBackdrop ?: selectedBackdrop
+    when (updated.status) {
+        ChamakStatus.Done -> {
+            pendingGenerateKey = null
+            stopQuoteRotation()
+            step = ChamakViewModel.Step.Result
+            signOutputs(updated)
+        }
+        ChamakStatus.Failed -> {
+            stopQuoteRotation()
+            step = ChamakViewModel.Step.Failed
+        }
+        ChamakStatus.AwaitingInput -> {
+            stopQuoteRotation()
+            setupSlidersFromAnalysis(updated.stage1AnalysisJSON)
+            step = if (mode == ChamakMode.SetCreation) ChamakViewModel.Step.SetStyling else ChamakViewModel.Step.SliderForm
+        }
+        ChamakStatus.Queued -> {
+            if (mode == ChamakMode.SetCreation && updated.wholesalerFormJSON == null && pendingGenerateKey == null) {
+                step = ChamakViewModel.Step.SetStyling
+            } else {
+                retrievalMessage = "This request is queued. Check status again, or review and retry the same request."
+                step = ChamakViewModel.Step.Recoverable
+            }
+        }
+        ChamakStatus.Analyzing, ChamakStatus.Generating -> {
+            step = if (updated.status == ChamakStatus.Analyzing) ChamakViewModel.Step.Analyzing else ChamakViewModel.Step.Generating
+            startQuoteRotation()
+            startPolling(updated.id, if (updated.status == ChamakStatus.Analyzing) ChamakStatus.AwaitingInput else ChamakStatus.Done)
+        }
+    }
 }

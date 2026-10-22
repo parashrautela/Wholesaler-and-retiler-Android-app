@@ -54,9 +54,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
+import android.content.ClipboardManager
+import android.content.ClipData
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -76,7 +76,7 @@ fun WishlistShareScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = context.getSystemService(ClipboardManager::class.java)
     val scope = rememberCoroutineScope()
 
     var shares by remember { mutableStateOf<List<WishlistShare>>(emptyList()) }
@@ -385,7 +385,7 @@ fun WishlistShareScreen(
                         if (!isRevoked && share.url != null) {
                             IconButton(
                                 onClick = {
-                                    clipboardManager.setText(AnnotatedString(share.url ?: ""))
+                                    clipboardManager.setPrimaryClip(ClipData.newPlainText("Jewel India", share.url ?: ""))
                                     Toast.makeText(context, "Link copied!", Toast.LENGTH_SHORT).show()
                                 },
                                 modifier = Modifier.size(34.dp)

@@ -60,9 +60,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalClipboardManager
+import android.content.ClipboardManager
+import android.content.ClipData
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -98,7 +98,7 @@ fun RetailerDashboardScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = context.getSystemService(ClipboardManager::class.java)
     val scope = rememberCoroutineScope()
 
     var refreshing by remember { mutableStateOf(false) }
@@ -356,7 +356,7 @@ fun RetailerDashboardScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             IconButton(
                                 onClick = {
-                                    clipboardManager.setText(AnnotatedString(staffPortalUrl))
+                                    clipboardManager.setPrimaryClip(ClipData.newPlainText("Jewel India", staffPortalUrl))
                                     Toast.makeText(context, "Staff portal link copied!", Toast.LENGTH_SHORT).show()
                                 },
                                 modifier = Modifier.size(32.dp)

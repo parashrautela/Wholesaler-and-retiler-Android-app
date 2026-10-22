@@ -39,10 +39,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jewelindia.app.core.consent.rememberAIConsentRequest
 import com.jewelindia.app.data.api.WholesalerApi
 import com.jewelindia.app.core.model.Product
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
 @Composable
@@ -57,10 +61,12 @@ fun AddProductScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val requestAIConsent = rememberAIConsentRequest(wholesalerId.ifBlank { userId })
     val form = previewState ?: remember { AddProductFormState() }
 
     var showSuccess by remember { mutableStateOf(false) }
     var savedAsDraft by remember { mutableStateOf(false) }
+    var completionDelivered by remember { mutableStateOf(false) }
 
     val pickImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -68,9 +74,12 @@ fun AddProductScreen(
         if (uri != null) {
             form.selectedUri = uri
             scope.launch {
-                context.contentResolver.openInputStream(uri)?.use { stream ->
-                    form.imageBytes = stream.readBytes()
-                }
+                try {
+                    form.imageBytes = withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    }
+                } catch (e: CancellationException) { throw e }
+                catch (_: Exception) { form.bannerError = "Couldn't open that photo. Please choose it again." }
             }
         }
     }
@@ -87,7 +96,11 @@ fun AddProductScreen(
         AddProductSuccessView(
             savedAsDraft = savedAsDraft,
             onClose = {
-                if (onClose != null) onClose() else onAdded?.invoke(Product(id = "new"))
+                if (!completionDelivered) {
+                    completionDelivered = true
+                    form.submittedProduct?.let { onAdded?.invoke(it) }
+                    onClose?.invoke()
+                }
             }
         )
         return
@@ -228,17 +241,20 @@ fun AddProductScreen(
                 form = form,
                 previewBalance = previewBalance,
                 onSubmit = { publish ->
-                    scope.launch {
-                        form.submit(
-                            context = context,
-                            wholesalerId = wholesalerId.ifBlank { userId },
-                            publish = publish,
-                            onSuccess = { isDraft ->
-                                savedAsDraft = isDraft
-                                showSuccess = true
-                            }
-                        )
+                    val submit: () -> Unit = {
+                        scope.launch {
+                            form.submit(
+                                context = context,
+                                wholesalerId = wholesalerId.ifBlank { userId },
+                                publish = publish,
+                                onSuccess = { isDraft ->
+                                    savedAsDraft = isDraft
+                                    showSuccess = true
+                                }
+                            )
+                        }
                     }
+                    if (publish) requestAIConsent(submit) else submit()
                 }
             )
 

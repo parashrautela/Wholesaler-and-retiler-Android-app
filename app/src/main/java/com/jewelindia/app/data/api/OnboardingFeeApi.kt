@@ -52,7 +52,6 @@ object OnboardingFeeApi {
 
     private suspend inline fun <reified T : Any> call(body: kotlinx.serialization.json.JsonObject): T {
         val token = AuthToken.fresh()
-            ?: throw FeeException("Your session isn't active on this device. Please sign in again.")
 
         return try {
             EdgeFunctions.invoke<T>("credits-topup", body = body, token = token)

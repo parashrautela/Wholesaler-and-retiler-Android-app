@@ -1,6 +1,7 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Features/Wholesaler/WholesalerShell.swift
 package com.jewelindia.app.feature.wholesaler
 
+import androidx.compose.runtime.collectAsState
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -9,6 +10,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.material3.Scaffold
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -114,7 +119,7 @@ fun WholesalerShell(
     val scope = rememberCoroutineScope()
     val creditStore = previewCreditStore ?: remember { CreditStore(scope) }
 
-    val user = sessionStore.user.value
+    val user by sessionStore.user.collectAsState()
     val wholesalerUserId = user?.id ?: ""
 
     LaunchedEffect(wholesalerUserId) {
@@ -200,6 +205,17 @@ fun WholesalerShell(
         return
     }
 
+    Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = {
+            WholesalerTabBar(
+                selectedTab = selectedTab,
+                pendingOrderCount = pendingOrderCount,
+                unreadChatCount = unreadChatCount,
+                onTabSelected = { selectedTab = it }
+            )
+        }
+    ) { contentPadding ->
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -210,7 +226,11 @@ fun WholesalerShell(
             targetState = selectedTab,
             transitionSpec = { fadeIn().togetherWith(fadeOut()) },
             label = "wholesaler_tab_content",
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize().then(
+                if (selectedTab == WholesalerTab.Chamak) {
+                    Modifier.padding(contentPadding).consumeWindowInsets(contentPadding).safeDrawingPadding()
+                } else Modifier
+            )
         ) { tab ->
             when (tab) {
                 WholesalerTab.Home -> WholesalerHomeScreen(
@@ -261,7 +281,7 @@ fun WholesalerShell(
         }
 
         // Top-Right Floating Capsule
-        WholesalerTopCapsule(
+        if (selectedTab != WholesalerTab.Chamak) WholesalerTopCapsule(
             creditStore = creditStore,
             onCreditClick = { showTreasureChest = true },
             onProfileClick = { showProfile = true },
@@ -274,14 +294,7 @@ fun WholesalerShell(
                 .padding(top = 8.dp, end = 16.dp)
         )
 
-        // Bottom Floating Glass Tab Bar
-        WholesalerTabBar(
-            selectedTab = selectedTab,
-            pendingOrderCount = pendingOrderCount,
-            unreadChatCount = unreadChatCount,
-            onTabSelected = { selectedTab = it },
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
+    }
     }
 
     // Logout Confirmation Dialog

@@ -99,7 +99,7 @@ object DebugPeekSamples {
     }
 
     fun wholesalerOrders(context: Context): List<WholesalerOrder> {
-        val image = fileUrl(context, "cat_haram") ?: "https://ljxgwiuvdpuarvdszjts.supabase.co/storage/v1/object/public/plant-images/products/processed/ad07ac3e-a6ea-4ded-9b5d-916d8aa570e1_v1.png"
+        val image = fileUrl(context, "cat_haram")
         return listOf(
             WholesalerOrder(
                 id = "6b7ecd46-0000",

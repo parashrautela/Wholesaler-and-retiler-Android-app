@@ -1,6 +1,9 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Features/Wholesaler/Chamak/ChamakViewModel.swift
 package com.jewelindia.app.feature.wholesaler.chamak
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -36,8 +39,70 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 class ChamakViewModel(
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
-) {
+    private val scopeOverride: CoroutineScope? = null,
+    savedStateHandle: SavedStateHandle? = null
+) : ViewModel() {
+    private val state = ChamakState(savedStateHandle)
+    private val scope get() = scopeOverride ?: viewModelScope
+    private var actionJob: Job? = null
+    private var flowVisible = true
+    var activeLaunch by mutableStateOf<ChamakLaunch?>(
+        if (state.flag("active") == true) {
+            ChamakLaunch(ChamakMode.entries.firstOrNull { it.name == state.string("mode") } ?: ChamakMode.Fusion)
+        } else null
+    )
+        private set
+
+    fun beginFlow(mode: ChamakMode, generation: ChamakGeneration? = null) {
+        if (actionJob?.isActive == true) {
+            state["active"] = true
+            activeLaunch = ChamakLaunch(this.mode, currentGeneration)
+            return
+        }
+        resetToPicker()
+        this.mode = generation?.mode ?: mode
+        currentGeneration = generation
+        state["active"] = true
+        state["mode"] = this.mode.name
+        activeLaunch = ChamakLaunch(this.mode, generation)
+    }
+
+    fun closeFlow() {
+        pauseFlow()
+        state["active"] = false
+        activeLaunch = null
+    }
+
+    fun runAction(action: suspend () -> Unit) {
+        if (actionJob?.isActive == true) return
+        actionJob = scope.launch {
+            try {
+                action()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                stopQuoteRotation()
+                retrievalMessage = "Couldn't confirm this request. Check its status or retry the same request."
+                step = Step.Recoverable
+            }
+        }
+    }
+
+    fun pauseFlow() {
+        flowVisible = false
+        stopPolling()
+        stopQuoteRotation()
+    }
+
+    fun resumeFlow() {
+        flowVisible = true
+        if (actionJob?.isActive == true) return
+        val id = currentGeneration?.id ?: state.string("generationId")
+            ?: if (state.flag("creationAttempted") == true) state.string("pendingGenerationId") else null
+        if (id == null) return
+        runAction { restoreGeneration(id) }
+    }
+
     enum class Step {
         CatalogPicker,
         Analyzing,
@@ -46,11 +111,12 @@ class ChamakViewModel(
         Generating,
         Result,
         Failed,
+        Recoverable,
         Gallery
     }
 
     var step by mutableStateOf(Step.CatalogPicker)
-    var mode by mutableStateOf(ChamakMode.Fusion)
+    var mode by mutableStateOf(activeLaunch?.mode ?: ChamakMode.Fusion)
     var catalogProducts by mutableStateOf<List<Product>>(emptyList())
     var catalogueSource by mutableStateOf(ChamakCatalogueSource.OwnProducts)
     var galleryGenerations by mutableStateOf<List<ChamakGeneration>>(emptyList())
@@ -70,11 +136,23 @@ class ChamakViewModel(
 
     val setPriceKey: String
         get() {
-            val count = maxOf(2, setPieces.size)
-            return if (count == 2) "chamak.set_creation" else "chamak.set_creation_$count"
+            val gen = currentGeneration
+            val count = if (gen?.mode == ChamakMode.SetCreation) {
+                listOfNotNull(gen.sourceImage1URL, gen.sourceImage2URL, gen.sourceImage3URL, gen.sourceImage4URL).count { it.isNotBlank() }
+            } else setPieces.size
+            val pieces = maxOf(2, count)
+            return if (pieces == 2) "chamak.set_creation" else "chamak.set_creation_$pieces"
         }
 
-    var currentGeneration by mutableStateOf<ChamakGeneration?>(null)
+    private var generation by mutableStateOf<ChamakGeneration?>(null)
+    var currentGeneration: ChamakGeneration?
+        get() = generation
+        set(value) {
+            generation = value
+            state["generationId"] = value?.id
+            if (value != null) state["mode"] = value.mode.name
+        }
+    var signedOriginalOutputImageURL by mutableStateOf<String?>(null)
     var signedOutputImageURL by mutableStateOf<String?>(null)
     var signedFullOutputImageURL by mutableStateOf<String?>(null)
     var signedOutputImageURLs by mutableStateOf<List<String>>(emptyList())
@@ -115,7 +193,17 @@ class ChamakViewModel(
         }
     }
 
-    var pendingGenerateKey: String? = null
+    var pendingGenerateKey: String?
+        get() = state.string("submissionKey")
+        set(value) { state["submissionKey"] = value }
+    private var pendingGenerationId: String
+        get() = state.string("pendingGenerationId") ?: UUID.randomUUID().toString().also { state["pendingGenerationId"] = it }
+        set(value) { state["pendingGenerationId"] = value }
+    var analysisKey: String?
+        get() = state.string("analysisKey")
+        set(value) { state["analysisKey"] = value }
+    var retrievalMessage by mutableStateOf<String?>(null)
+    var catalogErrorMessage by mutableStateOf<String?>(null)
     var insufficientCreditsError by mutableStateOf<InsufficientCreditsException?>(null)
     var showInsufficientCreditsSheet by mutableStateOf(false)
     var toastMessage by mutableStateOf<String?>(null)
@@ -144,11 +232,12 @@ class ChamakViewModel(
 
 
     fun selectionBlockReason(product: Product): SelectionBlockReason? {
-        if (mode != ChamakMode.SetCreation) return null
         if (slot(product) != null) return null
 
-        val url = product.processedImageURL ?: product.imageURL ?: product.rawImageURL ?: ""
+        val url = product.displaySource ?: ""
         if (url.isEmpty()) return ChamakSelectionBlockReason.MissingImage
+
+        if (mode != ChamakMode.SetCreation) return null
 
         val cType = JewelleryTypeCanonical.canonicalize(product.jewelleryType)
             ?: return ChamakSelectionBlockReason.MissingType
@@ -207,6 +296,9 @@ class ChamakViewModel(
             clearSlot(currentSlot)
             return
         }
+
+        val blocked = selectionBlockReason(product)
+        if (blocked != null) { errorMessage = blocked.message; return }
 
         if (mode == ChamakMode.SetCreation) {
             val reason = selectionBlockReason(product)
@@ -280,6 +372,10 @@ class ChamakViewModel(
         val d1 = selectedDesign1 ?: return
         val d2 = selectedDesign2 ?: return
 
+        if (!canStartAnalysis || isSubmitting) return
+        isSubmitting = true
+        errorMessage = null
+        retrievalMessage = null
         step = Step.Analyzing
         startQuoteRotation()
 
@@ -319,31 +415,44 @@ class ChamakViewModel(
                 }
             }
 
-            val gen = ChamakApi.createGeneration(
+            state["creationAttempted"] = true
+            val gen = currentGeneration ?: ChamakApi.createGeneration(
                 wholesalerId = wholesalerId,
                 source1URL = url1,
                 source2URL = url2,
                 extraSourceURLs = extraURLs,
-                mode = mode
+                mode = mode,
+                generationId = pendingGenerationId
             )
             currentGeneration = gen
+            if (gen.status !in listOf(ChamakStatus.Queued, ChamakStatus.Failed)) {
+                restoreGeneration(gen.id)
+                return
+            }
 
             if (mode == ChamakMode.SetCreation) {
                 stopQuoteRotation()
                 step = Step.SetStyling
             } else {
-                ChamakApi.triggerStage1Analysis(gen.id)
+                if (analysisKey == null) analysisKey = UUID.randomUUID().toString()
+                ChamakApi.triggerStage1Analysis(gen.id, wholesalerId, analysisKey)
                 startPolling(gen.id, ChamakStatus.AwaitingInput)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (err: InsufficientCreditsException) {
+            pendingGenerateKey = null
+            analysisKey = null
             insufficientCreditsError = err
             showInsufficientCreditsSheet = true
             step = Step.CatalogPicker
             stopQuoteRotation()
         } catch (e: Exception) {
             errorMessage = e.message ?: "Failed to start analysis."
-            step = Step.Failed
+            step = if (currentGeneration == null) Step.Failed else Step.Recoverable
             stopQuoteRotation()
+        } finally {
+            isSubmitting = false
         }
     }
 
@@ -363,6 +472,7 @@ class ChamakViewModel(
     }
 
     suspend fun submitFormAndGenerate(wholesalerId: String, onRefreshWallet: (suspend () -> Unit)? = null) {
+        if (isSubmitting) return
         val gen = currentGeneration ?: return
         if (pendingGenerateKey == null) {
             pendingGenerateKey = UUID.randomUUID().toString()
@@ -387,14 +497,18 @@ class ChamakViewModel(
                 idempotencyKey = pendingGenerateKey
             )
             startPolling(gen.id, ChamakStatus.Done, onRefreshWallet)
+        } catch (e: CancellationException) {
+            throw e
         } catch (err: InsufficientCreditsException) {
+            pendingGenerateKey = null
+            analysisKey = null
             insufficientCreditsError = err
             showInsufficientCreditsSheet = true
             step = Step.SliderForm
             stopQuoteRotation()
         } catch (e: Exception) {
-            errorMessage = e.message ?: "Submission failed."
-            step = Step.Failed
+            errorMessage = e.message ?: "Submission could not be confirmed. Check status before retrying."
+            step = Step.Recoverable
             stopQuoteRotation()
         } finally {
             isSubmitting = false
@@ -402,6 +516,7 @@ class ChamakViewModel(
     }
 
     suspend fun submitSetAndGenerate(wholesalerId: String, onRefreshWallet: (suspend () -> Unit)? = null) {
+        if (isSubmitting) return
         val gen = currentGeneration ?: return
         if (pendingGenerateKey == null) {
             pendingGenerateKey = UUID.randomUUID().toString()
@@ -420,21 +535,58 @@ class ChamakViewModel(
                 idempotencyKey = pendingGenerateKey
             )
             startPolling(gen.id, ChamakStatus.Done, onRefreshWallet)
+        } catch (e: CancellationException) {
+            throw e
         } catch (err: InsufficientCreditsException) {
+            pendingGenerateKey = null
+            analysisKey = null
             insufficientCreditsError = err
             showInsufficientCreditsSheet = true
             step = Step.SetStyling
             stopQuoteRotation()
         } catch (e: Exception) {
-            errorMessage = e.message ?: "Submission failed."
-            step = Step.Failed
+            errorMessage = e.message ?: "Submission could not be confirmed. Check status before retrying."
+            step = Step.Recoverable
             stopQuoteRotation()
         } finally {
             isSubmitting = false
         }
     }
 
+    fun retryPendingRequest(wholesalerId: String) {
+        val gen = currentGeneration ?: return
+        runAction {
+            if (mode == ChamakMode.Fusion && gen.stage1AnalysisJSON == null && pendingGenerateKey == null) {
+                if (analysisKey == null) analysisKey = UUID.randomUUID().toString()
+                step = Step.Analyzing
+                startQuoteRotation()
+                try {
+                    ChamakApi.triggerStage1Analysis(gen.id, wholesalerId, analysisKey)
+                    startPolling(gen.id, ChamakStatus.AwaitingInput)
+                } catch (e: CancellationException) { throw e }
+                catch (e: InsufficientCreditsException) {
+                    analysisKey = null
+                    insufficientCreditsError = e
+                    showInsufficientCreditsSheet = true
+                    step = Step.CatalogPicker
+                    stopQuoteRotation()
+                }
+            } else if (pendingGenerateKey != null) {
+                if (mode == ChamakMode.SetCreation) submitSetAndGenerate(wholesalerId)
+                else submitFormAndGenerate(wholesalerId)
+            } else {
+                reviseAndRetry()
+            }
+        }
+    }
+
     fun reviseAndRetry() {
+        if (currentGeneration?.status in listOf(ChamakStatus.Done, ChamakStatus.Failed)) {
+            pendingGenerateKey = null
+            analysisKey = null
+        }
+        retrievalMessage = null
+        errorMessage = null
         stopQuoteRotation()
         step = if (mode == ChamakMode.SetCreation) {
             if (currentGeneration != null) Step.SetStyling else Step.CatalogPicker
@@ -453,10 +605,11 @@ class ChamakViewModel(
         onRefreshWallet: (suspend () -> Unit)? = null
     ) {
         pollJob?.cancel()
+        if (!flowVisible) return
+        retrievalMessage = null
         pollJob = scope.launch {
             var attempts = 0
             var consecutiveFailures = 0
-            var lastPollError: Exception? = null
 
             while (attempts < 80) {
                 delay(3000)
@@ -467,23 +620,23 @@ class ChamakViewModel(
                     val updated = ChamakApi.fetchGeneration(generationId)
                     currentGeneration = updated
 
-                    if (updated.status == targetStatus) {
-                        if (targetStatus == ChamakStatus.AwaitingInput) {
+                    if (updated.status == ChamakStatus.Done || updated.status == targetStatus) {
+                        if (updated.status == ChamakStatus.AwaitingInput) {
                             stopQuoteRotation()
                             setupSlidersFromAnalysis(updated.stage1AnalysisJSON)
                             step = Step.SliderForm
-                        } else if (targetStatus == ChamakStatus.Done) {
+                        } else if (updated.status == ChamakStatus.Done) {
                             pendingGenerateKey = null
-                            signOutputs(updated)
                             stopQuoteRotation()
                             step = Step.Result
+                            signOutputs(updated)
 
                             if (onRefreshWallet != null) {
                                 try {
                                     onRefreshWallet()
                                     toastMessage = "Design generation complete"
                                     showToast = true
-                                } catch (_: Exception) {}
+                                } catch (e: CancellationException) { throw e } catch (_: Exception) {}
                             }
                         }
                         return@launch
@@ -494,24 +647,25 @@ class ChamakViewModel(
                         return@launch
                     }
                     consecutiveFailures = 0
-                } catch (e: Exception) {
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
                     consecutiveFailures++
-                    lastPollError = e
                 }
             }
 
             if (!isActive) return@launch
             stopQuoteRotation()
-            errorMessage = if (consecutiveFailures >= 5) {
+            retrievalMessage = if (consecutiveFailures >= 5) {
                 "Couldn't read this generation's status. It may still have completed — check your gallery."
             } else {
                 "Generation is taking longer than expected. Please check your gallery shortly."
             }
-            step = Step.Failed
+            step = Step.Recoverable
         }
     }
 
-    private fun setupSlidersFromAnalysis(analysis: Stage1Analysis?) {
+    internal fun setupSlidersFromAnalysis(analysis: Stage1Analysis?) {
         if (analysis == null) return
         val currentSliders = sliderValues.toMutableMap()
         for (attr in analysis.dynamicAttributes) {
@@ -526,6 +680,7 @@ class ChamakViewModel(
 
     internal fun startQuoteRotation() {
         quoteJob?.cancel()
+        if (!flowVisible) return
         activeQuoteIndex = 0
         quoteJob = scope.launch {
             while (isActive) {
@@ -557,6 +712,14 @@ class ChamakViewModel(
         selectedDesign3 = null
         selectedDesign4 = null
         currentGeneration = null
+        pendingGenerateKey = null
+        state["creationAttempted"] = false
+        pendingGenerationId = UUID.randomUUID().toString()
+        analysisKey = null
+        retrievalMessage = null
+        insufficientCreditsError = null
+        showInsufficientCreditsSheet = false
+        signedOriginalOutputImageURL = null
         signedOutputImageURL = null
         signedFullOutputImageURL = null
         signedOutputImageURLs = emptyList()
@@ -571,4 +734,16 @@ class ChamakViewModel(
     }
 
 
+}
+
+// Fixture models need only memory; production supplies the owner's restorable handle.
+private class ChamakState(private val saved: SavedStateHandle?) {
+    private val memory = mutableMapOf<String, Any?>()
+
+    fun string(key: String): String? = saved?.get<String>(key) ?: memory[key] as? String
+    fun flag(key: String): Boolean? = saved?.get<Boolean>(key) ?: memory[key] as? Boolean
+
+    operator fun set(key: String, value: Any?) {
+        if (saved != null) saved[key] = value else memory[key] = value
+    }
 }

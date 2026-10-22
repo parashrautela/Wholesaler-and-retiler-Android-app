@@ -9,6 +9,8 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.jewelindia.app.core.images.ImageNormalizer
+import com.jewelindia.app.core.model.Product
+import kotlinx.coroutines.CancellationException
 import com.jewelindia.app.core.model.UploadUsage
 import com.jewelindia.app.data.api.WholesalerApi
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +33,8 @@ enum class FormSubmitStatus {
 
 class AddProductFormState {
     var status by mutableStateOf(FormSubmitStatus.Idle)
+    var submittedProduct by mutableStateOf<Product?>(null)
+    private val submissionKey = UUID.randomUUID().toString()
     var bannerError by mutableStateOf<String?>(null)
     val errors = mutableStateMapOf<String, String>()
 
@@ -104,7 +108,7 @@ class AddProductFormState {
         publish: Boolean,
         onSuccess: (savedAsDraft: Boolean) -> Unit
     ): Boolean {
-        if (!validate(requiresImage = publish)) return false
+        if (status.isBusy || !validate(requiresImage = publish)) return false
 
         bannerError = null
         status = FormSubmitStatus.Uploading
@@ -120,13 +124,12 @@ class AddProductFormState {
                     context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                 } ?: throw Exception("Could not read image file")
 
-                val normalizedData = ImageNormalizer.jpeg(
-                    bytes,
-                    ImageNormalizer.MAX_PRODUCT_DIMENSION
-                ) ?: bytes
+                val normalizedData = withContext(Dispatchers.IO) {
+                    ImageNormalizer.jpeg(bytes, ImageNormalizer.MAX_PRODUCT_DIMENSION)
+                } ?: throw Exception("That file couldn't be decoded as a photo. Please choose another image.")
 
                 status = FormSubmitStatus.Saving
-                WholesalerApi.processProduct(
+                val result = WholesalerApi.processProduct(
                     imageData = normalizedData,
                     filename = "product.jpg",
                     mimeType = "image/jpeg",
@@ -134,12 +137,21 @@ class AddProductFormState {
                     jewelleryType = jewelleryType,
                     wholesalerId = wholesalerId,
                     imageCount = imageCount,
-                    submissionKey = UUID.randomUUID().toString()
+                    submissionKey = submissionKey
                 )
 
+                val id = result.productId?.takeIf { it.isNotBlank() }
+                    ?: throw Exception("Upload accepted, but its product ID wasn't returned. Check your catalogue before retrying.")
+                submittedProduct = Product(
+                    id = id, wholesalerId = wholesalerId, title = finalTitle,
+                    jewelleryType = jewelleryType, rawImageURL = result.rawImageURL,
+                    aiProcessingState = "queued"
+                )
                 status = FormSubmitStatus.Done
                 onSuccess(false)
                 return true
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 bannerError = e.message ?: "Upload failed"
                 status = FormSubmitStatus.Error

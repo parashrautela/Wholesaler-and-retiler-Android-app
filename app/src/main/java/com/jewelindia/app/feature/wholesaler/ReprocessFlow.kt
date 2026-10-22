@@ -7,6 +7,8 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -190,11 +192,12 @@ fun ReprocessOverlay(
 @Composable
 fun ReprocessConfirmSheet(
     hasImages: Boolean,
-    onConfirm: (PickedFile?) -> Unit,
+    onConfirm: (PickedFile?, Int) -> Unit,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     var newFile by remember { mutableStateOf<PickedFile?>(null) }
+    var imageCount by remember { mutableStateOf(2) }
     var previewUri by remember { mutableStateOf<Uri?>(null) }
 
     val picker = rememberLauncherForActivityResult(
@@ -222,6 +225,7 @@ fun ReprocessConfirmSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
@@ -331,7 +335,19 @@ fun ReprocessConfirmSheet(
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Text("How many enhanced images would you like?", style = Typography.santoshi(14.sp, FontWeight.SemiBold))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                (1..4).forEach { count ->
+                    OutlinedButton(
+                        onClick = { imageCount = count },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (imageCount == count) Palette.dark else Color.Transparent,
+                            contentColor = if (imageCount == count) Color.White else Palette.dark
+                        )
+                    ) { Text("$count") }
+                }
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -348,7 +364,7 @@ fun ReprocessConfirmSheet(
                 val canProceed = hasImages || newFile != null
                 Button(
                     onClick = {
-                        onConfirm(newFile)
+                        onConfirm(newFile, imageCount)
                         onDismiss()
                     },
                     enabled = canProceed,

@@ -1,6 +1,7 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Core/AuthRouter.swift (ViewModeStore)
 package com.jewelindia.app.core.session
 
+import androidx.core.content.edit
 import android.content.Context
 import android.content.SharedPreferences
 import com.jewelindia.app.core.model.ViewMode
@@ -34,10 +35,10 @@ class ViewModeStore(private val prefs: SharedPreferences) {
     }
 
     fun set(mode: ViewMode, userId: String) {
-        prefs.edit().putString(key(userId), mode.name).apply()
+        prefs.edit { putString(key(userId), mode.name) }
     }
 
     fun clear(userId: String) {
-        prefs.edit().remove(key(userId)).apply()
+        prefs.edit { remove(key(userId)) }
     }
 }

@@ -1,6 +1,7 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Features/Wholesaler/TreasureChest/TopUpSheet.swift
 package com.jewelindia.app.feature.treasurechest
 
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -59,6 +60,7 @@ fun DailyCreditsView(
     wallet: CreditWallet?,
     onDismiss: () -> Unit
 ) {
+    val locale = LocalConfiguration.current.locales[0]
     val dailyAllowance = wallet?.dailyAllowance ?: 2000
     val dailyLeft = wallet?.dailyAvailable ?: 700
     val bonusLeft = wallet?.bonusAvailable ?: 500
@@ -142,7 +144,7 @@ fun DailyCreditsView(
 
                 // Cirka allowance headline
                 Text(
-                    text = String.format("%,d credits every day", dailyAllowance),
+                    text = String.format(locale, "%,d credits every day", dailyAllowance),
                     style = Typography.cirka(29.sp),
                     fontWeight = FontWeight.Bold,
                     color = Palette.dark
@@ -167,7 +169,7 @@ fun DailyCreditsView(
                             color = Color(0xFF78716C)
                         )
                         Text(
-                            text = String.format("%,d", dailyLeft),
+                            text = String.format(locale, "%,d", dailyLeft),
                             style = Typography.santoshi(23.sp),
                             fontWeight = FontWeight.Bold,
                             color = Palette.dark
@@ -184,7 +186,7 @@ fun DailyCreditsView(
                             color = Color(0xFF78716C)
                         )
                         Text(
-                            text = String.format("%,d", bonusLeft),
+                            text = String.format(locale, "%,d", bonusLeft),
                             style = Typography.santoshi(23.sp),
                             fontWeight = FontWeight.Bold,
                             color = Palette.dark
@@ -197,7 +199,7 @@ fun DailyCreditsView(
                 // Next reset countdown
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text(
-                        text = String.format("Next %,d credits in", dailyAllowance),
+                        text = String.format(locale, "Next %,d credits in", dailyAllowance),
                         style = Typography.santoshi(14.sp),
                         fontWeight = FontWeight.SemiBold,
                         color = Palette.dark

@@ -390,7 +390,7 @@ private fun LikedCardFace(
             .clip(RoundedCornerShape(28.dp))
             .background(
                 Brush.verticalGradient(
-                    listOf(Color(0xFFFFF7ED), Color(0xFDE7C7))
+                    listOf(Color(0xFFFFF7ED), Color(0xFFFDE7C7))
                 )
             )
             .padding(24.dp)

@@ -4,6 +4,16 @@ package com.jewelindia.app.core.images
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import kotlinx.coroutines.CancellationException
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,21 +36,46 @@ fun CachedImage(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
-    placeholderColor: Color? = Palette.taupe.copy(alpha = 0.35f)
+    placeholderColor: Color? = Palette.taupe.copy(alpha = 0.35f),
+    fallbackUrl: String? = null
 ) {
+    var retry by remember(url) { mutableIntStateOf(0) }
+    var useFallback by remember(url, retry) { mutableStateOf(false) }
+    var resolved by remember(url, fallbackUrl, retry) { mutableStateOf<String?>(null) }
+    var failed by remember(url, fallbackUrl, retry) { mutableStateOf(false) }
+    val source = if (useFallback) fallbackUrl else url
+    LaunchedEffect(source, retry) {
+        resolved = null
+        failed = false
+        if (!source.isNullOrBlank()) {
+            try {
+                resolved = StorageImageURL.resolve(source)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                if (!useFallback && !fallbackUrl.isNullOrBlank() && fallbackUrl != url) useFallback = true
+                else failed = true
+            }
+        }
+    }
     Box(
-        modifier = if (placeholderColor != null) modifier.background(placeholderColor) else modifier
+        modifier = if (placeholderColor != null) modifier.background(placeholderColor) else modifier,
+        contentAlignment = Alignment.Center
     ) {
-        if (!url.isNullOrBlank()) {
+        if (resolved != null && !failed) {
             AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(url)
-                    .crossfade(true)
-                    .build(),
+                model = ImageRequest.Builder(LocalContext.current).data(resolved).crossfade(true).build(),
                 contentDescription = contentDescription,
                 contentScale = contentScale,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                onError = {
+                    if (!useFallback && !fallbackUrl.isNullOrBlank() && fallbackUrl != url) useFallback = true
+                    else failed = true
+                }
             )
+        }
+        if (failed) {
+            TextButton(onClick = { retry++ }) { Text("Retry image") }
         }
     }
 }

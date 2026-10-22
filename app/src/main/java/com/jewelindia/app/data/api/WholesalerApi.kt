@@ -21,6 +21,7 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Count
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.storage.storage
+import io.ktor.http.ContentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -169,6 +170,7 @@ object WholesalerApi {
                 }
             }
             order("created_at", order = Order.DESCENDING)
+            order("id", order = Order.DESCENDING)
             range(from, to)
         }
 
@@ -319,7 +321,7 @@ object WholesalerApi {
         try {
             HttpClients.pipeline.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@withContext UploadUsage.unknown
-                val body = response.body?.string() ?: return@withContext UploadUsage.unknown
+                val body = response.body.string()
                 JewelJson.decodeFromString<UploadUsage>(body)
             }
         } catch (_: Exception) {
@@ -340,7 +342,6 @@ object WholesalerApi {
         AIConsent.requireGranted(wholesalerId)
 
         val token = AuthToken.fresh()
-            ?: throw PipelineException("Your session isn't active on this device. Please sign out and sign in again.")
 
         val requestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
@@ -360,7 +361,7 @@ object WholesalerApi {
 
         try {
             HttpClients.pipeline.newCall(request).execute().use { response ->
-                val bodyString = response.body?.string() ?: ""
+                val bodyString = response.body.string()
                 if (!response.isSuccessful) {
                     if (response.code == 402) {
                         val detail = try {
@@ -404,7 +405,7 @@ object WholesalerApi {
         try {
             HttpClients.pipeline.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) throw PipelineException("Couldn't read processing status.")
-                val body = response.body?.string() ?: "{}"
+                val body = response.body.string()
                 Json.parseToJsonElement(body).jsonObject
             }
         } catch (e: Exception) {
@@ -416,8 +417,10 @@ object WholesalerApi {
     suspend fun reprocessProduct(
         productId: String,
         wholesalerId: String,
-        file: PickedFile?
+        file: PickedFile?,
+        imageCount: Int
     ) = withContext(Dispatchers.IO) {
+        require(imageCount in 1..4) { "Choose between 1 and 4 images." }
         AIConsent.requireGranted(wholesalerId)
         val url = "${AppConfig.aiPipelineURL.trimEnd('/')}/process/$productId"
 
@@ -426,19 +429,21 @@ object WholesalerApi {
             val body = MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart("wholesaler_id", wholesalerId)
+                .addFormDataPart("image_count", imageCount.toString())
                 .addFormDataPart("file", file.filename, file.data.toRequestBody(file.mimeType.toMediaType()))
                 .build()
             requestBuilder.post(body)
         } else {
             val json = buildJsonObject {
                 put("wholesaler_id", wholesalerId)
+                put("image_count", imageCount)
             }.toString()
             requestBuilder.post(json.toRequestBody("application/json".toMediaType()))
         }
 
         try {
             HttpClients.pipeline.newCall(requestBuilder.build()).execute().use { response ->
-                val body = response.body?.string() ?: ""
+                val body = response.body.string()
                 if (!response.isSuccessful) {
                     val fallback = if (response.code == 429) {
                         "Daily upload limit reached. Please try again tomorrow."
@@ -509,6 +514,7 @@ object WholesalerApi {
         upsert: Boolean = true
     ): String {
         db.storage.from(bucket).upload(path, data) {
+            this.contentType = ContentType.parse(contentType)
             this.upsert = upsert
         }
         return db.storage.from(bucket).publicUrl(path)
@@ -520,7 +526,6 @@ object WholesalerApi {
 object AccountApi {
     suspend fun deleteMyAccount() {
         val token = AuthToken.fresh()
-            ?: throw WholesalerApi.PipelineException("Please sign in again.")
 
         try {
             EdgeFunctions.invoke<JsonObject>("delete-account", token = token)

@@ -270,7 +270,7 @@ private fun DoorCard(
             .background(if (isFeatured) Color(0xFFFFFDF7) else Color.White)
             .border(
                 width = if (isFeatured) 1.5.dp else 1.dp,
-                color = if (isFeatured) Color(0xD4AF37).copy(alpha = 0.45f) else AuthColor.hairline,
+                color = if (isFeatured) Color(0xFFD4AF37).copy(alpha = 0.45f) else AuthColor.hairline,
                 shape = RoundedCornerShape(12.dp)
             )
             .clickable(enabled = !isBusy, onClick = onClick)
@@ -281,7 +281,7 @@ private fun DoorCard(
             modifier = Modifier
                 .size(48.dp)
                 .background(
-                    if (isFeatured) Color(0xFEF3C7).copy(alpha = 0.55f) else AuthColor.fill2,
+                    if (isFeatured) Color(0xFFFEF3C7).copy(alpha = 0.55f) else AuthColor.fill2,
                     RoundedCornerShape(12.dp)
                 )
         ) {

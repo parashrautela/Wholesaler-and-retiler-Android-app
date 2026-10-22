@@ -2,6 +2,7 @@
 package com.jewelindia.app
 
 import android.app.Application
+import com.jewelindia.app.core.consent.AIConsent
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.svg.SvgDecoder
@@ -12,6 +13,7 @@ class JewelApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        AIConsent.initialize(this)
         graph = AppGraph(this)
 
         SingletonImageLoader.setSafe { context ->

@@ -104,8 +104,8 @@ fun SectionHeader(
 @Composable
 fun LabelledField(
     label: String,
-    error: String? = null,
     modifier: Modifier = Modifier,
+    error: String? = null,
     content: @Composable () -> Unit
 ) {
     Column(modifier = modifier) {
@@ -141,8 +141,8 @@ fun JewelSelect(
     options: List<SelectOption>,
     selection: String,
     onSelectionChange: (String) -> Unit,
-    error: String? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    error: String? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
     val selectedOption = options.firstOrNull { it.value == selection }
@@ -226,9 +226,9 @@ fun InputWithSuffix(
     suffix: String,
     text: String,
     onTextChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
     placeholder: String = "0.00",
-    error: String? = null,
-    modifier: Modifier = Modifier
+    error: String? = null
 ) {
     LabelledField(label = label, error = error, modifier = modifier) {
         Row(
@@ -333,7 +333,7 @@ fun ErrorBanner(
             .fillMaxWidth()
             .clip(Radius.shapeLg)
             .background(Color(0xFFFEF2F2))
-            .border(1.dp, Color(0xFECACA), Radius.shapeLg)
+            .border(1.dp, Color(0xFFFECACA), Radius.shapeLg)
             .padding(Spacing.base),
         verticalAlignment = Alignment.Top
     ) {

@@ -1,8 +1,8 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Core/LegalLinks.swift
 package com.jewelindia.app.core.legal
 
+import androidx.core.net.toUri
 import android.content.Context
-import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
 
 object LegalLinks {
@@ -15,7 +15,7 @@ object LegalLinks {
             CustomTabsIntent.Builder()
                 .setShowTitle(true)
                 .build()
-                .launchUrl(context, Uri.parse(url))
+                .launchUrl(context, url.toUri())
         } catch (_: Exception) {}
     }
 }

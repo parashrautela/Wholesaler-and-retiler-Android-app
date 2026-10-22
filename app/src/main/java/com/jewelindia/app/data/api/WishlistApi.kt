@@ -64,7 +64,6 @@ object WishlistApi {
 
     private suspend inline fun <reified T : Any> shareRequestUrl(url: String, body: String?): T = withContext(Dispatchers.IO) {
         val token = AuthToken.fresh()
-            ?: throw WishlistApiException("Please sign in again.")
 
         val reqBuilder = Request.Builder()
             .url(url)
@@ -77,7 +76,7 @@ object WishlistApi {
 
         try {
             HttpClients.site.newCall(reqBuilder.build()).execute().use { response ->
-                val bodyString = response.body?.string() ?: ""
+                val bodyString = response.body.string()
                 if (!response.isSuccessful) {
                     val msg = try {
                         JewelJson.decodeFromString<WishlistRefusal>(bodyString).message

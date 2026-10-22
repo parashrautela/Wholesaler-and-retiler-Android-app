@@ -91,7 +91,7 @@ open class JewelApi(
             .build()
 
         http.site.newCall(request).execute().use { response ->
-            val body = response.body?.string().orEmpty()
+            val body = response.body.string()
             if (!response.isSuccessful) {
                 throw parseApiError(response.code, body)
             }
@@ -493,7 +493,7 @@ open class JewelApi(
             .build()
 
         http.site.newCall(request).execute().use { response ->
-            val body = response.body?.string().orEmpty()
+            val body = response.body.string()
             if (!response.isSuccessful) {
                 throw parseApiError(response.code, body)
             }
@@ -511,7 +511,7 @@ open class JewelApi(
             .build()
 
         http.site.newCall(request).execute().use { response ->
-            val body = response.body?.string().orEmpty()
+            val body = response.body.string()
             if (!response.isSuccessful) {
                 throw parseApiError(response.code, body)
             }
@@ -529,7 +529,7 @@ open class JewelApi(
             .build()
 
         http.site.newCall(request).execute().use { response ->
-            val body = response.body?.string().orEmpty()
+            val body = response.body.string()
             if (!response.isSuccessful) {
                 throw parseApiError(response.code, body)
             }

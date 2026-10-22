@@ -23,6 +23,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -101,6 +104,7 @@ fun SlotCard(
                 if (url != null) {
                     ProtectedImage(
                         url = url,
+                        fallbackUrl = designItem.imageURL,
                         contentDescription = designItem.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
@@ -111,7 +115,7 @@ fun SlotCard(
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(8.dp)
-                        .size(24.dp)
+                        .size(48.dp)
                         .background(accentColor, CircleShape)
                 ) {
                     Icon(
@@ -127,7 +131,7 @@ fun SlotCard(
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(8.dp)
-                        .size(24.dp)
+                        .size(48.dp)
                         .background(accentColor, CircleShape)
                 ) {
                     Icon(
@@ -212,7 +216,7 @@ fun CatalogProductCard(
     onZoom: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val imageURL = product.processedImageURL ?: product.imageURL ?: product.rawImageURL
+    val imageURL = product.displaySource
     val slotColor = if (slot != null) Color(ChamakSlot.colorHex(slot)) else Color(0xFFCA8A04)
 
     Column(
@@ -226,6 +230,14 @@ fun CatalogProductCard(
                 shape = RoundedCornerShape(16.dp)
             )
             .shadow(2.dp, RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.03f))
+            .semantics {
+                selected = isSelected
+                stateDescription = when {
+                    isSelected -> "Selected in slot $slot"
+                    isBlocked -> blockReason?.message ?: "Cannot select this design"
+                    else -> "Not selected"
+                }
+            }
             .clickable(onClick = onClick)
     ) {
         Box(
@@ -286,7 +298,7 @@ fun CatalogProductCard(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(6.dp)
-                        .size(26.dp)
+                        .size(48.dp)
                         .background(Color.White.copy(alpha = 0.9f), CircleShape)
                 ) {
                     Icon(

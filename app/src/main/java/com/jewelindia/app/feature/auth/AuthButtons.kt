@@ -1,8 +1,8 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Features/Auth/AuthKit.swift (Buttons & Banners)
 package com.jewelindia.app.feature.auth
 
+import androidx.core.net.toUri
 import android.content.Context
-import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -187,7 +187,7 @@ fun AuthLegalText(
             CustomTabsIntent.Builder()
                 .setShowTitle(true)
                 .build()
-                .launchUrl(context, Uri.parse(url))
+                .launchUrl(context, url.toUri())
         } catch (_: Exception) {}
     }
 

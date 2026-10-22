@@ -47,6 +47,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import kotlinx.coroutines.delay
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -101,9 +109,14 @@ fun WholesalerCatalogScreen(
     val resolvedUserId = wholesalerUserId.ifBlank {
         wholesaler?.userId ?: sessionStore.user.value?.id ?: ""
     }
-    val viewModel = remember(resolvedUserId) {
-        WholesalerCatalogViewModel(wholesalerUserId = resolvedUserId)
-    }
+    val viewModel = viewModel<WholesalerCatalogViewModel>(
+        key = "catalogue/$resolvedUserId",
+        factory = viewModelFactory { initializer { WholesalerCatalogViewModel(resolvedUserId) } }
+    )
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val hasMore by viewModel.hasMore.collectAsState()
+    val refreshError by viewModel.refreshError.collectAsState()
     val catalogState by viewModel.uiState.collectAsState()
     val isSelectingByVm by viewModel.isSelecting.collectAsState()
     val selectionByVm by viewModel.selection.collectAsState()
@@ -146,9 +159,15 @@ fun WholesalerCatalogScreen(
         }
     }
 
-    LaunchedEffect(resolvedUserId) {
+    LaunchedEffect(resolvedUserId, lifecycle) {
         if (peekProducts == null && resolvedUserId.isNotBlank()) {
-            viewModel.load()
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.load()
+                repeat(80) {
+                    delay(5000)
+                    viewModel.refreshPendingProducts()
+                }
+            }
         }
     }
 
@@ -236,6 +255,19 @@ fun WholesalerCatalogScreen(
                         color = Palette.dark
                     )
 
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(
+                        onClick = { viewModel.load() },
+                        enabled = peekProducts == null && !isRefreshing,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(if (isRefreshing) "Refreshing…" else "Refresh catalogue", modifier = Modifier.fillMaxWidth())
+                    }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -340,6 +372,27 @@ fun WholesalerCatalogScreen(
                         }
                     }
                 }
+
+            refreshError?.let { message ->
+                Text(message, style = manrope(12f, JewelWeight.Medium), color = Palette.muted,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+            }
+
+            if (peekProducts == null && (products.isNotEmpty() || hasMore)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    val total = (catalogState as? CatalogUiState.Content)?.totalCount ?: products.size
+                    Text("${products.size} of $total products loaded", style = manrope(12f), color = Palette.muted)
+                    if (isRefreshing) {
+                        CircularProgressIndicator(modifier = Modifier.padding(8.dp).size(20.dp), strokeWidth = 2.dp)
+                    } else if (hasMore) {
+                        TextButton(onClick = { viewModel.loadAllRemaining() }) { Text("Load all remaining") }
+                    }
+                }
+            }
 
             // Search Bar
             Box(
@@ -453,7 +506,7 @@ fun WholesalerCatalogScreen(
                         .fillMaxWidth()
                         .weight(1f)
                 ) {
-                    items(filteredProducts) { product ->
+                    items(filteredProducts, key = { it.id }) { product ->
                         CatalogueProductCard(
                             product = product,
                             onClick = {
@@ -535,7 +588,7 @@ fun WholesalerCatalogScreen(
     // Product Detail Sheet
     selectedProduct?.let { product ->
         CatalogProductDetailSheetHost(
-            product = product,
+            product = products.firstOrNull { it.id == product.id } ?: product,
             wholesalerId = resolvedUserId,
             onDismiss = { selectedProduct = null },
             onPublishToggle = { updated -> viewModel.togglePublish(updated) },

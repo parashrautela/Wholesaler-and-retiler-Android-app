@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -350,7 +351,7 @@ object DebugPeek {
             "chamak-hub-empty" -> {
                 ChamakHubScreen(
                     wholesalerId = "w-peek-0001",
-                    previewViewModel = ChamakViewModel(),
+                    previewViewModel = viewModel(key = "peek-chamak-empty") { ChamakViewModel() },
                     onClose = onBack
                 )
             }

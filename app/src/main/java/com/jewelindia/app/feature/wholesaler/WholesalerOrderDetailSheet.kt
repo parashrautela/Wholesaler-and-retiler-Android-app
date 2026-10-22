@@ -127,7 +127,7 @@ fun WholesalerOrderDetailSheet(
 
                     if (!order.productType.isNullOrBlank()) {
                         Text(
-                            text = order.productType!!.trim().replaceFirstChar { it.uppercase() },
+                            text = order.productType.trim().replaceFirstChar { it.uppercase() },
                             style = Typography.santoshi(12.sp),
                             color = Palette.muted
                         )
@@ -163,7 +163,7 @@ fun WholesalerOrderDetailSheet(
                     )
                     if (!order.storeCity.isNullOrBlank()) {
                         Text(
-                            text = order.storeCity!!,
+                            text = order.storeCity,
                             style = Typography.santoshi(13.sp),
                             color = Palette.muted
                         )
@@ -197,7 +197,7 @@ fun WholesalerOrderDetailSheet(
                         color = Palette.muted
                     )
                     Text(
-                        text = order.note!!,
+                        text = order.note,
                         style = Typography.santoshi(14.sp),
                         color = Palette.foreground,
                         lineHeight = 20.sp

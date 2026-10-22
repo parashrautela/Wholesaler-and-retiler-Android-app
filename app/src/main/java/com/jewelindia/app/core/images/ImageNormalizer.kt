@@ -1,6 +1,7 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Core/ImageNormalizer.swift
 package com.jewelindia.app.core.images
 
+import androidx.core.graphics.scale
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import java.io.ByteArrayOutputStream
@@ -72,7 +73,7 @@ object ImageNormalizer {
             val scale = min(maxDimension.toFloat() / width, maxDimension.toFloat() / height)
             val newWidth = (width * scale).roundToInt().coerceAtLeast(1)
             val newHeight = (height * scale).roundToInt().coerceAtLeast(1)
-            Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
+            bitmap.scale(newWidth, newHeight)
         } else {
             bitmap
         }

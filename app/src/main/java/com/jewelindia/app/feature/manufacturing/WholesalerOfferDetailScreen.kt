@@ -171,7 +171,7 @@ fun WholesalerOfferDetailScreen(
 
                         if (!req?.notes.isNullOrBlank()) {
                             Text(
-                                text = req?.notes ?: "",
+                                text = req.notes.orEmpty(),
                                 style = Typography.santoshi(14.sp),
                                 color = Palette.dark
                             )

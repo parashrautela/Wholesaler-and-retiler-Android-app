@@ -194,8 +194,8 @@ fun EmployeeCreativeBackdrop(
 @Composable
 fun EmployeeModeBar(
     storeName: String,
-    style: EmployeeStyle = LocalEmployeeStyle.current,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    style: EmployeeStyle = LocalEmployeeStyle.current
 ) {
     Box(
         modifier = modifier

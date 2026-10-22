@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-18",
+  "lint": {
+    "debug": {
+      "errors": 0,
+      "warnings": 0,
+      "hints": 0
+    },
+    "release": {
+      "errors": 0,
+      "warnings": 0,
+      "hints": 0
+    }
+  },
+  "unit_tests": {
+    "tests": 176,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "builds": [
+    "debug",
+    "release_unsigned"
+  ],
+  "runtime_device": "Android 15 API 35 emulator",
+  "runtime_checks": [
+    "three onboarding previews",
+    "sign-in input retained after landscape rotation"
+  ],
+  "intentional_lint_exclusion": "AndroidGradlePluginVersion only for the deliberately pinned Gradle wrapper version"
+}

@@ -1,6 +1,7 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Features/Retailer/StoreThemeView.swift
 package com.jewelindia.app.feature.retailer
 
+import androidx.core.content.edit
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -222,7 +223,7 @@ fun StoreThemeScreen(
                             onSelect = {
                                 if (isUnlocked) {
                                     activeThemeId = theme.id
-                                    prefs.sharedPreferences.edit().putString("jewel_store_theme", theme.id).apply()
+                                    prefs.sharedPreferences.edit { putString("jewel_store_theme", theme.id) }
                                     scope.launch {
                                         RetailerApi.setSelectedTheme(theme.id, userId)
                                     }
@@ -250,7 +251,7 @@ fun StoreThemeScreen(
                         if (result.ok) {
                             unlockedEntitlements = unlockedEntitlements + (theme.entitlementKey ?: "")
                             activeThemeId = theme.id
-                            prefs.sharedPreferences.edit().putString("jewel_store_theme", theme.id).apply()
+                            prefs.sharedPreferences.edit { putString("jewel_store_theme", theme.id) }
                             RetailerApi.setSelectedTheme(theme.id, userId)
                             creditStore.refresh()
                             themeToUnlock = null

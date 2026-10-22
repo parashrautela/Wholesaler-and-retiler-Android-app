@@ -54,9 +54,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
+import android.content.ClipboardManager
+import android.content.ClipData
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -351,7 +351,7 @@ fun StaffCredentialsSheet(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = context.getSystemService(ClipboardManager::class.java)
 
     val shareText = "Jewel India Staff Login Credentials:\n" +
             "Name: ${credentials.member.fullName}\n" +
@@ -444,7 +444,7 @@ fun StaffCredentialsSheet(
             ) {
                 Button(
                     onClick = {
-                        clipboardManager.setText(AnnotatedString(shareText))
+                        clipboardManager.setPrimaryClip(ClipData.newPlainText("Jewel India", shareText))
                         Toast.makeText(context, "Credentials copied to clipboard", Toast.LENGTH_SHORT).show()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Palette.surface),

@@ -8,10 +8,12 @@ IOS_ASSETS="$DIR/../wholesaler ios/JewelIndia/Resources/Assets.xcassets"
 FONT_DEST="$DIR/app/src/main/res/font"
 SVG_DEST="$DIR/app/src/main/assets/svg"
 DRAWABLE_DEST="$DIR/app/src/main/res/drawable-nodpi"
+DEBUG_DRAWABLE_DEST="$DIR/app/src/debug/res/drawable-nodpi"
 
 mkdir -p "$FONT_DEST"
 mkdir -p "$SVG_DEST"
 mkdir -p "$DRAWABLE_DEST"
+mkdir -p "$DEBUG_DRAWABLE_DEST"
 
 echo "Copying fonts..."
 python3 - <<EOF
@@ -63,15 +65,15 @@ import os, json, shutil, re
 assets_src = "$IOS_ASSETS"
 svg_dest = "$SVG_DEST"
 drawable_dest = "$DRAWABLE_DEST"
+debug_drawable_dest = "$DEBUG_DRAWABLE_DEST"
 
 def camel_to_snake(name):
     s = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s).lower()
 
-# Exact mapping per §A2.2
+# Artwork used by the app and debug previews.
 png_mapping = {
     "AuthPanelImage": "auth_panel_image.jpg",
-    "HeroFrame": "hero_frame.jpg",
     "CatBangles": "cat_bangles.png",
     "CatChains": "cat_chains.png",
     "CatEarrings": "cat_earrings.png",
@@ -81,13 +83,9 @@ png_mapping = {
     "CatNosepins": "cat_nosepins.png",
     "CatPendants": "cat_pendants.png",
     "CatRings": "cat_rings.png",
-    "ChamakNecklace": "chamak_necklace.png",
     "ChamakStudioArtwork": "chamak_studio_artwork.png",
     "GoogleG": "google_g.png",
     "InviteCardArtwork": "invite_card_artwork.png",
-    "InviteGuideLink": "invite_guide_link.png",
-    "InviteGuideSignup": "invite_guide_signup.png",
-    "InviteGuideStore": "invite_guide_store.png",
     "InviteRewardArtwork": "invite_reward_artwork.png",
     "UploadDesignCoin": "upload_design_coin.png",
     "UploadDesignLeftHand": "upload_design_left_hand.png",
@@ -138,7 +136,9 @@ for item in sorted(os.listdir(assets_src)):
             if not selected:
                 selected = images[-1]["filename"]
             src = os.path.join(item_path, selected)
-            dst = os.path.join(drawable_dest, dst_name)
+            # Category artwork is only used by debug preview fixtures.
+            dest = debug_drawable_dest if dst_name.startswith("cat_") else drawable_dest
+            dst = os.path.join(dest, dst_name)
             shutil.copy2(src, dst)
             png_copied += 1
 

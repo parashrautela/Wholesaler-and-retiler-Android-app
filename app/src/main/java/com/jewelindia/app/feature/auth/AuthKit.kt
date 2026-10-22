@@ -193,7 +193,7 @@ fun AuthLayout(
                         modifier = Modifier
                             .size(44.dp)
                             .background(AuthColor.brandSquare, RoundedCornerShape(10.dp))
-                            .border(1.dp, Color(0xD4AF37).copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                            .border(1.dp, Color(0xFFD4AF37).copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                     ) {
                         Text(
                             text = Copy.brandMark,

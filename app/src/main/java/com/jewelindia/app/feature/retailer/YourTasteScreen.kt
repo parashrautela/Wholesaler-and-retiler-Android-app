@@ -95,9 +95,9 @@ import kotlinx.coroutines.launch
 fun YourTasteScreen(
     store: MarketplaceCatalogueStore,
     onOpenChat: (ChatThread) -> Unit,
+    modifier: Modifier = Modifier,
     boardId: String? = null,
-    onBack: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onBack: (() -> Unit)? = null
 ) {
     val state by store.state.collectAsState()
     val scope = rememberCoroutineScope()

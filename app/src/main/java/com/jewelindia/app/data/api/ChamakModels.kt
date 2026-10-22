@@ -210,7 +210,7 @@ data class ChamakDesignItem(
 
     companion object {
         fun from(product: Product): ChamakDesignItem {
-            val url = product.processedImageURL ?: product.imageURL ?: product.rawImageURL ?: ""
+            val url = product.displaySource ?: ""
             return ChamakDesignItem(
                 id = product.id,
                 title = product.title ?: "Catalogue Design",

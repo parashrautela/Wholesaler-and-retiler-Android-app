@@ -65,21 +65,35 @@ data class Product(
     val canPublish: Boolean
         get() {
             if (aiProcessingState != null) {
-                return aiProcessingState == "ready" && (aiVerifiedOutputURLs.isNotEmpty() || generatedImageURLs.isNotEmpty() || !processedImageURL.isNullOrEmpty())
+                return aiProcessingState == "ready" && hasAIOutput
             }
-            return generatedImageURLs.isNotEmpty() || !processedImageURL.isNullOrEmpty()
+            return hasAIOutput
         }
 
     /**
      * Prefer an explicitly chosen showcase, then generated/processed media,
      * and only use the uploader's original photo as a final fallback.
      */
-    val displaySource: String?
-        get() = showcaseImageURLs.firstOrNull()?.trim()?.nilIfEmpty
-            ?: generatedImageURLs.firstOrNull()?.trim()?.nilIfEmpty
-            ?: processedImageURL?.trim()?.nilIfEmpty
-            ?: imageURL?.trim()?.nilIfEmpty
-            ?: rawImageURL?.trim()?.nilIfEmpty
+    val displaySource: String? get() = allImages.firstOrNull()
+
+    val hasAIOutput: Boolean
+        get() = (aiVerifiedOutputURLs + generatedImageURLs + listOfNotNull(processedImageURL)).any { it.isNotBlank() }
+
+    val isProcessing: Boolean
+        get() = aiProcessingState?.lowercase() in setOf("queued", "pending", "uploaded", "processing", "analyzing", "generating", "running") ||
+            (aiProcessingState == null && !hasAIOutput && !rawImageURL.isNullOrBlank())
+
+    val processingLabel: String?
+        get() = when {
+            aiProcessingState?.lowercase() in setOf("failed", "error") -> "AI processing failed"
+            isProcessing -> "AI processing"
+            !hasAIOutput -> "No AI output yet"
+            else -> null
+        }
+
+    fun originalFor(displayUrl: String?): String? = allImages.firstOrNull {
+        it == displayUrl || imageVariants[it]?.values?.contains(displayUrl) == true
+    }
 
     /**
      * The display image, at the size the view actually draws.
@@ -99,21 +113,7 @@ data class Product(
      * source first, then the generated set — matching §8.3 exactly.
      */
     fun thumbnailUrls(size: ImageSize = ImageSize.CARD): List<String> {
-        val seen = mutableSetOf<String>()
-        val ordered = mutableListOf<String>()
-        val priority = if (showcaseImageURLs.isEmpty()) {
-            generatedImageURLs + listOfNotNull(processedImageURL, imageURL) + customImageURLs + listOfNotNull(rawImageURL)
-        } else {
-            showcaseImageURLs
-        }
-
-        for (raw in priority) {
-            val trimmed = raw.trim()
-            if (trimmed.isNotEmpty() && seen.add(trimmed)) {
-                ordered.add(trimmed)
-            }
-        }
-        return ordered.take(4).mapNotNull { url(it, size) }
+        return allImages.take(4).map { url(it, size) }
     }
 
     /**
@@ -135,13 +135,8 @@ data class Product(
     val inStock: Boolean get() = stockAvailable == true
     val allImages: List<String>
         get() {
-            val list = mutableListOf<String>()
-            showcaseImageURLs.forEach { if (it.isNotBlank() && !list.contains(it)) list.add(it) }
-            generatedImageURLs.forEach { if (it.isNotBlank() && !list.contains(it)) list.add(it) }
-            processedImageURL?.let { if (it.isNotBlank() && !list.contains(it)) list.add(it) }
-            imageURL?.let { if (it.isNotBlank() && !list.contains(it)) list.add(it) }
-            customImageURLs.forEach { if (it.isNotBlank() && !list.contains(it)) list.add(it) }
-            rawImageURL?.let { if (it.isNotBlank() && !list.contains(it)) list.add(it) }
-            return list
+            return (showcaseImageURLs + aiVerifiedOutputURLs + generatedImageURLs +
+                listOfNotNull(processedImageURL, imageURL) + customImageURLs + listOfNotNull(rawImageURL))
+                .map { it.trim() }.filter { it.isNotEmpty() }.distinct()
         }
 }

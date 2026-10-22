@@ -31,7 +31,7 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Storefront
-import androidx.compose.material.icons.outlined.Chat
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.ShoppingBag
@@ -518,7 +518,7 @@ fun EmployeePillNav(
                 tab = EmployeeTab.Queries,
                 label = "Queries",
                 selectedIcon = Icons.AutoMirrored.Filled.Chat,
-                unselectedIcon = Icons.Outlined.Chat,
+                unselectedIcon = Icons.AutoMirrored.Outlined.Chat,
                 isSelected = selectedTab == EmployeeTab.Queries,
                 hasPing = hasUnreadQueries,
                 onClick = { onSelectTab(EmployeeTab.Queries) }

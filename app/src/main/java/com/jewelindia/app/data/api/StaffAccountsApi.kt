@@ -4,6 +4,7 @@ package com.jewelindia.app.data.api
 import com.jewelindia.app.core.text.Copy
 import com.jewelindia.app.data.net.AuthToken
 import com.jewelindia.app.data.net.EdgeFunctions
+import com.jewelindia.app.data.supabase.JewelJson
 import com.jewelindia.app.data.supabase.JewelSupabase
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order
@@ -12,6 +13,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonObject
 
 class StaffApiException(message: String) : RuntimeException(message)
 
@@ -64,10 +67,9 @@ object StaffAccountsApi {
 
     private suspend fun invoke(request: Request): Reply {
         val token = AuthToken.fresh()
-            ?: throw StaffApiException("Please sign in again.")
 
         return try {
-            EdgeFunctions.invoke<Reply>("staff-accounts", body = request, token = token)
+            EdgeFunctions.invoke<Reply>("staff-accounts", body = JewelJson.encodeToJsonElement(request).jsonObject, token = token)
         } catch (e: Exception) {
             throw StaffApiException(e.message ?: "Staff accounts aren't reachable right now. Please try again.")
         }

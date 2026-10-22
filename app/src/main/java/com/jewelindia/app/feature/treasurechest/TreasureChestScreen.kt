@@ -266,7 +266,7 @@ fun TreasureChestScreen(
                                 )
                                 if (!price.description.isNullOrBlank()) {
                                     Text(
-                                        text = price.description ?: "",
+                                        text = price.description,
                                         style = Typography.santoshi(12.sp),
                                         color = Palette.muted
                                     )

@@ -79,8 +79,8 @@ fun EmployeeHomeScreen(
     onOpenCanvas: () -> Unit,
     onOpenDetail: (Product) -> Unit,
     onOpenStylePicker: () -> Unit,
-    onOpenProfile: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenProfile: () -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
     val storeState by store.state.collectAsState()

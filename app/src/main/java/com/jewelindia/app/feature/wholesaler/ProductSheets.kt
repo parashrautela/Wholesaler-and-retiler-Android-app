@@ -130,7 +130,7 @@ fun AddProductSuccessView(
                 text = if (savedAsDraft) {
                     "Your product details are saved as a draft. Add a photo and submit it whenever you're ready."
                 } else {
-                    "Your design is in good hands. We've received your photo and details. Our AI is getting to work — you'll see your studio-ready images within 24 hours."
+                    "Your photo has been submitted for AI processing. Return to your catalogue to see its progress and finished images."
                 },
                 style = Typography.santoshi(16.sp),
                 color = Color(0xFF6B6B6B),

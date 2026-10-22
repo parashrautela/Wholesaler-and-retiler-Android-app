@@ -1,0 +1,62 @@
+[
+  {
+    "screen": "onboard",
+    "alive_after_1_5s": false,
+    "launch_returncode": 0
+  },
+  {
+    "screen": "onboard2",
+    "alive_after_1_5s": false,
+    "launch_returncode": 0
+  },
+  {
+    "screen": "onboard3",
+    "alive_after_1_5s": true,
+    "launch_returncode": 0
+  },
+  {
+    "screen": "entry-wholesaler",
+    "alive_after_1_5s": true,
+    "launch_returncode": 0
+  },
+  {
+    "screen": "signin",
+    "alive_after_1_5s": true,
+    "launch_returncode": 0
+  },
+  {
+    "screen": "upload-card",
+    "alive_after_1_5s": true,
+    "launch_returncode": 0
+  },
+  {
+    "screen": "invite-card",
+    "alive_after_1_5s": true,
+    "launch_returncode": 0
+  },
+  {
+    "screen": "chamak-hub-empty",
+    "alive_after_1_5s": true,
+    "launch_returncode": 0
+  },
+  {
+    "screen": "chamak-picker-sample",
+    "alive_after_1_5s": true,
+    "launch_returncode": 0
+  },
+  {
+    "screen": "chamak-result",
+    "alive_after_1_5s": true,
+    "launch_returncode": 0
+  },
+  {
+    "screen": "chamak-viewer",
+    "alive_after_1_5s": true,
+    "launch_returncode": 0
+  },
+  {
+    "screen": "setcreation-styling",
+    "alive_after_1_5s": true,
+    "launch_returncode": 0
+  }
+]

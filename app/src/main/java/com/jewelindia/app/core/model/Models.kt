@@ -1,6 +1,7 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Core/Models.swift
 package com.jewelindia.app.core.model
 
+import androidx.annotation.Keep
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -8,6 +9,7 @@ import kotlinx.serialization.Serializable
  * The three roles stored in `auth.users.raw_user_meta_data.role` and mirrored
  * into `public.profiles.role`.
  */
+@Keep
 @Serializable
 enum class UserRole {
     @SerialName("wholesaler") wholesaler,

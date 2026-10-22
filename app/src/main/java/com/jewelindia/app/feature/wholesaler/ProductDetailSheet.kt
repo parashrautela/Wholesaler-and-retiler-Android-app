@@ -26,6 +26,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.outlined.Diamond
+import androidx.compose.material.icons.outlined.Fullscreen
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -46,8 +49,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.SecureFlagPolicy
+import com.jewelindia.app.core.consent.AIConsent
+import com.jewelindia.app.core.consent.rememberAIConsentRequest
 import com.jewelindia.app.core.images.PickedFile
 import com.jewelindia.app.core.model.Product
+import com.jewelindia.app.core.model.ImageSize
 import com.jewelindia.app.core.model.UploadUsage
 import com.jewelindia.app.core.security.ProtectedImage
 import com.jewelindia.app.data.api.WholesalerApi
@@ -55,6 +64,9 @@ import com.jewelindia.app.design.JewelWeight
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.cirka
 import com.jewelindia.app.design.manrope
+import com.jewelindia.app.feature.wholesaler.chamak.ChamakImageViewer
+import com.jewelindia.app.feature.wholesaler.chamak.ChamakViewerImage
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -69,8 +81,10 @@ fun ProductDetailSheet(
     onUpdated: ((Product) -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
+    val requestAIConsent = rememberAIConsentRequest(wholesalerId)
     var currentProduct by remember(product) { mutableStateOf(product) }
-    var activeImageURL by remember(product) { mutableStateOf(currentProduct.displayImageUrl()) }
+    var activeImageURL by remember(product) { mutableStateOf(currentProduct.displayImageUrl(ImageSize.DETAIL)) }
+    var viewerImageURL by remember(product) { mutableStateOf<String?>(null) }
     var isPublished by remember(product) { mutableStateOf(currentProduct.isPublished == true) }
     var inStock by remember(product) { mutableStateOf(currentProduct.stockAvailable != false) }
     var usage by remember { mutableStateOf<UploadUsage?>(null) }
@@ -97,15 +111,16 @@ fun ProductDetailSheet(
         "Upload Image to AI"
     }
 
-    fun startReprocess(baseFile: PickedFile?) {
+    fun startReprocess(baseFile: PickedFile?, imageCount: Int) {
         reprocess.status = "Initiating re-upload..."
         scope.launch {
             try {
+                AIConsent.requireGranted(wholesalerId)
                 reprocess.status = "Clearing old images..."
                 WholesalerApi.clearProductImages(currentProduct.id, wholesalerId)
 
                 reprocess.status = "Queueing AI pipeline..."
-                WholesalerApi.reprocessProduct(currentProduct.id, wholesalerId, baseFile)
+                WholesalerApi.reprocessProduct(currentProduct.id, wholesalerId, baseFile, imageCount)
 
                 reprocess.status = "AI processing in progress..."
                 val urls = pollReprocess(
@@ -118,13 +133,15 @@ fun ProductDetailSheet(
                     generatedImageURLs = urls
                 )
                 currentProduct = updated
-                activeImageURL = updated.displayImageUrl()
+                activeImageURL = updated.displayImageUrl(ImageSize.DETAIL)
                 onUpdated?.invoke(updated)
                 usage = try { WholesalerApi.fetchUploadUsage(wholesalerId) } catch (_: Exception) { null }
 
                 reprocess.status = "Processing complete!"
                 delay(1500)
                 reprocess.reset()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 reprocess.failure = e.message ?: "Failed to reprocess product."
             }
@@ -207,6 +224,19 @@ fun ProductDetailSheet(
                             contentScale = ContentScale.Fit,
                             modifier = Modifier.fillMaxSize()
                         )
+                        Button(
+                            onClick = {
+                                viewerImageURL = currentProduct.originalFor(url)
+                                    ?.let { currentProduct.url(it, ImageSize.FULL) }
+                                    ?: currentProduct.displayImageUrl(ImageSize.FULL)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Black.copy(alpha = 0.7f)),
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp)
+                        ) {
+                            Icon(Icons.Outlined.Fullscreen, contentDescription = null)
+                            Spacer(Modifier.width(6.dp))
+                            Text("Full view")
+                        }
                     } else {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -241,10 +271,13 @@ fun ProductDetailSheet(
                                     .background(Palette.cream)
                                     .border(
                                         width = 2.dp,
-                                        color = if (thumbUrl == activeImageURL) Palette.dark.copy(alpha = 0.3f) else Color.Transparent,
+                                        color = if (currentProduct.originalFor(thumbUrl) == currentProduct.originalFor(activeImageURL)) Palette.dark.copy(alpha = 0.3f) else Color.Transparent,
                                         shape = RoundedCornerShape(10.dp)
                                     )
-                                    .clickable { activeImageURL = thumbUrl }
+                                    .clickable {
+                                        activeImageURL = currentProduct.originalFor(thumbUrl)
+                                            ?.let { currentProduct.url(it, ImageSize.DETAIL) } ?: thumbUrl
+                                    }
                             ) {
                                 ProtectedImage(
                                     url = thumbUrl,
@@ -414,12 +447,28 @@ fun ProductDetailSheet(
         }
     }
 
+    viewerImageURL?.let { url ->
+        Dialog(
+            onDismissRequest = { viewerImageURL = null },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false,
+                securePolicy = SecureFlagPolicy.SecureOn
+            )
+        ) {
+            ChamakImageViewer(
+                images = listOf(ChamakViewerImage(currentProduct.id, currentProduct.title ?: "Product", url)),
+                onDismiss = { viewerImageURL = null }
+            )
+        }
+    }
+
     if (showReprocessConfirm) {
         ReprocessConfirmSheet(
             hasImages = currentProduct.hasDisplayImage,
-            onConfirm = { file ->
+            onConfirm = { file, imageCount ->
                 showReprocessConfirm = false
-                startReprocess(file)
+                requestAIConsent { startReprocess(file, imageCount) }
             },
             onDismiss = { showReprocessConfirm = false }
         )

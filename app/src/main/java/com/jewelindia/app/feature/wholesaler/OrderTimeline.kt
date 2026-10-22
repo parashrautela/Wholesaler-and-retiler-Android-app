@@ -195,8 +195,8 @@ fun OrderStatusBadge(
 @Composable
 fun OrderDesignThumb(
     imageUrl: String?,
-    size: Dp = 72.dp,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    size: Dp = 72.dp
 ) {
     Box(
         modifier = modifier

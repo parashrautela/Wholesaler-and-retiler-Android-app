@@ -1,6 +1,7 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Features/Onboarding/OnboardKit.swift
 package com.jewelindia.app.feature.onboarding
 
+import com.jewelindia.app.design.components.SvgImage
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
@@ -9,7 +10,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -50,12 +50,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jewelindia.app.R
 import kotlinx.coroutines.launch
 
 object OnboardColor {
@@ -226,8 +224,8 @@ fun LeftPanel(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(bottom = 20.dp)
         ) {
-            Image(
-                painter = painterResource(id = R.mipmap.ic_launcher),
+            SvgImage(
+                name = "JewelLogo",
                 contentDescription = "Jewel Logo",
                 modifier = Modifier
                     .size(32.dp)

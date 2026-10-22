@@ -41,8 +41,8 @@ fun Modifier.pressScale(
 @Composable
 fun SvgImage(
     name: String,
-    contentDescription: String? = null,
     modifier: Modifier = Modifier,
+    contentDescription: String? = null,
     colorFilter: ColorFilter? = null,
     contentScale: ContentScale = ContentScale.Fit
 ) {

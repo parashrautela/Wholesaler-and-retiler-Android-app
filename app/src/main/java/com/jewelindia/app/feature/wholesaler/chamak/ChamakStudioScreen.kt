@@ -1,9 +1,11 @@
 // Facade and Preview definitions for Chamak Studio
 package com.jewelindia.app.feature.wholesaler.chamak
 
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,6 +22,7 @@ import com.jewelindia.app.data.api.Stage1Analysis
 
 @Composable
 fun ChamakStudioScreen(
+    modifier: Modifier = Modifier,
     wholesalerUserId: String = "",
     wholesaler: Wholesaler? = null,
     sessionStore: SessionStore? = null,
@@ -36,6 +39,7 @@ fun ChamakStudioScreen(
     } else {
         ChamakHubScreen(
             wholesalerId = resolvedUserId,
+            modifier = modifier,
             catalogueSource = catalogueSource,
             onClose = onClose
         )
@@ -59,7 +63,7 @@ fun ChamakHubScreenPreview() {
 @Composable
 fun ChamakCatalogPickerScreenPreview() {
     JewelTheme {
-        val vm = ChamakViewModel()
+        val vm = viewModel<ChamakViewModel>()
         ChamakCatalogPickerScreen(
             vm = vm,
             wholesalerId = "test-wholesaler"
@@ -71,7 +75,7 @@ fun ChamakCatalogPickerScreenPreview() {
 @Composable
 fun ChamakSliderFormScreenPreview() {
     JewelTheme {
-        val vm = ChamakViewModel().apply {
+        val vm = viewModel { ChamakViewModel().apply {
             currentGeneration = ChamakGeneration(
                 id = "gen-1",
                 wholesalerId = "wholesaler-1",
@@ -84,7 +88,7 @@ fun ChamakSliderFormScreenPreview() {
                     image2Strengths = listOf("Emerald centerpiece", "Matte finish")
                 )
             )
-        }
+        } }
         ChamakSliderFormScreen(
             vm = vm,
             wholesalerId = "test-wholesaler"
@@ -96,9 +100,9 @@ fun ChamakSliderFormScreenPreview() {
 @Composable
 fun ChamakSetStylingScreenPreview() {
     JewelTheme {
-        val vm = ChamakViewModel().apply {
+        val vm = viewModel { ChamakViewModel().apply {
             mode = ChamakMode.SetCreation
-        }
+        } }
         ChamakSetStylingScreen(
             vm = vm,
             wholesalerId = "test-wholesaler"
@@ -110,9 +114,9 @@ fun ChamakSetStylingScreenPreview() {
 @Composable
 fun ChamakGeneratingScreenPreview() {
     JewelTheme {
-        val vm = ChamakViewModel().apply {
+        val vm = viewModel { ChamakViewModel().apply {
             step = ChamakViewModel.Step.Generating
-        }
+        } }
         ChamakGeneratingScreen(vm = vm)
     }
 }
@@ -121,7 +125,7 @@ fun ChamakGeneratingScreenPreview() {
 @Composable
 fun ChamakResultScreenPreview() {
     JewelTheme {
-        val vm = ChamakViewModel().apply {
+        val vm = viewModel { ChamakViewModel().apply {
             currentGeneration = ChamakGeneration(
                 id = "gen-1",
                 wholesalerId = "wholesaler-1",
@@ -133,7 +137,7 @@ fun ChamakResultScreenPreview() {
             )
             signedOutputImageURL = "https://example.com/output.png"
             step = ChamakViewModel.Step.Result
-        }
+        } }
         ChamakResultScreen(
             vm = vm,
             wholesalerId = "test-wholesaler"
@@ -145,7 +149,7 @@ fun ChamakResultScreenPreview() {
 @Composable
 fun ChamakGalleryScreenPreview() {
     JewelTheme {
-        val vm = ChamakViewModel().apply {
+        val vm = viewModel { ChamakViewModel().apply {
             galleryGenerations = listOf(
                 ChamakGeneration(
                     id = "gen-1",
@@ -168,7 +172,7 @@ fun ChamakGalleryScreenPreview() {
                     outputImageURL = "https://example.com/output2.png"
                 )
             )
-        }
+        } }
         ChamakGalleryScreen(
             vm = vm,
             wholesalerId = "test-wholesaler"

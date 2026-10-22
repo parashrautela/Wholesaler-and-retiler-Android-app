@@ -1,7 +1,7 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Features/Onboarding/OnboardingFeeSheet.swift
 package com.jewelindia.app.feature.onboarding
 
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -98,7 +98,7 @@ fun OnboardingFeeSheet(
             waitingForTabReturn = true
 
             val customTabsIntent = CustomTabsIntent.Builder().build()
-            customTabsIntent.launchUrl(context, Uri.parse(url))
+            customTabsIntent.launchUrl(context, url.toUri())
         } catch (e: Exception) {
             phase = FeePhase.Failed(e.message ?: "Failed to open payment page.")
         }

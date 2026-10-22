@@ -8,6 +8,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,7 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.Palette
@@ -182,6 +183,7 @@ fun RetailerShell(sessionStore: SessionStore) {
     // Chamak Studio overlay (full screen)
     if (showChamakStudio) {
         ChamakStudioScreen(
+            modifier = Modifier.safeDrawingPadding(),
             wholesaler = null,
             sessionStore = sessionStore,
             catalogueSource = ChamakCatalogueSource.StoreDesigns,
@@ -406,7 +408,7 @@ fun RetailerShell(sessionStore: SessionStore) {
 
                             DropdownMenuItem(
                                 text = { Text("Log Out", color = Palette.textSecondary) },
-                                leadingIcon = { Icon(Icons.Filled.ExitToApp, contentDescription = null, tint = Palette.textSecondary) },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = Palette.textSecondary) },
                                 onClick = {
                                     showTopMenu = false
                                     scope.launch { sessionStore.signOut() }

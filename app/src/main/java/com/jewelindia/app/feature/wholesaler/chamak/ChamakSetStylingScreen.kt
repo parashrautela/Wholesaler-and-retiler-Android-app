@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,11 +38,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
+import com.jewelindia.app.core.consent.rememberAIConsentRequest
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,7 +62,6 @@ import com.jewelindia.app.data.api.ChamakDesignItem
 import com.jewelindia.app.data.api.ChamakSlot
 import com.jewelindia.app.data.api.SetBackdrop
 import com.jewelindia.app.data.api.SetStylingChip
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -70,7 +70,7 @@ fun ChamakSetStylingScreen(
     wholesalerId: String,
     modifier: Modifier = Modifier
 ) {
-    val scope = rememberCoroutineScope()
+    val requestAIConsent = rememberAIConsentRequest(wholesalerId)
     val scrollState = rememberScrollState()
     var previewImage by remember { mutableStateOf<ChamakViewerImage?>(null) }
 
@@ -90,7 +90,7 @@ fun ChamakSetStylingScreen(
             ) {
                 IconButton(
                     onClick = { vm.resetToPicker() },
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -289,13 +289,15 @@ fun ChamakSetStylingScreen(
             ) {
                 Button(
                     onClick = {
-                        scope.launch {
-                            vm.submitSetAndGenerate(wholesalerId)
+                        requestAIConsent {
+                            vm.runAction {
+                                vm.submitSetAndGenerate(wholesalerId)
+                            }
                         }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp),
+                        .heightIn(min = 54.dp),
                     shape = RoundedCornerShape(27.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF212120)),
                     enabled = !vm.isSubmitting

@@ -1,6 +1,7 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Features/Wholesaler/Chamak/ChamakResultView.swift
 package com.jewelindia.app.feature.wholesaler.chamak
 
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,6 +30,7 @@ import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -74,17 +77,20 @@ fun ChamakResultScreen(
     val scrollState = rememberScrollState()
 
     var showImageViewer by remember { mutableStateOf(false) }
-    var viewerStartIndex by remember { mutableStateOf(0) }
+    var viewerStartIndex by remember { mutableIntStateOf(0) }
 
     val isSet = vm.mode == ChamakMode.SetCreation
     val gen = vm.currentGeneration
     val isFailed = vm.step == ChamakViewModel.Step.Failed
 
     // Collect viewer images
-    val viewerImages = remember(gen, vm.signedFullOutputImageURL, vm.signedOutputImageURL) {
+    val viewerImages = remember(gen, vm.signedFullOutputImageURL, vm.signedOutputImageURL, vm.signedOutputImageURLs) {
         buildList {
             val outputUrl = vm.signedFullOutputImageURL ?: vm.signedOutputImageURL
             if (outputUrl != null) add(ChamakViewerImage("result", if (isSet) "Your Set" else "Final Design", outputUrl, isResult = true))
+            vm.signedOutputImageURLs.drop(1).forEachIndexed { index, url ->
+                add(ChamakViewerImage("output-${index + 2}", "Output ${index + 2}", url, isResult = true))
+            }
             listOfNotNull(
                 (gen?.sourceImage1URL ?: vm.selectedDesign1?.imageURL)?.let { ChamakViewerImage("source1", if (isSet) "Piece 1" else "Core design", it) },
                 (gen?.sourceImage2URL ?: vm.selectedDesign2?.imageURL)?.let { ChamakViewerImage("source2", if (isSet) "Piece 2" else "New direction", it) },
@@ -110,7 +116,7 @@ fun ChamakResultScreen(
             ) {
                 IconButton(
                     onClick = { vm.resetToPicker() },
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -234,6 +240,28 @@ fun ChamakResultScreen(
                         )
                     }
 
+                    vm.retrievalMessage?.let { message ->
+                        Text(message, color = Palette.muted)
+                        TextButton(onClick = { vm.runAction { gen?.let { vm.signOutputs(it) } } }) {
+                            Text("Retry loading output")
+                        }
+                    }
+
+                    if (vm.signedOutputImageURLs.size > 1) {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(vm.signedOutputImageURLs.size) { index ->
+                                ProtectedImage(
+                                    url = vm.signedOutputImageURLs[index],
+                                    contentDescription = "Open output ${index + 1}",
+                                    modifier = Modifier.size(72.dp).clickable {
+                                        viewerStartIndex = index
+                                        showImageViewer = true
+                                    }
+                                )
+                            }
+                        }
+                    }
+
                     // Main Result Card
                     val signedUrl = vm.signedFullOutputImageURL ?: vm.signedOutputImageURL
                     Box(
@@ -258,6 +286,7 @@ fun ChamakResultScreen(
                             if (signedUrl != null) {
                                 ProtectedImage(
                                     url = signedUrl,
+                                    fallbackUrl = vm.signedOriginalOutputImageURL,
                                     contentDescription = "Chamak Output",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
@@ -270,7 +299,7 @@ fun ChamakResultScreen(
                                     modifier = Modifier
                                         .align(Alignment.TopEnd)
                                         .padding(10.dp)
-                                        .size(28.dp)
+                                        .size(48.dp)
                                         .background(Color.White.copy(alpha = 0.95f), CircleShape)
                                 ) {
                                     Icon(
@@ -286,13 +315,13 @@ fun ChamakResultScreen(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    CircularProgressIndicator(
+                                    if (vm.retrievalMessage == null) CircularProgressIndicator(
                                         color = Color(0xFFCA8A04),
                                         modifier = Modifier.size(24.dp),
                                         strokeWidth = 2.dp
                                     )
                                     Text(
-                                        text = "Loading private image...",
+                                        text = if (vm.retrievalMessage == null) "Loading private image..." else "Image unavailable. Use Retry loading output.",
                                         fontFamily = Manrope,
                                         fontSize = 12.sp,
                                         color = Palette.muted
@@ -452,7 +481,7 @@ fun ChamakResultScreen(
                             onClick = { vm.reviseAndRetry() },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(54.dp),
+                                .heightIn(min = 54.dp),
                             shape = RoundedCornerShape(27.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color.White,
@@ -479,7 +508,7 @@ fun ChamakResultScreen(
                             onClick = { vm.reviseAndRetry() },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(54.dp),
+                                .heightIn(min = 54.dp),
                             shape = RoundedCornerShape(27.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Palette.dark)
                         ) {

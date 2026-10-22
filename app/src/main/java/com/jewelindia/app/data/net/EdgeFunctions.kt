@@ -5,7 +5,6 @@ import com.jewelindia.app.core.config.AppConfig
 import com.jewelindia.app.data.supabase.JewelJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -17,19 +16,14 @@ import okhttp3.RequestBody.Companion.toRequestBody
 object EdgeFunctions {
     suspend inline fun <reified T : Any> invoke(
         name: String,
-        body: Any? = null,
+        body: JsonObject? = null,
         token: String? = null,
         fallbackErrorMessage: String = "Operation failed. Please try again."
     ): T = withContext(Dispatchers.IO) {
         val authToken = token ?: AuthToken.fresh()
         val url = "${AppConfig.supabaseURL.trimEnd('/')}/functions/v1/$name"
 
-        val jsonBody = when (body) {
-            null -> "{}"
-            is String -> body
-            is JsonObject -> body.toString()
-            else -> JewelJson.encodeToString(body)
-        }
+        val jsonBody = body?.toString() ?: "{}"
 
         val request = Request.Builder()
             .url(url)
@@ -40,7 +34,7 @@ object EdgeFunctions {
             .build()
 
         HttpClients.plain.newCall(request).execute().use { response ->
-            val bodyString = response.body?.string().orEmpty()
+            val bodyString = response.body.string()
             if (!response.isSuccessful) {
                 val errorMsg = try {
                     val elem = Json.parseToJsonElement(bodyString).jsonObject

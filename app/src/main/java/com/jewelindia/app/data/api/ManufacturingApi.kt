@@ -102,7 +102,7 @@ object ManufacturingApi {
             .build()
 
         http.pipeline.newCall(req).execute().use { response ->
-            val body = response.body?.string().orEmpty()
+            val body = response.body.string()
             if (!response.isSuccessful) {
                 val detail = runCatching {
                     JewelJson.decodeFromString(FastApiDetailError.serializer(), body).detail
@@ -250,7 +250,7 @@ object ManufacturingApi {
         }
 
         return http.pipeline.newCall(reqBuilder.build()).execute().use { response ->
-            val body = response.body?.string().orEmpty()
+            val body = response.body.string()
             if (!response.isSuccessful) {
                 val detail = runCatching {
                     JewelJson.decodeFromString(FastApiDetailError.serializer(), body).detail

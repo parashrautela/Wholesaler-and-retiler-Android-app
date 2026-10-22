@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,6 +26,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.activity.compose.BackHandler
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
+import androidx.compose.material3.TextButton
+import androidx.lifecycle.createSavedStateHandle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,36 +70,49 @@ data class ChamakLaunch(
 @Composable
 fun ChamakHubScreen(
     wholesalerId: String,
+    modifier: Modifier = Modifier,
     catalogueSource: ChamakCatalogueSource = ChamakCatalogueSource.OwnProducts,
     previewViewModel: ChamakViewModel? = null,
-    onClose: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onClose: (() -> Unit)? = null
 ) {
-    var launch by remember { mutableStateOf<ChamakLaunch?>(null) }
-    val galleryVm = previewViewModel ?: remember {
-        ChamakViewModel().apply {
-            this.catalogueSource = catalogueSource
+    val galleryVm = previewViewModel ?: viewModel<ChamakViewModel>(
+        key = "chamak/$wholesalerId/${catalogueSource.name}",
+        factory = viewModelFactory {
+            initializer { ChamakViewModel(savedStateHandle = createSavedStateHandle()) }
         }
-    }
+    )
+    val launch = galleryVm.activeLaunch
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    BackHandler(enabled = launch == null && onClose != null) { onClose?.invoke() }
 
-    LaunchedEffect(wholesalerId) {
-        if (previewViewModel == null) {
-            galleryVm.refreshGallery(wholesalerId)
+    LaunchedEffect(wholesalerId, launch, lifecycle) {
+        if (previewViewModel == null && launch == null) {
+            galleryVm.catalogueSource = catalogueSource
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                repeat(80) {
+                    galleryVm.refreshGallery(wholesalerId)
+                    if (!galleryVm.isSubmitting && galleryVm.galleryGenerations.none {
+                        it.status !in listOf(com.jewelindia.app.data.api.ChamakStatus.Done, com.jewelindia.app.data.api.ChamakStatus.Failed, com.jewelindia.app.data.api.ChamakStatus.AwaitingInput)
+                    }) return@repeatOnLifecycle
+                    delay(5000)
+                }
+            }
         }
     }
 
     val activeLaunch = launch
     if (activeLaunch != null) {
-        ChamakFlowCoordinator(
-            wholesalerId = wholesalerId,
-            mode = activeLaunch.mode,
-            openingGeneration = activeLaunch.generation,
-            catalogueSource = catalogueSource,
-            onClose = {
-                launch = null
-                galleryVm.resetToPicker()
-            }
-        )
+        Dialog(
+            onDismissRequest = { galleryVm.closeFlow() },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        ) {
+            ChamakFlowCoordinator(
+                wholesalerId = wholesalerId,
+                vm = galleryVm,
+                modifier = modifier,
+                onClose = { galleryVm.closeFlow() }
+            )
+        }
     } else {
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
@@ -103,6 +129,7 @@ fun ChamakHubScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
+                    if (onClose != null) TextButton(onClick = onClose) { Text("Back to store") }
                     Text(
                         text = "Chamak Studio",
                         fontSize = 34.sp,
@@ -113,13 +140,13 @@ fun ChamakHubScreen(
 
                     // Chamak Studio Card
                     ChamakToolCard(
-                        onClick = { launch = ChamakLaunch(ChamakMode.Fusion) }
+                        onClick = { galleryVm.beginFlow(ChamakMode.Fusion) }
                     )
 
                     // Set Creation Card
                     if (catalogueSource == ChamakCatalogueSource.OwnProducts) {
                         ChamakSetCreationCard(
-                            onClick = { launch = ChamakLaunch(ChamakMode.SetCreation) }
+                            onClick = { galleryVm.beginFlow(ChamakMode.SetCreation) }
                         )
                     }
 
@@ -157,13 +184,24 @@ fun ChamakHubScreen(
                 }
             }
 
+            galleryVm.galleryErrorMessage?.let { message ->
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Column {
+                        Text(message, color = Palette.muted)
+                        TextButton(onClick = { galleryVm.runAction { galleryVm.refreshGallery(wholesalerId) } }) {
+                            Text("Retry gallery")
+                        }
+                    }
+                }
+            }
+
             // Gallery Cards
             if (galleryVm.isRefreshingGallery && galleryVm.galleryGenerations.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(180.dp),
+                            .heightIn(min = 180.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(color = Palette.dark)
@@ -210,7 +248,7 @@ fun ChamakHubScreen(
                         generation = gen,
                         thumbnailURL = galleryVm.galleryThumbnailURLs[gen.id],
                         onClick = {
-                            launch = ChamakLaunch(mode = gen.mode, generation = gen)
+                            galleryVm.beginFlow(gen.mode, gen)
                         }
                     )
                 }
@@ -227,7 +265,7 @@ private fun ChamakToolCard(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(180.dp)
+            .heightIn(min = 180.dp)
             .clip(RoundedCornerShape(24.dp))
             .background(Color(0xFFEDEDF0))
             .border(1.dp, Color(0xFFE5E5EA), RoundedCornerShape(24.dp))
@@ -293,7 +331,7 @@ private fun ChamakSetCreationCard(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(180.dp)
+            .heightIn(min = 180.dp)
             .clip(RoundedCornerShape(24.dp))
             .background(Color(0xFFEDEDF0))
             .border(1.dp, Color(0xFFE5E5EA), RoundedCornerShape(24.dp))

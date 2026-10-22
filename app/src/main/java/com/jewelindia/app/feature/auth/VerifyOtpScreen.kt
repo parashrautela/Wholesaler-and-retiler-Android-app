@@ -1,6 +1,7 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Features/Auth/VerifyOTPView.swift
 package com.jewelindia.app.feature.auth
 
+import java.util.Locale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -88,7 +89,7 @@ fun VerifyOtpScreen(
     }
 
     val formatSeconds: (Int) -> String = { sec ->
-        String.format("%02d:%02d", sec / 60, sec % 60)
+        String.format(Locale.ROOT, "%02d:%02d", sec / 60, sec % 60)
     }
 
     AuthLayout(

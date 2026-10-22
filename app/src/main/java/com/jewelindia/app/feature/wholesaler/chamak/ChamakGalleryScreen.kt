@@ -71,7 +71,7 @@ fun ChamakGalleryScreen(
         ) {
             IconButton(
                 onClick = { vm.step = ChamakViewModel.Step.CatalogPicker },
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(48.dp)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -211,7 +211,7 @@ fun ChamakGalleryScreen(
                         generation = gen,
                         thumbnailURL = vm.galleryThumbnailURLs[gen.id],
                         onClick = {
-                            scope.launch {
+                            vm.runAction {
                                 vm.openGalleryItem(gen)
                             }
                         }

@@ -41,11 +41,11 @@ class SoftBlossomShape : Shape {
             }
             val ctrl1X = ((p1X + tipX) / 2f + cos(angleMid) * 5f).toFloat()
             val ctrl1Y = ((p1Y + tipY) / 2f + sin(angleMid) * 5f).toFloat()
-            path.quadraticBezierTo(ctrl1X, ctrl1Y, tipX, tipY)
+            path.quadraticTo(ctrl1X, ctrl1Y, tipX, tipY)
 
             val ctrl2X = ((tipX + p2X) / 2f + cos(angleMid) * 5f).toFloat()
             val ctrl2Y = ((tipY + p2Y) / 2f + sin(angleMid) * 5f).toFloat()
-            path.quadraticBezierTo(ctrl2X, ctrl2Y, p2X, p2Y)
+            path.quadraticTo(ctrl2X, ctrl2Y, p2X, p2Y)
         }
         path.close()
         return Outline.Generic(path)
@@ -81,12 +81,12 @@ class SoftCabochonTrillionShape : Shape {
         val ctrlLeftY = midY - 2f
 
         path.moveTo(midX - 12f, minY + 12f)
-        path.quadraticBezierTo(pTopX, pTopY, midX + 12f, minY + 12f)
-        path.quadraticBezierTo(ctrlRightX, ctrlRightY, maxX - 8f, maxY - 18f)
-        path.quadraticBezierTo(pBottomRightX, pBottomRightY, maxX - 20f, maxY - 6f)
-        path.quadraticBezierTo(ctrlBottomX, ctrlBottomY, minX + 20f, maxY - 6f)
-        path.quadraticBezierTo(pBottomLeftX, pBottomLeftY, minX + 8f, maxY - 18f)
-        path.quadraticBezierTo(ctrlLeftX, ctrlLeftY, midX - 12f, minY + 12f)
+        path.quadraticTo(pTopX, pTopY, midX + 12f, minY + 12f)
+        path.quadraticTo(ctrlRightX, ctrlRightY, maxX - 8f, maxY - 18f)
+        path.quadraticTo(pBottomRightX, pBottomRightY, maxX - 20f, maxY - 6f)
+        path.quadraticTo(ctrlBottomX, ctrlBottomY, minX + 20f, maxY - 6f)
+        path.quadraticTo(pBottomLeftX, pBottomLeftY, minX + 8f, maxY - 18f)
+        path.quadraticTo(ctrlLeftX, ctrlLeftY, midX - 12f, minY + 12f)
         path.close()
         return Outline.Generic(path)
     }
@@ -131,7 +131,7 @@ class SoftTeardropGemShape : Shape {
         val bottomY = maxY
 
         path.moveTo(midX - 8f, minY + 16f)
-        path.quadraticBezierTo(topX, topY, midX + 8f, minY + 16f)
+        path.quadraticTo(topX, topY, midX + 8f, minY + 16f)
         path.cubicTo(
             maxX + 10f, midY + height * 0.15f,
             maxX - 6f, maxY,

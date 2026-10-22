@@ -1,0 +1,14 @@
+[
+  {
+    "screen": "onboard",
+    "alive_after_4s": true
+  },
+  {
+    "screen": "onboard2",
+    "alive_after_4s": true
+  },
+  {
+    "screen": "onboard3",
+    "alive_after_4s": true
+  }
+]

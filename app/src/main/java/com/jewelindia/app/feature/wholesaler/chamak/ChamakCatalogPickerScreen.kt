@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -48,6 +49,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import com.jewelindia.app.core.consent.rememberAIConsentRequest
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -76,6 +78,11 @@ import com.jewelindia.app.data.api.ChamakDesignItem
 import com.jewelindia.app.data.api.ChamakMode
 import com.jewelindia.app.data.api.ChamakSlot
 import com.jewelindia.app.data.api.JewelleryTypeCanonical
+import com.jewelindia.app.core.images.ImageNormalizer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withContext
+import androidx.compose.material3.TextButton
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -83,11 +90,12 @@ import kotlinx.coroutines.launch
 fun ChamakCatalogPickerScreen(
     vm: ChamakViewModel,
     wholesalerId: String,
-    onClose: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClose: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val requestAIConsent = rememberAIConsentRequest(wholesalerId)
 
     var selectedCategory by remember { mutableStateOf("All") }
     var previewImage by remember { mutableStateOf<ChamakViewerImage?>(null) }
@@ -100,14 +108,23 @@ fun ChamakCatalogPickerScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
-        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-        if (bytes != null && bytes.isNotEmpty()) {
-            if (vm.mode == ChamakMode.SetCreation) {
-                pendingUploadBytes = bytes
-                showTypePickerSheet = true
-            } else {
-                vm.setCustomImage(bytes, pendingUploadSlot)
-            }
+        scope.launch {
+            try {
+                val bytes = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        ImageNormalizer.jpeg(stream.readBytes(), ImageNormalizer.MAX_PRODUCT_DIMENSION)
+                    }
+                }
+                if (bytes == null || bytes.isEmpty()) {
+                    vm.errorMessage = "Couldn't read that photo. Choose another image."
+                } else if (vm.mode == ChamakMode.SetCreation) {
+                    pendingUploadBytes = bytes
+                    showTypePickerSheet = true
+                } else {
+                    vm.setCustomImage(bytes, pendingUploadSlot)
+                }
+            } catch (e: CancellationException) { throw e }
+            catch (_: Exception) { vm.errorMessage = "Couldn't open that photo. Please choose it again." }
         }
     }
 
@@ -142,7 +159,7 @@ fun ChamakCatalogPickerScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (onClose != null) {
-                    IconButton(onClick = onClose, modifier = Modifier.size(36.dp)) {
+                    IconButton(onClick = onClose, modifier = Modifier.size(48.dp)) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
@@ -267,11 +284,30 @@ fun ChamakCatalogPickerScreen(
                                 color = Color(0xFF92400E),
                                 modifier = Modifier.weight(1f)
                             )
-                            IconButton(onClick = { vm.errorMessage = null }, modifier = Modifier.size(24.dp)) {
+                            IconButton(onClick = { vm.errorMessage = null }, modifier = Modifier.size(48.dp)) {
                                 Icon(Icons.Default.Close, "Dismiss", tint = Color(0xFF92400E), modifier = Modifier.size(12.dp))
                             }
                         }
                     }
+                }
+
+                vm.catalogErrorMessage?.let { message ->
+                    item(span = { GridItemSpan(2) }) {
+                        Column {
+                            Text(message, color = Palette.muted)
+                            TextButton(onClick = { vm.runAction { vm.load(wholesalerId) } }) { Text("Retry catalogue") }
+                        }
+                    }
+                }
+                item(span = { GridItemSpan(2) }) {
+                    val count = vm.setPieces.size
+                    Text(
+                        text = if (vm.mode == ChamakMode.SetCreation)
+                            "$count of 2–4 pieces selected. Choose a different jewellery type for each piece."
+                        else "$count of 2 designs selected. Select two different images to continue.",
+                        color = Palette.muted,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
                 }
 
                 // Selection Slots
@@ -443,7 +479,7 @@ fun ChamakCatalogPickerScreen(
                             mode = vm.mode,
                             onClick = { vm.selectProduct(product) },
                             onZoom = {
-                                val url = product.processedImageURL ?: product.imageURL ?: product.rawImageURL
+                                val url = product.displaySource
                                 if (url != null) {
                                     previewImage = ChamakViewerImage(product.id, product.title ?: "Catalogue Design", url)
                                 }
@@ -468,7 +504,7 @@ fun ChamakCatalogPickerScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp)
+                        .heightIn(min = 54.dp)
                         .clip(RoundedCornerShape(27.dp))
                         .background(
                             if (isEnabled) {
@@ -482,8 +518,10 @@ fun ChamakCatalogPickerScreen(
                             }
                         )
                         .clickable(enabled = isEnabled) {
-                            scope.launch {
-                                vm.startVisionAnalysis(wholesalerId)
+                            requestAIConsent {
+                                vm.runAction {
+                                    vm.startVisionAnalysis(wholesalerId)
+                                }
                             }
                         },
                     contentAlignment = Alignment.Center

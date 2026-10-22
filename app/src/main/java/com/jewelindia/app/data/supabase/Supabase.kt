@@ -1,7 +1,7 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Networking/SupabaseManager.swift
 package com.jewelindia.app.data.supabase
 
-import android.net.Uri
+import androidx.core.net.toUri
 import com.jewelindia.app.BuildConfig
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
@@ -63,4 +63,4 @@ fun createJewelSupabase(): SupabaseClient = createSupabaseClient(
 }
 
 val projectRef: String
-    get() = Uri.parse(BuildConfig.SUPABASE_URL).host?.substringBefore('.') ?: ""
+    get() = BuildConfig.SUPABASE_URL.toUri().host?.substringBefore('.') ?: ""

@@ -28,11 +28,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -59,6 +62,7 @@ import com.jewelindia.app.core.security.ProtectedImage
 import com.jewelindia.app.data.api.WholesalerApi
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -92,7 +96,7 @@ fun EditProductScreen(
 
     val customImages = remember { mutableStateListOf<String>().apply { addAll(product.customImageURLs) } }
     val initialShowcase = if (product.showcaseImageURLs.isNotEmpty()) {
-        product.showcaseImageURLs
+        product.showcaseImageURLs.filter { it.isNotBlank() }.distinct().take(4)
     } else {
         (product.generatedImageURLs + listOfNotNull(product.processedImageURL, product.imageURL) +
                 product.customImageURLs + listOfNotNull(product.rawImageURL)).distinct().take(4)
@@ -100,34 +104,42 @@ fun EditProductScreen(
     val showcaseImages = remember { mutableStateListOf<String>().apply { addAll(initialShowcase) } }
 
     var isSaving by remember { mutableStateOf(false) }
+    var isUploading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
-        if (uri != null) {
-            val owner = product.wholesalerId ?: return@rememberLauncherForActivityResult
+        if (uri != null && !isUploading && !isSaving) {
+            isUploading = true
+            errorMessage = null
             scope.launch {
                 try {
-                    val bytes = withContext(Dispatchers.IO) {
-                        context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    val owner = product.wholesalerId?.takeIf { it.isNotBlank() }
+                        ?: error("Couldn't identify the product owner. Reopen the catalogue and try again.")
+                    val jpeg = withContext(Dispatchers.IO) {
+                        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                            ?: error("Couldn't read this photo. Please choose another image.")
+                        ImageNormalizer.jpeg(bytes, ImageNormalizer.MAX_PRODUCT_DIMENSION)
+                            ?: error("Couldn't read this photo. Please choose another image.")
                     }
-                    if (bytes != null) {
-                        val jpeg = ImageNormalizer.jpeg(bytes, ImageNormalizer.MAX_PRODUCT_DIMENSION) ?: bytes
-                        val path = "$owner/products/custom-${UUID.randomUUID()}.jpg"
-                        val url = WholesalerApi.upload("plant-images", path, jpeg, "image/jpeg")
-                        customImages.add(url)
-                        if (showcaseImages.size < 4) showcaseImages.add(url)
-                    }
+                    val path = "raw/${owner.lowercase()}/custom-${UUID.randomUUID()}.jpg"
+                    val url = WholesalerApi.upload("plant-images", path, jpeg, "image/jpeg", upsert = false)
+                    customImages.add(url)
+                    if (showcaseImages.size < 4) showcaseImages.add(url)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     errorMessage = "Couldn't upload your image: ${e.message}"
+                } finally {
+                    isUploading = false
                 }
             }
         }
     }
 
     val availableShowcase = remember(product, customImages.toList()) {
-        (product.generatedImageURLs + listOfNotNull(product.processedImageURL, product.imageURL) +
+        (product.showcaseImageURLs + product.aiVerifiedOutputURLs + product.generatedImageURLs + listOfNotNull(product.processedImageURL, product.imageURL) +
                 customImages + listOfNotNull(product.rawImageURL)).distinct()
     }
 
@@ -140,6 +152,7 @@ fun EditProductScreen(
     }
 
     fun saveChanges() {
+        if (isSaving || isUploading) return
         isSaving = true
         errorMessage = null
 
@@ -190,7 +203,7 @@ fun EditProductScreen(
     }
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isSaving && !isUploading) onDismiss() },
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = Color.White
     ) {
@@ -210,7 +223,7 @@ fun EditProductScreen(
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
-                        .clickable(enabled = !isSaving) { onDismiss() }
+                        .clickable(enabled = !isSaving && !isUploading) { onDismiss() }
                         .padding(vertical = 4.dp)
                 ) {
                     Text(
@@ -229,10 +242,10 @@ fun EditProductScreen(
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .clickable(enabled = !isSaving) { saveChanges() }
+                        .clickable(enabled = !isSaving && !isUploading) { saveChanges() }
                         .padding(vertical = 4.dp)
                 ) {
-                    if (isSaving) {
+                    if (isSaving || isUploading) {
                         CircularProgressIndicator(
                             color = Palette.dark,
                             strokeWidth = 2.dp,
@@ -347,6 +360,41 @@ fun EditProductScreen(
                     )
                 }
 
+                if (showcaseImages.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("IMAGE ORDER · FIRST IMAGE IS THE COVER", style = Typography.santoshi(12.sp, FontWeight.Bold))
+                        showcaseImages.toList().forEachIndexed { index, url ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                ProtectedImage(
+                                    url = url,
+                                    contentDescription = "Image ${index + 1}",
+                                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Text(if (index == 0) "1 · Cover" else "${index + 1}", modifier = Modifier.weight(1f))
+                                IconButton(
+                                    onClick = { java.util.Collections.swap(showcaseImages, index, index - 1) },
+                                    enabled = index > 0 && !isSaving && !isUploading
+                                ) {
+                                    Icon(Icons.Default.ArrowUpward, contentDescription = "Move image ${index + 1} earlier")
+                                }
+                                IconButton(
+                                    onClick = { java.util.Collections.swap(showcaseImages, index, index + 1) },
+                                    enabled = index < showcaseImages.lastIndex && !isSaving && !isUploading
+                                ) {
+                                    Icon(Icons.Default.ArrowDownward, contentDescription = "Move image ${index + 1} later")
+                                }
+                            }
+                        }
+                        Text("Use the arrows to reorder. Retailers see the cover image first after you save.",
+                            style = Typography.santoshi(11.sp), color = Color(0xFF6B7280))
+                    }
+                }
+
                 // Section: Showcase Images
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
@@ -414,7 +462,7 @@ fun EditProductScreen(
                             .clip(RoundedCornerShape(8.dp))
                             .background(Color(0xFFF9FAFB))
                             .border(1.dp, Color(0xFFE5E5E5), RoundedCornerShape(8.dp))
-                            .clickable(enabled = showcaseImages.size < 4) { imagePicker.launch("image/*") }
+                            .clickable(enabled = !isUploading && !isSaving) { imagePicker.launch("image/*") }
                             .padding(horizontal = 14.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -422,18 +470,20 @@ fun EditProductScreen(
                         Icon(
                             imageVector = Icons.Default.AddPhotoAlternate,
                             contentDescription = null,
-                            tint = if (showcaseImages.size >= 4) Color(0xFF9CA3AF) else Color(0xFF111827),
+                            tint = if (isUploading || isSaving) Color(0xFF9CA3AF) else Color(0xFF111827),
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = "Add my own images",
                             style = Typography.santoshi(14.sp, FontWeight.Medium),
-                            color = if (showcaseImages.size >= 4) Color(0xFF9CA3AF) else Color(0xFF111827)
+                            color = if (isUploading || isSaving) Color(0xFF9CA3AF) else Color(0xFF111827)
                         )
                     }
 
                     Text(
-                        text = "Tap images to select them. The selected images are shown first in the catalogue, in selection order.",
+                        text = if (isUploading) "Uploading your image…" else if (showcaseImages.size >= 4) {
+                            "4 images selected. Deselect one to feature a different image. Your uploads are kept in this list."
+                        } else "Tap images to select them. The selected images are shown first in the catalogue, in selection order.",
                         style = Typography.santoshi(11.sp),
                         color = Color(0xFF6B7280)
                     )

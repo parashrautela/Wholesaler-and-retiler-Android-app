@@ -151,7 +151,6 @@ object CreditsApi {
 
     private suspend inline fun <reified T : Any> invokeTopUp(body: kotlinx.serialization.json.JsonObject): T {
         val token = AuthToken.fresh()
-            ?: throw TopUpException("Your session isn't active on this device. Please sign out and sign in again.")
         return try {
             EdgeFunctions.invoke<T>("credits-topup", body = body, token = token)
         } catch (e: Exception) {

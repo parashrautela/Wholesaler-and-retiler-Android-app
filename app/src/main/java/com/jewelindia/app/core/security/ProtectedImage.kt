@@ -17,7 +17,8 @@ fun ProtectedImage(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
-    placeholderColor: Color? = Palette.taupe.copy(alpha = 0.35f)
+    placeholderColor: Color? = Palette.taupe.copy(alpha = 0.35f),
+    fallbackUrl: String? = null
 ) {
     CaptureProtected(modifier = modifier) {
         CachedImage(
@@ -25,7 +26,8 @@ fun ProtectedImage(
             contentDescription = contentDescription,
             modifier = Modifier.matchParentSize(),
             contentScale = contentScale,
-            placeholderColor = placeholderColor
+            placeholderColor = placeholderColor,
+            fallbackUrl = fallbackUrl
         )
     }
 }

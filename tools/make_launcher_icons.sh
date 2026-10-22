@@ -10,35 +10,13 @@ if [ ! -f "$ICON_SRC" ]; then
 fi
 
 TMP_DIR=$(mktemp -d)
-
-mkdir -p "$DIR/app/src/main/res/mipmap-mdpi"
-mkdir -p "$DIR/app/src/main/res/mipmap-hdpi"
-mkdir -p "$DIR/app/src/main/res/mipmap-xhdpi"
-mkdir -p "$DIR/app/src/main/res/mipmap-xxhdpi"
-mkdir -p "$DIR/app/src/main/res/mipmap-xxxhdpi"
-mkdir -p "$DIR/app/src/main/res/mipmap-anydpi-v26"
+trap 'rm -rf "$TMP_DIR"' EXIT
 mkdir -p "$DIR/app/src/main/res/drawable-nodpi"
 
-# Legacy mipmaps
-sips -z 48 48 "$ICON_SRC" --out "$DIR/app/src/main/res/mipmap-mdpi/ic_launcher.png" > /dev/null
-cp "$DIR/app/src/main/res/mipmap-mdpi/ic_launcher.png" "$DIR/app/src/main/res/mipmap-mdpi/ic_launcher_round.png"
-
-sips -z 72 72 "$ICON_SRC" --out "$DIR/app/src/main/res/mipmap-hdpi/ic_launcher.png" > /dev/null
-cp "$DIR/app/src/main/res/mipmap-hdpi/ic_launcher.png" "$DIR/app/src/main/res/mipmap-hdpi/ic_launcher_round.png"
-
-sips -z 96 96 "$ICON_SRC" --out "$DIR/app/src/main/res/mipmap-xhdpi/ic_launcher.png" > /dev/null
-cp "$DIR/app/src/main/res/mipmap-xhdpi/ic_launcher.png" "$DIR/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png"
-
-sips -z 144 144 "$ICON_SRC" --out "$DIR/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" > /dev/null
-cp "$DIR/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" "$DIR/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png"
-
-sips -z 192 192 "$ICON_SRC" --out "$DIR/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" > /dev/null
-cp "$DIR/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" "$DIR/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png"
-
+# minSdk is 26; supported devices use the adaptive icons in mipmap-anydpi.
 # Foreground 432px
 cp "$ICON_SRC" "$TMP_DIR/padded.png"
 sips --padToHeightWidth 1552 1552 --padColor FEFEFE "$TMP_DIR/padded.png" > /dev/null
 sips -z 432 432 "$TMP_DIR/padded.png" --out "$DIR/app/src/main/res/drawable-nodpi/ic_launcher_foreground.png" > /dev/null
 
-rm -rf "$TMP_DIR"
 echo "Launcher icons generated successfully."

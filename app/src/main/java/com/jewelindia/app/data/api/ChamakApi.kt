@@ -14,6 +14,8 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.storage.storage
+import kotlinx.coroutines.CancellationException
+import com.jewelindia.app.core.images.StorageImageURL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -51,7 +53,6 @@ object ChamakApi {
 
     private suspend fun authorizedRequest(url: String, idempotencyKey: String? = null): Request.Builder {
         val token = AuthToken.fresh()
-            ?: throw ChamakException("Your session isn't active on this device. Please sign out and sign in again.")
 
         val builder = Request.Builder()
             .url(url)
@@ -75,7 +76,7 @@ object ChamakApi {
         }.decodeList<Product>()
 
         return rows.filter { product ->
-            val url = product.processedImageURL ?: product.imageURL ?: product.rawImageURL
+            val url = product.displaySource
             !url.isNullOrEmpty()
         }
     }
@@ -86,11 +87,11 @@ object ChamakApi {
 
         val shortlist = try {
             db.from("retailer_selections").select {}.decodeList<Row>()
-        } catch (_: Exception) { emptyList() }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { throw ChamakException("Couldn't load your store designs. Please retry.") }
 
         val boards = try {
             db.from("customer_board_items").select {}.decodeList<Row>()
-        } catch (_: Exception) { emptyList() }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { throw ChamakException("Couldn't load your store designs. Please retry.") }
 
         val ids = (shortlist + boards).map { it.productId }.toSet()
         if (ids.isEmpty()) return emptyList()
@@ -104,7 +105,7 @@ object ChamakApi {
         }.decodeList<Product>()
 
         return rows.filter { product ->
-            val url = product.processedImageURL ?: product.imageURL ?: product.rawImageURL
+            val url = product.displaySource
             !url.isNullOrEmpty()
         }
     }
@@ -117,6 +118,7 @@ object ChamakApi {
         slot: Int,
         mode: ChamakMode = ChamakMode.Fusion
     ): String {
+        AIConsent.requireGranted(wholesalerId)
         requireLiveSession(wholesalerId)
         val uid = wholesalerId.lowercase()
         val stamp = System.currentTimeMillis()
@@ -130,6 +132,8 @@ object ChamakApi {
                 contentType = "image/jpeg",
                 upsert = false
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             throw ChamakException("Failed to upload source image $slot: ${e.message}")
         }
@@ -139,6 +143,7 @@ object ChamakApi {
 
     @Serializable
     private data class CreateGenerationPayload(
+        val id: String,
         @SerialName("wholesaler_id") val wholesalerId: String,
         @SerialName("source_image_1_url") val sourceImage1URL: String,
         @SerialName("source_image_2_url") val sourceImage2URL: String,
@@ -154,35 +159,70 @@ object ChamakApi {
         source1URL: String,
         source2URL: String,
         extraSourceURLs: List<String> = emptyList(),
-        mode: ChamakMode = ChamakMode.Fusion
+        mode: ChamakMode = ChamakMode.Fusion,
+        generationId: String
     ): ChamakGeneration {
+        AIConsent.requireGranted(wholesalerId)
         requireLiveSession(wholesalerId)
 
         val payload = CreateGenerationPayload(
+            id = generationId,
             wholesalerId = wholesalerId.lowercase(),
-            sourceImage1URL = source1URL,
-            sourceImage2URL = source2URL,
-            sourceImage3URL = extraSourceURLs.firstOrNull(),
-            sourceImage4URL = extraSourceURLs.drop(1).firstOrNull(),
+            sourceImage1URL = StorageImageURL.resolve(source1URL),
+            sourceImage2URL = StorageImageURL.resolve(source2URL),
+            sourceImage3URL = extraSourceURLs.firstOrNull()?.let { StorageImageURL.resolve(it) },
+            sourceImage4URL = extraSourceURLs.drop(1).firstOrNull()?.let { StorageImageURL.resolve(it) },
             status = "queued",
             promptVersion = "v1.0-chamak",
             mode = if (mode == ChamakMode.SetCreation) "set_creation" else "fusion"
         )
 
         return JewelNetwork.withRetry {
-            db.from("chamak_generations")
-                .insert(payload) {
-                    select()
-                }
-                .decodeSingle<ChamakGeneration>()
+            try {
+                db.from("chamak_generations").insert(payload) { select() }.decodeSingle<ChamakGeneration>()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // An accepted insert may lose its response. Re-read the stable ID; never overwrite a running row.
+                try { fetchGeneration(generationId) }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { throw e }
+            }
+        }
+    }
+
+    @Serializable
+    private data class SourceLinks(
+        @SerialName("source_image_1_url") val first: String,
+        @SerialName("source_image_2_url") val second: String,
+        @SerialName("source_image_3_url") val third: String?,
+        @SerialName("source_image_4_url") val fourth: String?
+    )
+
+    private suspend fun refreshSourceLinks(generationId: String, ownerId: String) {
+        val generation = fetchGeneration(generationId)
+        if (!generation.wholesalerId.equals(ownerId, ignoreCase = true)) {
+            throw ChamakException("This generation doesn't belong to your account.")
+        }
+        val before = listOf(generation.sourceImage1URL, generation.sourceImage2URL, generation.sourceImage3URL, generation.sourceImage4URL)
+        val after = before.map { it?.let { source -> StorageImageURL.resolve(source) } }
+        if (before != after) {
+            db.from("chamak_generations").update(
+                SourceLinks(requireNotNull(after[0]), requireNotNull(after[1]), after[2], after[3])
+            ) {
+                filter { eq("id", generationId); eq("wholesaler_id", generation.wholesalerId) }
+            }
         }
     }
 
     suspend fun triggerStage1Analysis(
         generationId: String,
+        wholesalerId: String,
         idempotencyKey: String? = null
     ) = withContext(Dispatchers.IO) {
-        AIConsent.requireGranted()
+        AIConsent.requireGranted(wholesalerId)
+        requireLiveSession(wholesalerId)
+        refreshSourceLinks(generationId, wholesalerId)
         val url = "${AppConfig.aiPipelineURL.trimEnd('/')}/api/chamak/analyze"
         val request = authorizedRequest(url, idempotencyKey)
             .post(
@@ -194,13 +234,14 @@ object ChamakApi {
 
         val response = try {
             HttpClients.pipeline.newCall(request).execute()
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
-            try { updateStatus(generationId, ChamakStatus.Failed) } catch (_: Exception) {}
             throw ChamakException("Couldn't reach the analysis service. Check your connection and try again.")
         }
 
         response.use { resp ->
-            val bodyString = resp.body?.string() ?: ""
+            val bodyString = resp.body.string()
             if (resp.isSuccessful) return@withContext
 
             if (resp.code == 402) {
@@ -227,7 +268,6 @@ object ChamakApi {
                 }
             } catch (_: Exception) { null } ?: "The analysis service didn't accept this request."
 
-            try { updateStatus(generationId, ChamakStatus.Failed) } catch (_: Exception) {}
             throw ChamakException(message)
         }
     }
@@ -272,6 +312,7 @@ object ChamakApi {
     ) = withContext(Dispatchers.IO) {
         AIConsent.requireGranted(wholesalerId)
         requireLiveSession(wholesalerId)
+        refreshSourceLinks(generationId, wholesalerId)
 
         @Serializable
         data class Payload(
@@ -300,7 +341,7 @@ object ChamakApi {
             .build()
 
         HttpClients.pipeline.newCall(request).execute().use { resp ->
-            val bodyString = resp.body?.string() ?: ""
+            val bodyString = resp.body.string()
             if (resp.isSuccessful) return@withContext
 
             if (resp.code == 402) {
@@ -327,7 +368,6 @@ object ChamakApi {
                 }
             } catch (_: Exception) { null } ?: "Chamak didn't accept this request."
 
-            try { updateStatus(generationId, ChamakStatus.Failed) } catch (_: Exception) {}
             throw ChamakException(message)
         }
     }
@@ -341,6 +381,7 @@ object ChamakApi {
     ) = withContext(Dispatchers.IO) {
         AIConsent.requireGranted(wholesalerId)
         requireLiveSession(wholesalerId)
+        refreshSourceLinks(generationId, wholesalerId)
 
         @Serializable
         data class Payload(
@@ -370,7 +411,7 @@ object ChamakApi {
             .build()
 
         HttpClients.pipeline.newCall(request).execute().use { resp ->
-            val bodyString = resp.body?.string() ?: ""
+            val bodyString = resp.body.string()
             if (resp.isSuccessful) return@withContext
 
             if (resp.code == 402) {
@@ -397,31 +438,24 @@ object ChamakApi {
                 }
             } catch (_: Exception) { null } ?: "The set creation pipeline didn't accept this request."
 
-            try { updateStatus(generationId, ChamakStatus.Failed) } catch (_: Exception) {}
             throw ChamakException(message)
         }
     }
 
     // MARK: - Signed Storage URLs
 
-    suspend fun getSignedURL(path: String): String {
-        if (path.startsWith("http://") || path.startsWith("https://")) {
-            if (path.contains("token=") || path.contains("supabase.co/storage")) {
-                return path
-            }
-        }
-        val cleanPath = path.replace("chamak-outputs/", "")
-        return try {
-            db.storage.from("chamak-outputs").createSignedUrl(cleanPath, expiresIn = 1.hours)
-        } catch (_: Exception) {
-            path
-        }
-    }
+    suspend fun getSignedURL(path: String): String = StorageImageURL.resolve(path, "chamak-outputs")
 
     suspend fun getSignedURLs(paths: List<String>): Map<String, String> {
         val result = mutableMapOf<String, String>()
         for (path in paths.toSet()) {
-            result[path] = getSignedURL(path)
+            try {
+                result[path] = getSignedURL(path)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Other images can still be displayed; missing links remain retryable.
+            }
         }
         return result
     }

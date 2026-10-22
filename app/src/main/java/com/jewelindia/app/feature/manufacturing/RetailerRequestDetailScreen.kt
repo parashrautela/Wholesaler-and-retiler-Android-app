@@ -425,7 +425,7 @@ fun QuoteCard(
                         style = Typography.cirka(20.sp),
                         color = Palette.textPrimary
                     )
-                    quote.proposedDeliveryDate?.let { date ->
+                    quote.proposedDeliveryDate.let { date ->
                         Text(
                             text = "Delivery by ${date.take(10)}",
                             style = Typography.santoshi(12.sp),

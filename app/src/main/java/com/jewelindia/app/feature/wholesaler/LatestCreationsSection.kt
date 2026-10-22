@@ -51,9 +51,9 @@ import com.jewelindia.app.feature.wholesaler.chamak.ChamakGalleryCard
 fun LatestCreationsSection(
     wholesalerUserId: String,
     onSeeAll: () -> Unit,
+    modifier: Modifier = Modifier,
     onOpenGeneration: (ChamakGeneration) -> Unit = {},
-    peekGenerations: List<ChamakGeneration>? = null,
-    modifier: Modifier = Modifier
+    peekGenerations: List<ChamakGeneration>? = null
 ) {
     var selectedMode by remember { mutableStateOf(ChamakMode.Fusion) }
     var generations by remember { mutableStateOf<List<ChamakGeneration>>(peekGenerations ?: emptyList()) }

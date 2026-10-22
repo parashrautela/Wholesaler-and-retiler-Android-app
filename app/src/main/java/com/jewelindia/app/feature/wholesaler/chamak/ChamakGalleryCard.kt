@@ -61,6 +61,9 @@ fun ChamakGalleryCard(
                 if (thumbnailURL != null) {
                     ProtectedImage(
                         url = thumbnailURL,
+                        fallbackUrl = generation.outputImageURL?.let {
+                            if (it.startsWith("http") || it.startsWith("chamak-outputs/")) it else "chamak-outputs/$it"
+                        },
                         contentDescription = "Chamak Generation",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
@@ -69,7 +72,7 @@ fun ChamakGalleryCard(
                     Placeholder(
                         icon = Icons.Default.AutoAwesome,
                         tint = Color(0xFFBB8651),
-                        text = null
+                        text = "Tap to load output"
                     )
                 }
 

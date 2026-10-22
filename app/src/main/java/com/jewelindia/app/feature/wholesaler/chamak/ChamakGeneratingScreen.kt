@@ -11,6 +11,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +43,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -98,22 +106,60 @@ fun ChamakGeneratingScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF1E1E1E),
-                        Color(0xFF121212),
-                        Color(0xFF0A0A0A)
-                    )
+                    0f to Color.White,
+                    0.25f to Color(0xFFFAF5F7),
+                    0.55f to Color(0xFFF3E8FF),
+                    1f to Color(0xFFFCE7F3)
                 )
             ),
         contentAlignment = Alignment.Center
     ) {
+        // Radial brushes reproduce the iOS diffused auras without large offscreen blur layers.
+        Canvas(Modifier.fillMaxSize()) {
+            val radius = size.width * 0.65f
+            for ((x, color) in listOf(0.15f to Color(0xFFC084FC), 0.85f to Color(0xFFF472B6))) {
+                val center = Offset(size.width * x, size.height * 0.65f)
+                drawCircle(Brush.radialGradient(listOf(color.copy(alpha = 0.35f), Color.Transparent), center, radius), radius, center)
+            }
+        }
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+        val contentHeight = maxHeight
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 32.dp)
+            verticalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .heightIn(min = contentHeight)
+                .padding(horizontal = 24.dp, vertical = 32.dp)
         ) {
+            val analyzing = vm.step == ChamakViewModel.Step.Analyzing
+            val isSet = vm.mode == ChamakMode.SetCreation
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = if (analyzing) { if (isSet) "Preparing" else "Analyzing" }
+                        else { if (isSet) "Staging" else "Crafting" },
+                    fontFamily = Cirka, fontSize = 38.sp, fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1A1A1A), textAlign = TextAlign.Center
+                )
+                Text(
+                    text = if (analyzing) { if (isSet) "your pieces" else "your designs" }
+                        else { if (isSet) "your set" else "your design" },
+                    fontFamily = Cirka, fontSize = 38.sp, fontStyle = FontStyle.Italic,
+                    color = Color(0xFFDE6B7C), textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = if (analyzing) {
+                        if (isSet) "Checking photos and preparing your staging studio."
+                        else "Breaking down your designs to craft a fresh perspective."
+                    } else {
+                        if (isSet) "Arranging your pieces with master jewellery composition."
+                        else "Synthesizing elements into a bespoke jewellery masterpiece."
+                    },
+                    fontFamily = Manrope, fontSize = 14.sp, lineHeight = 21.sp,
+                    color = Color(0xFF6B7280), textAlign = TextAlign.Center
+                )
+            }
             // Blooming Aura & Morphing Jewel Emblem Center
             Box(
                 modifier = Modifier.size(240.dp),
@@ -177,7 +223,7 @@ fun ChamakGeneratingScreen(
                                 Brush.linearGradient(
                                     colors = listOf(
                                         Color.White.copy(alpha = 0.95f),
-                                        Color(0xFFF6E8CD).copy(alpha = 0.85f)
+                                        Color.White.copy(alpha = 0.8f)
                                     )
                                 )
                             )
@@ -185,38 +231,20 @@ fun ChamakGeneratingScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(36.dp))
-
-            // Title & Status
-            val title = if (vm.mode == ChamakMode.SetCreation) "Staging Your Set" else "Synthesizing Designs"
-            Text(
-                text = title,
-                fontFamily = Cirka,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            val statusCopy = if (vm.step == ChamakViewModel.Step.Analyzing) {
-                "Analyzing intricate motifs, stone settings, and metal geometry…"
-            } else {
-                "Blending artistic proportions and rendering studio lighting…"
-            }
-
-            Text(
-                text = statusCopy,
-                fontFamily = Manrope,
-                fontSize = 13.sp,
-                color = Color.White.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center,
-                lineHeight = 19.sp
-            )
-
-            Spacer(modifier = Modifier.height(40.dp))
-
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.45f))
+                        .border(1.dp, Color.White.copy(alpha = 0.8f), CircleShape)
+                        .padding(horizontal = 22.dp, vertical = 12.dp)
+                ) {
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFDE6B7C)))
+                    Text("Creating your design…", fontFamily = Manrope, fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold, color = Color(0xFF6B465C))
+                }
+                Spacer(Modifier.height(16.dp))
             // Rotating quote card
             AnimatedContent(
                 targetState = currentQuote,
@@ -233,7 +261,7 @@ fun ChamakGeneratingScreen(
                         text = "“${quote.text}”",
                         fontFamily = Cirka,
                         fontSize = 14.sp,
-                        color = Color(0xFFE4CC8F),
+                        color = Color(0xFF4B5563),
                         textAlign = TextAlign.Center,
                         lineHeight = 20.sp
                     )
@@ -243,10 +271,12 @@ fun ChamakGeneratingScreen(
                         fontFamily = Manrope,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = Color(0xFF6B7280)
                     )
                 }
             }
+            }
+        }
         }
     }
 }

@@ -161,7 +161,6 @@ object CatalogueImageSearchApi {
             throw ImageSearchFailure.Message("Select a jewellery category.")
         }
         val token = AuthToken.fresh(JewelSupabase.client)
-            ?: throw ImageSearchFailure.Message("Your session isn't active on this device. Please sign in again.")
         val url = "${AppConfig.aiPipelineUrl.trimEnd('/')}/api/retailer/image-search"
 
         val body = buildSearchBody(photoBytes, category)

@@ -297,9 +297,9 @@ fun StatCard(
     title: String,
     value: String,
     icon: ImageVector,
+    modifier: Modifier = Modifier,
     showsBadge: Boolean = false,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onClick: () -> Unit
 ) {
     Box(
         modifier = modifier

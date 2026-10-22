@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -53,12 +55,12 @@ import java.util.Locale
 @Composable
 fun CatalogueProductCard(
     product: Product,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
     onEdit: () -> Unit = {},
     onDelete: () -> Unit = {},
     isSelecting: Boolean = false,
-    isSelected: Boolean = false,
-    modifier: Modifier = Modifier
+    isSelected: Boolean = false
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -103,6 +105,7 @@ fun CatalogueProductCard(
             if (imageUrl != null) {
                 ProtectedImage(
                     url = imageUrl,
+                    fallbackUrl = product.displaySource,
                     contentDescription = product.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -115,6 +118,20 @@ fun CatalogueProductCard(
                     modifier = Modifier
                         .size(32.dp)
                         .align(Alignment.Center)
+                )
+            }
+
+            product.processingLabel?.let { label ->
+                Text(
+                    text = label,
+                    color = Palette.dark,
+                    style = manrope(10f, JewelWeight.Semibold),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.align(Alignment.BottomStart).padding(8.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.White.copy(alpha = 0.94f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
 
@@ -151,7 +168,7 @@ fun CatalogueProductCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(28.dp)
+                            .size(48.dp)
                             .shadow(2.dp, CircleShape)
                             .clip(CircleShape)
                             .background(Color.White.copy(alpha = 0.9f))
@@ -219,6 +236,7 @@ fun CatalogueProductCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(min = 108.dp)
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
@@ -235,11 +253,12 @@ fun CatalogueProductCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 if (metadataLine.isNotEmpty()) {
                     Text(
                         text = metadataLine,
+                        modifier = Modifier.weight(1f),
                         style = manrope(12f, JewelWeight.Medium),
                         color = Palette.muted,
                         maxLines = 1,
@@ -247,10 +266,12 @@ fun CatalogueProductCard(
                     )
                 }
 
+                if (metadataLine.isEmpty()) Spacer(Modifier.weight(1f))
                 val purity = product.metalPurity
                 if (!purity.isNullOrBlank()) {
                     Box(
                         modifier = Modifier
+                            .widthIn(max = 64.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .background(Color(0xFFFFFBF4))
                             .border(1.dp, Color(0xFFF3E8D6), RoundedCornerShape(4.dp))
@@ -258,6 +279,8 @@ fun CatalogueProductCard(
                     ) {
                         Text(
                             text = purity.uppercase(),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             style = manrope(10f, JewelWeight.Bold),
                             color = Color(0xFF9A6B2F)
                         )
@@ -296,6 +319,9 @@ fun CatalogueProductCard(
                     )
                     Text(
                         text = "Made to order · ${product.makeToOrderDays} days",
+                        modifier = Modifier.weight(1f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                         style = manrope(11f, JewelWeight.Semibold),
                         color = Color(0xFFB45309)
                     )

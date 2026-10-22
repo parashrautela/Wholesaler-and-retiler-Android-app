@@ -5,6 +5,11 @@ import com.jewelindia.app.data.supabase.JewelJson
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.decodeFromString
+import com.jewelindia.app.core.model.Product
+import com.jewelindia.app.core.model.ImageSize
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -66,4 +71,17 @@ class ProductEditEncodingTest {
         assertEquals("rings", json["jewellery_type"]?.toString()?.trim('"'))
         assertEquals("22k", json["metal_purity"]?.toString()?.trim('"'))
     }
+    @Test
+    fun reorderedShowcaseSavesAndReloadsWithTheChosenCover() {
+        val images = mutableListOf("https://example.com/front.jpg", "https://example.com/blue.jpg", "https://example.com/back.jpg")
+        java.util.Collections.swap(images, 2, 1)
+        java.util.Collections.swap(images, 1, 0)
+        val edit = ProductEdit(showcaseImageUrls = images, customImageUrls = listOf(images[2]))
+        val saved = Json.parseToJsonElement(JewelJson.encodeToString(edit)).jsonObject
+        assertEquals(images, saved["showcase_image_urls"]!!.jsonArray.map { it.jsonPrimitive.content })
+        val reloaded = JewelJson.decodeFromString<Product>("""{"id":"ring","showcase_image_urls":${saved["showcase_image_urls"]},"generated_image_urls":["https://example.com/old.jpg"]}""")
+        assertEquals("https://example.com/back.jpg", reloaded.primaryImage)
+        assertEquals(images, reloaded.thumbnailUrls(ImageSize.FULL).take(3))
+    }
+
 }

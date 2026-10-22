@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -39,12 +40,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import com.jewelindia.app.core.consent.rememberAIConsentRequest
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,7 +65,6 @@ import com.jewelindia.app.design.Palette
 import com.jewelindia.app.data.api.ChamakAttribute
 import com.jewelindia.app.data.api.ChamakDesignItem
 import com.jewelindia.app.data.api.ContentFlag
-import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 
@@ -75,7 +75,7 @@ fun ChamakSliderFormScreen(
     wholesalerId: String,
     modifier: Modifier = Modifier
 ) {
-    val scope = rememberCoroutineScope()
+    val requestAIConsent = rememberAIConsentRequest(wholesalerId)
     val scrollState = rememberScrollState()
 
     var previewImage by remember { mutableStateOf<ChamakViewerImage?>(null) }
@@ -140,7 +140,7 @@ fun ChamakSliderFormScreen(
             ) {
                 IconButton(
                     onClick = { vm.resetToPicker() },
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -529,13 +529,15 @@ fun ChamakSliderFormScreen(
             ) {
                 Button(
                     onClick = {
-                        scope.launch {
-                            vm.submitFormAndGenerate(wholesalerId)
+                        requestAIConsent {
+                            vm.runAction {
+                                vm.submitFormAndGenerate(wholesalerId)
+                            }
                         }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp),
+                        .heightIn(min = 54.dp),
                     shape = RoundedCornerShape(27.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isHardBlocked) Color(0xFF9CA3AF) else Color(0xFF212120)
