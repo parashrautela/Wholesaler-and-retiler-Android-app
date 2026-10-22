@@ -68,11 +68,6 @@ class SessionStore(
 
     private var watchJob: Job? = null
 
-    fun setDebugDestination(destination: AppDestination) {
-        watchJob?.cancel()
-        _phase.value = Phase.Authenticated(destination)
-    }
-
     /**
      * Starts mirroring Supabase auth state.
      */
