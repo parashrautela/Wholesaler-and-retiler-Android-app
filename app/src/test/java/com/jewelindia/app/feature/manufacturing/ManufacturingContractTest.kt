@@ -137,4 +137,35 @@ class ManufacturingContractTest {
         assertEquals("/api/wholesaler/manufacturing-offers/$offerId/quotes", parallelPath)
         assertEquals("/api/wholesaler/manufacturing-offers/$offerId/accept", directPath)
     }
+
+    @Test
+    fun decodeOfferWithParallelBroadcastMode_routesToQuotes() {
+        val offerJson = """
+        {
+            "id": "offer-parallel-123",
+            "request_id": "req-parallel-456",
+            "rank": 1,
+            "status": "active",
+            "offered_at": "2026-10-22T00:00:00Z",
+            "expires_at": "2026-10-23T00:00:00Z",
+            "request": {
+                "id": "req-parallel-456",
+                "category": "Ring",
+                "material": "Gold",
+                "min_weight_grams": 5.0,
+                "max_weight_grams": 10.0,
+                "delivery_needed_date": "2026-11-01",
+                "broadcast_mode": "parallel"
+            }
+        }
+        """.trimIndent()
+
+        val offer = JewelJson.decodeFromString(com.jewelindia.app.core.model.ManufacturingOffer.serializer(), offerJson)
+        val isParallel = offer.request?.broadcastMode == "parallel"
+        assertTrue(isParallel)
+
+        val path = ManufacturingApi.acceptOfferPath(offer.id, parallel = isParallel)
+        assertTrue(path.endsWith("/quotes"))
+        assertEquals("/api/wholesaler/manufacturing-offers/offer-parallel-123/quotes", path)
+    }
 }

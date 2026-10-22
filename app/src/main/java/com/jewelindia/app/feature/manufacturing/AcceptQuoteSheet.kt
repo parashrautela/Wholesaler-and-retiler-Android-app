@@ -55,6 +55,8 @@ fun AcceptQuoteSheet(
     var loading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val isParallel = offer.request?.broadcastMode == "parallel"
+    val idempotencyKey = remember { java.util.UUID.randomUUID().toString() }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -129,7 +131,12 @@ fun AcceptQuoteSheet(
                                 proposedDeliveryDate = deliveryDate,
                                 comments = notes.ifBlank { null }
                             )
-                            ManufacturingApi.acceptOffer(offer.id, params)
+                            ManufacturingApi.acceptOffer(
+                                id = offer.id,
+                                params = params,
+                                parallel = isParallel,
+                                idempotencyKey = idempotencyKey
+                            )
                             onSuccess()
                             onDismiss()
                         } catch (e: Exception) {
@@ -148,7 +155,7 @@ fun AcceptQuoteSheet(
                     CircularProgressIndicator(color = Palette.light)
                 } else {
                     Text(
-                        text = "Send Quotation",
+                        text = if (isParallel) "Submit Quote" else "Accept Enquiry with Quote",
                         style = Typography.santoshi(15.sp),
                         fontWeight = FontWeight.Bold,
                         color = Palette.light

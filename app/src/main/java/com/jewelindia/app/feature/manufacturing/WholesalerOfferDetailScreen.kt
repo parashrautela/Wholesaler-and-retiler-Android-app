@@ -169,6 +169,15 @@ fun WholesalerOfferDetailScreen(
                             }
                         )
 
+                        if (req?.broadcastMode == "parallel") {
+                            Text(
+                                text = "Submit a quote. The retailer selects the supplier.",
+                                style = Typography.santoshi(13.sp),
+                                color = Palette.goldPrimary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+
                         if (!req?.notes.isNullOrBlank()) {
                             Text(
                                 text = req.notes.orEmpty(),
@@ -199,7 +208,13 @@ fun WholesalerOfferDetailScreen(
                         req?.purity?.let { Text("Purity: $it", style = Typography.santoshi(13.sp), color = Palette.dark) }
                         req?.formattedWeightRange?.let { Text("Weight Range: $it", style = Typography.santoshi(13.sp), color = Palette.dark) }
                         req?.quantity?.let { Text("Quantity: $it pieces", style = Typography.santoshi(13.sp), color = Palette.dark) }
-                        req?.deliveryNeededDate?.let { Text("Needed By: $it", style = Typography.santoshi(13.sp), color = Palette.dark) }
+                        if (req?.broadcastMode == "parallel") {
+                            val deadline = req.quotationDeadline ?: req.deliveryNeededDate
+                            Text("Shared Quotation Deadline: $deadline", style = Typography.santoshi(13.sp), color = Palette.dark)
+                            Text("Needed By: ${req.deliveryNeededDate}", style = Typography.santoshi(13.sp), color = Palette.dark)
+                        } else {
+                            req?.deliveryNeededDate?.let { Text("Needed By: $it", style = Typography.santoshi(13.sp), color = Palette.dark) }
+                        }
                     }
                 }
 
@@ -223,7 +238,11 @@ fun WholesalerOfferDetailScreen(
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Palette.goldPrimary)
                         ) {
-                            Text("Quote Now", color = Palette.light, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = if (req?.broadcastMode == "parallel") "Submit Quote" else "Quote Now",
+                                color = Palette.light,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
