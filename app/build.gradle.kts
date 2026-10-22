@@ -32,6 +32,7 @@ android {
         buildConfigField("String", "AI_PIPELINE_URL", "\"${secret("AI_PIPELINE_URL")}\"")
         buildConfigField("String", "SITE_URL", "\"${secret("SITE_URL")}\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${secret("GOOGLE_WEB_CLIENT_ID", required = false)}\"")
+        buildConfigField("boolean", "SHOW_RETAILER_AND_STAFF_DOORS", "false")
         manifestPlaceholders["authScheme"] = "jewelindia"
     }
 

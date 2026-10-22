@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jewelindia.app.BuildConfig
 import androidx.compose.ui.window.Dialog
 import com.jewelindia.app.core.model.UserRole
 import com.jewelindia.app.core.session.SessionStore
@@ -158,42 +159,44 @@ fun RoleChoiceScreen(
                 }
             )
 
-            DoorCard(
-                title = Copy.doorRetailerTitle,
-                description = Copy.doorRetailerBody,
-                icon = Icons.Default.Storefront,
-                isFeatured = true,
-                isBusy = busyRole == UserRole.retailer,
-                onClick = {
-                    error = null
-                    if (signedIn) {
-                        showInviteCodeDialog = true
-                    } else {
-                        onNavigate(AuthRoute.InviteCode)
-                    }
-                }
-            )
-
-            DoorCard(
-                title = Copy.doorStaffTitle,
-                description = Copy.doorStaffBody,
-                icon = Icons.Default.Badge,
-                isFeatured = false,
-                isBusy = busyRole == UserRole.employee,
-                onClick = {
-                    error = null
-                    if (signedIn) {
-                        scope.launch {
-                            busyRole = UserRole.employee
-                            val msg = sessionStore.claimStaffInvite()
-                            busyRole = null
-                            if (msg != null) error = msg
+            if (BuildConfig.SHOW_RETAILER_AND_STAFF_DOORS) {
+                DoorCard(
+                    title = Copy.doorRetailerTitle,
+                    description = Copy.doorRetailerBody,
+                    icon = Icons.Default.Storefront,
+                    isFeatured = true,
+                    isBusy = busyRole == UserRole.retailer,
+                    onClick = {
+                        error = null
+                        if (signedIn) {
+                            showInviteCodeDialog = true
+                        } else {
+                            onNavigate(AuthRoute.InviteCode)
                         }
-                    } else {
-                        onNavigate(AuthRoute.EmployeeSignIn)
                     }
-                }
-            )
+                )
+
+                DoorCard(
+                    title = Copy.doorStaffTitle,
+                    description = Copy.doorStaffBody,
+                    icon = Icons.Default.Badge,
+                    isFeatured = false,
+                    isBusy = busyRole == UserRole.employee,
+                    onClick = {
+                        error = null
+                        if (signedIn) {
+                            scope.launch {
+                                busyRole = UserRole.employee
+                                val msg = sessionStore.claimStaffInvite()
+                                busyRole = null
+                                if (msg != null) error = msg
+                            }
+                        } else {
+                            onNavigate(AuthRoute.EmployeeSignIn)
+                        }
+                    }
+                )
+            }
         }
 
         if (error != null) {
