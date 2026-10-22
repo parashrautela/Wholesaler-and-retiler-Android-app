@@ -44,6 +44,7 @@ import com.jewelindia.app.feature.chat.ChatThreadsScreen
 import com.jewelindia.app.feature.manufacturing.WholesalerOfferDetailScreen
 import com.jewelindia.app.feature.onboarding.OnboardCoordinator
 import com.jewelindia.app.feature.onboarding.OnboardFlow
+import com.jewelindia.app.feature.onboarding.OnboardStep1Screen
 import com.jewelindia.app.feature.onboarding.OnboardStep2Screen
 import com.jewelindia.app.feature.onboarding.OnboardStep3Screen
 import com.jewelindia.app.feature.onboarding.OnboardSubmittedScreen
@@ -444,6 +445,10 @@ object DebugPeek {
             }
             "onboard" -> {
                 OnboardCoordinator(sessionStore = graph.sessionStore)
+            }
+            "onboard1" -> {
+                val flow = remember { OnboardFlow() }
+                OnboardStep1Screen(flow = flow, onNext = onBack, onBack = onBack, onSignOut = onBack)
             }
             "onboard2" -> {
                 val flow = remember { OnboardFlow() }

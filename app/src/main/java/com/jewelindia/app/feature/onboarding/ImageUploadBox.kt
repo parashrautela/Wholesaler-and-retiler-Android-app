@@ -1,6 +1,7 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Features/Onboarding/OnboardKit.swift (ImageUploadBox)
 package com.jewelindia.app.feature.onboarding
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -97,7 +98,10 @@ fun ImageUploadBox(
                 val picked = readUriToPickedFile(context, uri)
                 isLoading = false
                 if (picked != null) {
-                    onFileSelected(ImageNormalizer.normalized(picked, ImageNormalizer.MAX_DOCUMENT_DIMENSION))
+                    val normalized = withContext(Dispatchers.Default) {
+                        ImageNormalizer.normalized(picked, ImageNormalizer.MAX_DOCUMENT_DIMENSION)
+                    }
+                    onFileSelected(normalized)
                 } else {
                     loadError = "Couldn't read that file. Please try again."
                 }
@@ -117,7 +121,10 @@ fun ImageUploadBox(
                 val picked = readUriToPickedFile(context, uri)
                 isLoading = false
                 if (picked != null) {
-                    onFileSelected(ImageNormalizer.normalized(picked, ImageNormalizer.MAX_DOCUMENT_DIMENSION))
+                    val normalized = withContext(Dispatchers.Default) {
+                        ImageNormalizer.normalized(picked, ImageNormalizer.MAX_DOCUMENT_DIMENSION)
+                    }
+                    onFileSelected(normalized)
                 } else {
                     loadError = "Couldn't read captured photo."
                 }
@@ -297,7 +304,13 @@ fun ImageUploadBox(
                             val uri = createCameraUri(context)
                             tempCameraUri = uri
                             if (uri != null) {
-                                cameraLauncher.launch(uri)
+                                try {
+                                    cameraLauncher.launch(uri)
+                                } catch (e: ActivityNotFoundException) {
+                                    loadError = "No camera app found on this phone."
+                                } catch (e: SecurityException) {
+                                    loadError = "No camera app found on this phone."
+                                }
                             }
                         }
                         .padding(vertical = 10.dp),
