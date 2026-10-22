@@ -3,15 +3,14 @@ package com.jewelindia.app.feature.wholesaler.chamak
 
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -24,21 +23,44 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import com.jewelindia.app.data.api.CreditsApi
+import com.jewelindia.app.data.api.EntitlementPurchase
 import com.jewelindia.app.data.api.StoreActivity
-import com.jewelindia.app.design.Palette
-import com.jewelindia.app.design.Typography
+import com.jewelindia.app.data.net.userMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URL
+
+sealed interface ExportDecision {
+    data object Proceed : ExportDecision
+    data object NeedCredits : ExportDecision
+    data class Fail(val message: String) : ExportDecision
+}
+
+fun exportDecision(res: EntitlementPurchase): ExportDecision {
+    return when {
+        res.ok || res.alreadyOwned -> ExportDecision.Proceed
+        res.isInsufficientCredits -> ExportDecision.NeedCredits
+        else -> {
+            val msg = when (res.error) {
+                "INSUFFICIENT_CREDITS" -> "You don't have enough credits to export this design."
+                "NOT_FOUND" -> "Design not found."
+                "UNAUTHORIZED" -> "Please sign in to export designs."
+                else -> res.error?.takeIf { it.isNotBlank() } ?: "Couldn't export this design. Please try again."
+            }
+            ExportDecision.Fail(msg)
+        }
+    }
+}
 
 @Composable
 fun ChamakExportButton(
@@ -57,44 +79,57 @@ fun ChamakExportButton(
             scope.launch {
                 exporting = true
                 try {
-                    // Try to purchase export with credits
                     try {
                         val res = CreditsApi.purchaseExport(generationId)
-                        if (res.isInsufficientCredits) {
-                            exporting = false
-                            onInsufficientCredits()
-                            return@launch
-                        }
-                    } catch (_: Exception) {}
-
-                    // Download clean image and share
-                    val file = withContext(Dispatchers.IO) {
-                        val exportDir = File(context.cacheDir, "exports").apply { mkdirs() }
-                        val exportFile = File(exportDir, "chamak-${generationId.take(8)}.png")
-                        URL(imageUrl).openStream().use { input ->
-                            FileOutputStream(exportFile).use { output ->
-                                input.copyTo(output)
+                        when (val decision = exportDecision(res)) {
+                            is ExportDecision.NeedCredits -> {
+                                onInsufficientCredits()
+                                return@launch
+                            }
+                            is ExportDecision.Fail -> {
+                                Toast.makeText(context, decision.message, Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+                            is ExportDecision.Proceed -> {
+                                // Proceed
                             }
                         }
-                        exportFile
+                    } catch (e: Exception) {
+                        Toast.makeText(context, e.userMessage(), Toast.LENGTH_SHORT).show()
+                        return@launch
                     }
 
-                    // Log activity
-                    StoreActivity.log(StoreActivity.Event.ImageExported)
+                    // Download clean image and share
+                    try {
+                        val file = withContext(Dispatchers.IO) {
+                            val exportDir = File(context.cacheDir, "exports").apply { mkdirs() }
+                            val exportFile = File(exportDir, "chamak-${generationId.take(8)}.png")
+                            URL(imageUrl).openStream().use { input ->
+                                FileOutputStream(exportFile).use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
+                            exportFile
+                        }
 
-                    // Share intent
-                    val uri = FileProvider.getUriForFile(
-                        context,
-                        "${context.packageName}.fileprovider",
-                        file
-                    )
-                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                        type = "image/png"
-                        putExtra(Intent.EXTRA_STREAM, uri)
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        // Log activity
+                        StoreActivity.log(StoreActivity.Event.ImageExported)
+
+                        // Share intent
+                        val uri = FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.fileprovider",
+                            file
+                        )
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "image/png"
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, "Export Chamak Design"))
+                    } catch (_: Exception) {
+                        Toast.makeText(context, "Couldn't download the image. Please try again.", Toast.LENGTH_SHORT).show()
                     }
-                    context.startActivity(Intent.createChooser(shareIntent, "Export Chamak Design"))
-                } catch (_: Exception) {
                 } finally {
                     exporting = false
                 }
