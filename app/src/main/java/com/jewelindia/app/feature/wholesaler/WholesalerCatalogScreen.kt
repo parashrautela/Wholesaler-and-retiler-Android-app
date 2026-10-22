@@ -2,6 +2,7 @@
 package com.jewelindia.app.feature.wholesaler
 
 import android.provider.DocumentsContract
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -134,6 +135,8 @@ fun WholesalerCatalogScreen(
     var showMoreMenu by remember { mutableStateOf(false) }
     var showShareSheet by remember { mutableStateOf(false) }
     var showSharedLinksScreen by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = isSelecting) { viewModel.setSelecting(false) }
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
@@ -579,6 +582,7 @@ fun WholesalerCatalogScreen(
     }
 
     // Shared Links Screen (M2)
+    BackHandler(enabled = showSharedLinksScreen) { showSharedLinksScreen = false }
     if (showSharedLinksScreen) {
         SharedLinksScreen(
             onBack = { showSharedLinksScreen = false }

@@ -1,6 +1,7 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Features/Wholesaler/WholesalerShell.swift
 package com.jewelindia.app.feature.wholesaler
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.collectAsState
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -134,6 +135,22 @@ fun WholesalerShell(
         }
         scope.launch {
             unreadChatCount = try { WholesalerApi.countUnreadConversations(wholesalerUserId) } catch (_: Exception) { 0 }
+        }
+    }
+
+    val anyOverlay = activeChatThread != null || selectedOfferId != null || showOffersList ||
+        showReport || showProfile || showTreasureChest || showInvitationHistory || showUploadHistory
+    BackHandler(enabled = anyOverlay || selectedTab != WholesalerTab.Home) {
+        when {
+            activeChatThread != null -> activeChatThread = null
+            selectedOfferId != null -> selectedOfferId = null
+            showOffersList -> showOffersList = false
+            showReport -> showReport = false
+            showProfile -> showProfile = false
+            showTreasureChest -> showTreasureChest = false
+            showInvitationHistory -> showInvitationHistory = false
+            showUploadHistory -> showUploadHistory = false
+            else -> selectedTab = WholesalerTab.Home
         }
     }
 
