@@ -89,6 +89,8 @@ fun WholesalerOrdersScreen(
 
     var selectedTab by remember { mutableStateOf(OrderTab.New) }
     var openedOrder by remember { mutableStateOf<WholesalerOrder?>(null) }
+    var isUpdating by remember { mutableStateOf(false) }
+    var actionError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(resolvedUserId) {
         if (peekOrders == null && peekError == null) {
@@ -262,7 +264,11 @@ fun WholesalerOrdersScreen(
                 items(filteredOrders, key = { it.id }) { order ->
                     WholesalerOrderCard(
                         order = order,
-                        onClick = { openedOrder = order }
+                        onClick = {
+                            openedOrder = order
+                            actionError = null
+                            isUpdating = false
+                        }
                     )
                 }
                 item {
@@ -275,24 +281,46 @@ fun WholesalerOrdersScreen(
     if (openedOrder != null) {
         WholesalerOrderDetailSheet(
             order = openedOrder!!,
+            isUpdating = isUpdating,
+            actionError = actionError,
             onStatusUpdate = { newStatus ->
+                isUpdating = true
+                actionError = null
                 viewModel.updateStatus(
                     orderId = openedOrder!!.id,
                     newStatus = newStatus,
-                    onSuccess = { openedOrder = null },
-                    onError = {}
+                    onSuccess = {
+                        isUpdating = false
+                        openedOrder = null
+                    },
+                    onError = {
+                        isUpdating = false
+                        actionError = it
+                    }
                 )
             },
             onReject = { reason ->
+                isUpdating = true
+                actionError = null
                 viewModel.rejectOrder(
                     orderId = openedOrder!!.id,
                     reason = reason,
                     details = "",
-                    onSuccess = { openedOrder = null },
-                    onError = {}
+                    onSuccess = {
+                        isUpdating = false
+                        openedOrder = null
+                    },
+                    onError = {
+                        isUpdating = false
+                        actionError = it
+                    }
                 )
             },
-            onDismiss = { openedOrder = null }
+            onDismiss = {
+                openedOrder = null
+                actionError = null
+                isUpdating = false
+            }
         )
     }
 }

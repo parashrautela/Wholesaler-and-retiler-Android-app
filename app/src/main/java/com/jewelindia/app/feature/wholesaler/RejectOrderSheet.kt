@@ -65,7 +65,9 @@ object RejectOrderDefaults {
 @Composable
 fun RejectOrderSheet(
     onDismiss: () -> Unit,
-    onConfirm: suspend (String) -> Unit
+    onConfirm: suspend (String) -> Unit,
+    isUpdating: Boolean = false,
+    actionError: String? = null
 ) {
     val scope = rememberCoroutineScope()
     var chosen by remember { mutableStateOf<String?>(null) }
@@ -221,9 +223,10 @@ fun RejectOrderSheet(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            if (errorMessage != null) {
+            val errorToShow = actionError ?: errorMessage
+            if (errorToShow != null) {
                 Text(
-                    text = errorMessage!!,
+                    text = errorToShow,
                     style = Typography.santoshi(12.sp),
                     color = Color.Red,
                     textAlign = TextAlign.Center,
@@ -231,13 +234,14 @@ fun RejectOrderSheet(
                 )
             }
 
-            val canSubmit = fullReason != null && !isSaving
+            val updating = isSaving || isUpdating
+            val canSubmit = fullReason != null && !updating
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .background(
-                        if (fullReason == null) Color(0xFFEF4444).copy(alpha = 0.35f)
+                        if (fullReason == null || updating) Color(0xFFEF4444).copy(alpha = 0.35f)
                         else Color(0xFFEF4444)
                     )
                     .clickable(enabled = canSubmit) {
@@ -249,8 +253,9 @@ fun RejectOrderSheet(
                                 onDismiss()
                             } catch (e: Exception) {
                                 errorMessage = e.userMessage()
+                            } finally {
+                                isSaving = false
                             }
-                            isSaving = false
                         }
                     }
                     .padding(vertical = 14.dp),
@@ -260,7 +265,7 @@ fun RejectOrderSheet(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (isSaving) {
+                    if (updating) {
                         CircularProgressIndicator(
                             color = Color.White,
                             strokeWidth = 2.dp,
@@ -268,7 +273,7 @@ fun RejectOrderSheet(
                         )
                     }
                     Text(
-                        text = if (isSaving) "Rejecting…" else "Confirm Rejection",
+                        text = if (updating) "Rejecting…" else "Confirm Rejection",
                         style = Typography.santoshi(15.sp, FontWeight.Bold),
                         color = Color.White
                     )

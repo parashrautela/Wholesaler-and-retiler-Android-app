@@ -53,7 +53,9 @@ fun WholesalerOrderDetailSheet(
     order: WholesalerOrder,
     onStatusUpdate: (OrderStatus) -> Unit,
     onReject: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    isUpdating: Boolean = false,
+    actionError: String? = null
 ) {
     val scope = rememberCoroutineScope()
     var working by remember { mutableStateOf(false) }
@@ -256,12 +258,24 @@ fun WholesalerOrderDetailSheet(
         }
 
         if (order.status == OrderStatus.pending || nextStatus != null || order.status == OrderStatus.dispatched) {
-            Box(
+            val updating = isUpdating || working
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color.White.copy(alpha = 0.95f))
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                if (!actionError.isNullOrBlank()) {
+                    Text(
+                        text = actionError,
+                        style = Typography.santoshi(13.sp, FontWeight.Medium),
+                        color = Color(0xFFEF4444),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
                 if (order.status == OrderStatus.pending) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -272,15 +286,15 @@ fun WholesalerOrderDetailSheet(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color.Red.copy(alpha = 0.1f))
-                                .clickable(enabled = !working) { showRejectSheet = true }
+                                .background(Color.Red.copy(alpha = if (updating) 0.05f else 0.1f))
+                                .clickable(enabled = !updating) { showRejectSheet = true }
                                 .padding(vertical = 14.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = "Reject",
                                 style = Typography.santoshi(15.sp, FontWeight.Bold),
-                                color = Color(0xFFEF4444)
+                                color = if (updating) Color(0xFFEF4444).copy(alpha = 0.5f) else Color(0xFFEF4444)
                             )
                         }
 
@@ -289,15 +303,15 @@ fun WholesalerOrderDetailSheet(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Palette.dark)
-                                .clickable(enabled = !working) {
+                                .background(if (updating) Palette.dark.copy(alpha = 0.6f) else Palette.dark)
+                                .clickable(enabled = !updating) {
                                     working = true
                                     onStatusUpdate(OrderStatus.accepted)
                                 }
                                 .padding(vertical = 14.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (working) {
+                            if (updating) {
                                 CircularProgressIndicator(
                                     color = Color.White,
                                     strokeWidth = 2.dp,
@@ -322,15 +336,15 @@ fun WholesalerOrderDetailSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Palette.dark)
-                            .clickable(enabled = !working) {
+                            .background(if (updating) Palette.dark.copy(alpha = 0.6f) else Palette.dark)
+                            .clickable(enabled = !updating) {
                                 working = true
                                 onStatusUpdate(nextStatus)
                             }
                             .padding(vertical = 14.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (working) {
+                        if (updating) {
                             CircularProgressIndicator(
                                 color = Color.White,
                                 strokeWidth = 2.dp,
@@ -364,10 +378,11 @@ fun WholesalerOrderDetailSheet(
         RejectOrderSheet(
             onDismiss = { showRejectSheet = false },
             onConfirm = { reason ->
-                onReject(reason)
                 showRejectSheet = false
-                onDismiss()
-            }
+                onReject(reason)
+            },
+            isUpdating = isUpdating,
+            actionError = actionError
         )
     }
 }
