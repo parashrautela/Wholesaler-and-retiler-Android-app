@@ -113,7 +113,7 @@ object WholesalerApi {
         @Serializable
         data class Row(val id: String)
         return try {
-            val rows = db.from("conversations").select {
+            val rows = db.from("conversations").select(Columns.raw("id, messages!inner(id)")) {
                 filter {
                     eq("wholesaler_id", wholesalerId)
                     eq("messages.sender_type", "employee")
