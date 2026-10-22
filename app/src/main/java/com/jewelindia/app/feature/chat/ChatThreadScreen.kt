@@ -43,6 +43,7 @@ import com.jewelindia.app.data.net.userMessage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -57,12 +58,17 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.jewelindia.app.core.model.ChatMessage
 import com.jewelindia.app.core.time.ChatTime
 import com.jewelindia.app.data.api.ChatApi
 import com.jewelindia.app.data.api.ChatThread
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 @Composable
@@ -77,6 +83,9 @@ fun ChatThreadScreen(
     var inputText by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(peekMessages == null) }
+    var initialLoadFailed by remember { mutableStateOf(false) }
+    var initialErrorMessage by remember { mutableStateOf<String?>(null) }
+    var retryTrigger by remember { mutableIntStateOf(0) }
     var showMenu by remember { mutableStateOf(false) }
     var reportingMessage by remember { mutableStateOf<ChatMessage?>(null) }
     var reportReason by remember { mutableStateOf("") }
@@ -86,30 +95,54 @@ fun ChatThreadScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val displayTitle = title ?: thread.title
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
 
-    suspend fun loadMessages() {
+    LaunchedEffect(thread.id, peekMessages, retryTrigger) {
         if (peekMessages != null) {
             messages = peekMessages
             loading = false
-            return
+            initialLoadFailed = false
+            if (messages.isNotEmpty()) {
+                listState.scrollToItem(messages.size - 1)
+            }
+            return@LaunchedEffect
         }
-        try {
-            messages = ChatApi.fetchMessages(thread.id)
-            ChatApi.markRead(thread.id)
-        } catch (_: Exception) {}
-    }
 
-    LaunchedEffect(thread.id, peekMessages) {
-        if (peekMessages != null) {
-            messages = peekMessages
-            loading = false
-        } else {
-            loading = true
-            loadMessages()
-            loading = false
-        }
-        if (messages.isNotEmpty()) {
-            listState.scrollToItem(messages.size - 1)
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            var isFirst = true
+            while (isActive) {
+                try {
+                    val fetched = ChatApi.fetchMessages(thread.id)
+                    val wasAtBottom = messages.isEmpty() || !listState.canScrollForward
+                    val previousIds = messages.map { it.id }.toSet()
+                    val hasNewIncoming = fetched.any { it.id !in previousIds && it.senderType != side }
+
+                    messages = fetched
+                    initialLoadFailed = false
+                    initialErrorMessage = null
+
+                    if (hasNewIncoming || isFirst) {
+                        try {
+                            ChatApi.markRead(thread.id)
+                        } catch (_: Exception) {}
+                    }
+
+                    if (isFirst && fetched.isNotEmpty()) {
+                        listState.scrollToItem(fetched.size - 1)
+                    } else if (wasAtBottom && fetched.isNotEmpty()) {
+                        listState.scrollToItem(fetched.size - 1)
+                    }
+                } catch (e: Exception) {
+                    if (messages.isEmpty()) {
+                        initialLoadFailed = true
+                        initialErrorMessage = e.userMessage()
+                    }
+                } finally {
+                    loading = false
+                    isFirst = false
+                }
+                delay(4000)
+            }
         }
     }
 
@@ -131,7 +164,10 @@ fun ChatThreadScreen(
                     )
                 } else {
                     ChatApi.send(thread.id, text)
-                    loadMessages()
+                    try {
+                        val fetched = ChatApi.fetchMessages(thread.id)
+                        messages = fetched
+                    } catch (_: Exception) {}
                 }
                 inputText = ""
                 if (messages.isNotEmpty()) {
@@ -257,6 +293,38 @@ fun ChatThreadScreen(
                     modifier = Modifier.align(Alignment.Center),
                     color = Palette.dark
                 )
+            } else if (initialLoadFailed && messages.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = initialErrorMessage ?: "Couldn't load messages.",
+                            style = Typography.santoshi(14.sp),
+                            color = Palette.accentRed,
+                            textAlign = TextAlign.Center
+                        )
+                        TextButton(onClick = {
+                            loading = true
+                            initialLoadFailed = false
+                            initialErrorMessage = null
+                            retryTrigger++
+                        }) {
+                            Text(
+                                text = "Retry",
+                                color = Palette.goldPrimary,
+                                style = Typography.santoshi(14.sp),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
             } else if (messages.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize().padding(32.dp),
