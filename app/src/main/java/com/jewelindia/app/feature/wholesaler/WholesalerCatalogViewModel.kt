@@ -117,7 +117,7 @@ class WholesalerCatalogViewModel(
         loadJob = launchSafely(onError = { e ->
             if (version == revision) {
                 _isRefreshing.value = false
-                val message = e.message ?: "Couldn't load your catalogue. Check your connection and try again."
+                val message = e.userMessage()
                 if (loadedProducts.isEmpty()) _uiState.value = CatalogUiState.Error(message)
                 else _refreshError.value = message
             }
@@ -179,7 +179,7 @@ class WholesalerCatalogViewModel(
     ) {
         val newStatus = !(product.stockAvailable ?: true)
         launchSafely(onError = { e ->
-            onError(e.message ?: "Failed to update stock status")
+            onError(e.userMessage())
         }) {
             api.updateProductFlags(product.id, inStock = newStatus)
             val idx = loadedProducts.indexOfFirst { it.id == product.id }

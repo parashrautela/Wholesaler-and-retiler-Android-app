@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.jewelindia.app.data.net.userMessage
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -132,7 +133,7 @@ fun AcceptQuoteSheet(
                             onSuccess()
                             onDismiss()
                         } catch (e: Exception) {
-                            errorMessage = e.message ?: "Failed to submit quote"
+                            errorMessage = e.userMessage()
                         } finally {
                             loading = false
                         }

@@ -7,6 +7,7 @@ import com.jewelindia.app.core.text.Copy
 import com.jewelindia.app.data.api.CatalogueShare
 import com.jewelindia.app.data.api.CatalogueShareApi
 import com.jewelindia.app.data.api.CatalogueShareService
+import com.jewelindia.app.data.net.userMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -146,7 +147,7 @@ class CatalogueShareViewModel(
                 _hasCreatedLink.value = true
                 loadShares()
             } catch (e: Exception) {
-                _creationError.value = e.message ?: Copy.genericFailure
+                _creationError.value = e.userMessage()
             } finally {
                 _isCreating.value = false
             }
@@ -181,7 +182,7 @@ class CatalogueShareViewModel(
                 }
                 loadShares()
             } catch (e: Exception) {
-                _actionNotice.value = e.message ?: "Failed to revoke link."
+                _actionNotice.value = e.userMessage()
             } finally {
                 _revokingShareId.value = null
             }

@@ -39,6 +39,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import com.jewelindia.app.data.net.userMessage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -130,7 +131,7 @@ fun EditProductScreen(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    errorMessage = "Couldn't upload your image: ${e.message}"
+                    errorMessage = "Couldn't upload your image: ${e.userMessage()}"
                 } finally {
                     isUploading = false
                 }
@@ -196,7 +197,7 @@ fun EditProductScreen(
                 onSaved(updatedProduct)
                 onDismiss()
             } catch (e: Exception) {
-                errorMessage = e.message ?: "Failed to save product changes."
+                errorMessage = e.userMessage()
                 isSaving = false
             }
         }

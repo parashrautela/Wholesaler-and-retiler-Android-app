@@ -13,6 +13,7 @@ import com.jewelindia.app.core.model.Product
 import kotlinx.coroutines.CancellationException
 import com.jewelindia.app.core.model.UploadUsage
 import com.jewelindia.app.data.api.WholesalerApi
+import com.jewelindia.app.data.net.userMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -153,7 +154,7 @@ class AddProductFormState {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                bannerError = e.message ?: "Upload failed"
+                bannerError = e.userMessage()
                 status = FormSubmitStatus.Error
                 return false
             }

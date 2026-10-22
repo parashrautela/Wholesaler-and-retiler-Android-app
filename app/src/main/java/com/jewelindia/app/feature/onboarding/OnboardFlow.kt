@@ -10,6 +10,7 @@ import com.jewelindia.app.core.images.PickedFile
 import com.jewelindia.app.core.model.VerificationStatus
 import com.jewelindia.app.data.api.WholesalerApi
 import com.jewelindia.app.data.net.JewelNetwork
+import com.jewelindia.app.data.net.userMessage
 import com.jewelindia.app.data.supabase.JewelSupabase
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
@@ -250,7 +251,7 @@ class OnboardFlow(
                 true
             }
         } catch (e: Exception) {
-            submitError = e.message ?: "Submission failed. Please check your connection and try again."
+            submitError = e.userMessage()
             false
         } finally {
             isSubmitting = false
@@ -278,7 +279,7 @@ class OnboardFlow(
                 )
             }
         } catch (e: Exception) {
-            throw Exception("Couldn't upload your $label: ${e.message}")
+            throw Exception("Couldn't upload your $label: ${e.userMessage()}")
         }
     }
 }

@@ -24,6 +24,7 @@ import com.jewelindia.app.core.text.Copy
 import com.jewelindia.app.core.text.Credentials
 import com.jewelindia.app.data.api.JewelApi
 import com.jewelindia.app.data.net.ApiError
+import com.jewelindia.app.data.net.userMessage
 import com.jewelindia.app.data.supabase.JewelSupabase
 import com.jewelindia.app.navigation.AuthRoute
 import com.jewelindia.app.navigation.EntryMode
@@ -229,10 +230,8 @@ fun EntryScreen(
                             signupFlow.remainingResends = otp.remainingResends
                         }
                         onNavigate(AuthRoute.VerifyOtp)
-                    } catch (e: ApiError) {
-                        error = e.message
                     } catch (e: Exception) {
-                        error = Copy.networkError
+                        error = e.userMessage()
                     } finally {
                         loading = false
                     }

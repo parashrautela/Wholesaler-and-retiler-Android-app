@@ -57,6 +57,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.delay
 import androidx.compose.material3.TextButton
+import com.jewelindia.app.data.net.userMessage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -227,7 +228,7 @@ fun WholesalerCatalogScreen(
                         exportFeedback = "Exported ${filteredProducts.size} designs to folder"
                     }
                 } catch (e: Exception) {
-                    exportFeedback = "Export failed: ${e.message}"
+                    exportFeedback = "Export failed: ${e.userMessage()}"
                 } finally {
                     isExporting = false
                 }

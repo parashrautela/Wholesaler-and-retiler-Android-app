@@ -38,6 +38,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.jewelindia.app.data.net.userMessage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -350,7 +351,7 @@ fun WholesalerProfileScreen(
                                 AccountApi.deleteMyAccount()
                                 sessionStore.signOut()
                             } catch (e: Exception) {
-                                deleteError = e.message ?: "Deletion failed"
+                                deleteError = e.userMessage()
                                 deleting = false
                             }
                         }

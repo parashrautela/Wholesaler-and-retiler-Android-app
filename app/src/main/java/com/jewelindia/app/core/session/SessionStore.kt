@@ -8,6 +8,7 @@ import com.jewelindia.app.core.model.UserRole
 import com.jewelindia.app.core.text.Copy
 import com.jewelindia.app.core.text.Credentials
 import com.jewelindia.app.data.net.DbRefusal
+import com.jewelindia.app.data.net.userMessage
 import com.jewelindia.app.data.api.LikeBook
 import com.jewelindia.app.data.supabase.JewelSupabase
 import io.github.jan.supabase.SupabaseClient
@@ -311,7 +312,7 @@ class SessionStore(
             }
             null
         } catch (e: Exception) {
-            e.message ?: Copy.genericFailure
+            e.userMessage()
         }
     }
 
@@ -325,7 +326,7 @@ class SessionStore(
             )
             null
         } catch (e: Exception) {
-            e.message ?: Copy.genericFailure
+            e.userMessage()
         }
     }
 }

@@ -43,6 +43,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import com.jewelindia.app.data.net.userMessage
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -207,7 +208,7 @@ fun CreateManufacturingRequestSheet(
                 onDismiss()
             } catch (e: Exception) {
                 isSubmitting = false
-                errorMessage = e.message ?: "Failed to submit enquiry. Please try again."
+                errorMessage = e.userMessage()
             }
         }
     }

@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import com.jewelindia.app.data.net.userMessage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -100,7 +101,7 @@ fun OnboardingFeeSheet(
             val customTabsIntent = CustomTabsIntent.Builder().build()
             customTabsIntent.launchUrl(context, url.toUri())
         } catch (e: Exception) {
-            phase = FeePhase.Failed(e.message ?: "Failed to open payment page.")
+            phase = FeePhase.Failed(e.userMessage())
         }
     }
 

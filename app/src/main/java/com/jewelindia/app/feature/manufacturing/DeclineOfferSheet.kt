@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.model.ManufacturingOffer
+import com.jewelindia.app.data.net.userMessage
 import com.jewelindia.app.data.api.ManufacturingApi
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
@@ -99,7 +100,7 @@ fun DeclineOfferSheet(
                             onSuccess()
                             onDismiss()
                         } catch (e: Exception) {
-                            errorMessage = e.message ?: "Failed to decline offer"
+                            errorMessage = e.userMessage()
                         } finally {
                             loading = false
                         }

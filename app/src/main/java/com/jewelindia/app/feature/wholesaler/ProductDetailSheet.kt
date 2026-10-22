@@ -149,7 +149,7 @@ fun ProductDetailSheet(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                reprocess.failure = e.message ?: "Failed to reprocess product."
+                reprocess.failure = e.userMessage()
             }
         }
     }

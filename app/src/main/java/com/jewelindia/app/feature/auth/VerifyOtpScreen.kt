@@ -35,6 +35,7 @@ import com.jewelindia.app.core.session.SignupFlow
 import com.jewelindia.app.core.text.Copy
 import com.jewelindia.app.data.api.JewelApi
 import com.jewelindia.app.data.net.ApiError
+import com.jewelindia.app.data.net.userMessage
 import com.jewelindia.app.design.Typography
 import com.jewelindia.app.navigation.AuthRoute
 import com.jewelindia.app.navigation.EntryMode
@@ -241,7 +242,7 @@ fun VerifyOtpScreen(
                                 } else if (e.cooldown) {
                                     resendCooldown = e.waitSeconds ?: Copy.otpResendCooldownSeconds
                                 }
-                                error = e.message
+                                error = e.userMessage()
                             } catch (e: Exception) {
                                 error = Copy.networkError
                             } finally {
@@ -311,7 +312,7 @@ fun VerifyOtpScreen(
                         SignupFlow.isCompletingSignup = false
                         isWrongOTP = true
                         showStopwatch = false
-                        error = if (e.message.isNotEmpty()) e.message else Copy.otpWrong
+                        error = e.userMessage().ifEmpty { Copy.otpWrong }
                         code = ""
                         verifying = false
                     } catch (e: Exception) {

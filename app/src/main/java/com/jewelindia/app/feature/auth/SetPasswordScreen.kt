@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.session.SessionStore
 import com.jewelindia.app.core.session.SignupFlow
 import com.jewelindia.app.data.api.JewelApi
+import com.jewelindia.app.data.net.userMessage
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
 import kotlinx.coroutines.launch
@@ -156,7 +157,7 @@ fun SetPasswordScreen(
                             sessionStore.refreshDestination()
                             onPasswordSet()
                         } catch (e: Exception) {
-                            errorMessage = e.message ?: "Failed to set password. Please try again."
+                            errorMessage = e.userMessage()
                         } finally {
                             isLoading = false
                         }

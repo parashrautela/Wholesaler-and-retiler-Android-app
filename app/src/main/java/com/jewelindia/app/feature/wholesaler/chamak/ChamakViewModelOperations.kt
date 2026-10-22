@@ -10,6 +10,7 @@ import com.jewelindia.app.data.api.ChamakGeneration
 import com.jewelindia.app.data.api.ChamakMode
 import com.jewelindia.app.data.api.ChamakStatus
 import com.jewelindia.app.data.api.SetBackdrop
+import com.jewelindia.app.data.net.userMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.supervisorScope
@@ -158,7 +159,7 @@ suspend fun ChamakViewModel.submitFeedback() {
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        errorMessage = e.message
+        errorMessage = e.userMessage()
     }
 }
 

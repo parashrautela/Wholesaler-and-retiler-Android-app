@@ -5,6 +5,7 @@ import com.jewelindia.app.core.model.OrderStatus
 import com.jewelindia.app.data.api.OrdersApi
 import com.jewelindia.app.data.api.WholesalerOrder
 import com.jewelindia.app.core.util.launchSafely
+import com.jewelindia.app.data.net.userMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,7 +41,7 @@ class WholesalerOrdersViewModel(
 
         launchSafely(onError = { e ->
             _uiState.value = OrdersUiState.Error(
-                e.message ?: "Couldn't load your orders. Check your connection and try again."
+                e.userMessage()
             )
         }) {
             _uiState.value = OrdersUiState.Loading
@@ -63,7 +64,7 @@ class WholesalerOrdersViewModel(
         onError: (String) -> Unit = {}
     ) {
         launchSafely(onError = { e ->
-            onError(e.message ?: "Failed to update order status")
+            onError(e.userMessage())
         }) {
             api.setStatus(orderId, newStatus)
             val idx = allOrders.indexOfFirst { it.id == orderId }
@@ -83,7 +84,7 @@ class WholesalerOrdersViewModel(
         onError: (String) -> Unit = {}
     ) {
         launchSafely(onError = { e ->
-            onError(e.message ?: "Failed to reject order")
+            onError(e.userMessage())
         }) {
             val fullReason = if (details.isNotBlank()) "$reason: $details" else reason
             api.setStatus(orderId, OrderStatus.rejected, reason = fullReason)

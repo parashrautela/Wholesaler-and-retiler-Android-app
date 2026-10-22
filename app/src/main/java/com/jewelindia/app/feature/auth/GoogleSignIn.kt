@@ -10,6 +10,7 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.jewelindia.app.core.config.AppConfig
 import com.jewelindia.app.core.text.Copy
+import com.jewelindia.app.data.net.userMessage
 import com.jewelindia.app.data.supabase.JewelSupabase
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
@@ -75,14 +76,14 @@ object GoogleSignIn {
             // No Google account configured on device — fall back to browser flow
             return@withContext signInInBrowser(supabase)
         } catch (e: Exception) {
-            return@withContext GoogleOutcome.Failed(e.message ?: Copy.genericFailure)
+            return@withContext GoogleOutcome.Failed(e.userMessage())
         }
 
         val credential = result.credential
         val googleIdTokenCredential = try {
             GoogleIdTokenCredential.createFrom(credential.data)
         } catch (e: Exception) {
-            return@withContext GoogleOutcome.Failed(e.message ?: Copy.genericFailure)
+            return@withContext GoogleOutcome.Failed(e.userMessage())
         }
 
         val idToken = googleIdTokenCredential.idToken
@@ -94,7 +95,7 @@ object GoogleSignIn {
             }
             GoogleOutcome.SignedIn
         } catch (e: Exception) {
-            GoogleOutcome.Failed(e.message ?: Copy.genericFailure)
+            GoogleOutcome.Failed(e.userMessage())
         }
     }
 
@@ -118,7 +119,7 @@ object GoogleSignIn {
                 GoogleOutcome.Cancelled
             }
         } catch (e: Exception) {
-            GoogleOutcome.Failed(e.message ?: Copy.genericFailure)
+            GoogleOutcome.Failed(e.userMessage())
         }
     }
 

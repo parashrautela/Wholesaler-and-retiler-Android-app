@@ -39,6 +39,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.jewelindia.app.data.net.userMessage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -137,7 +138,7 @@ fun ChatThreadScreen(
                     listState.animateScrollToItem(messages.size - 1)
                 }
             } catch (e: Exception) {
-                errorMessage = e.message ?: "Failed to send message"
+                errorMessage = e.userMessage()
             } finally {
                 sending = false
             }

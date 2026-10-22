@@ -4,6 +4,7 @@ package com.jewelindia.app.data.net
 import com.jewelindia.app.core.text.Copy
 import com.jewelindia.app.core.time.JewelDates
 import io.github.jan.supabase.exceptions.HttpRequestException
+import io.github.jan.supabase.exceptions.RestException
 import io.github.jan.supabase.postgrest.exception.PostgrestRestException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.booleanOrNull
@@ -24,7 +25,7 @@ class ApiError(
 }
 
 object DbRefusal {
-    private val knownCodes = listOf(
+    val knownCodes = listOf(
         "INVITE_CODE_REQUIRED", "INVITE_CODE_NOT_FOUND", "INVITE_CODE_EXPIRED", "INVITE_CODE_USED",
         "INVITE_CODE_INACTIVE", "RETAILER_ALREADY_ATTRIBUTED", "RETAILER_ALREADY_VERIFIED",
         "RETAILER_HAS_NO_INVITER", "ROLE_ALREADY_SET", "ROLE_NOT_ALLOWED", "NOT_SIGNED_IN",
@@ -40,7 +41,22 @@ object DbRefusal {
     }
 
     fun message(e: Throwable): String {
-        return when (code(e)) {
+        val pg = e as? PostgrestRestException
+        val cd = pg?.code ?: code(e)
+        val shortText = (e as? RestException)?.error ?: e.message ?: ""
+        return friendlyDbText(shortText, cd)
+    }
+}
+
+internal fun friendlyDbText(error: String, code: String?): String {
+    if (code == "PT403" || error.contains("locked by Jewel India admin")) {
+        return Copy.featureLocked
+    }
+    val matchedCode = listOfNotNull(code, error).firstNotNullOfOrNull { text ->
+        DbRefusal.knownCodes.firstOrNull { text.contains(it) }
+    }
+    if (matchedCode != null) {
+        return when (matchedCode) {
             "INVITE_CODE_REQUIRED" -> Copy.inviteCodeEmpty
             "INVITE_CODE_NOT_FOUND" -> Copy.inviteCodeReason("not_found")
             "INVITE_CODE_EXPIRED" -> Copy.inviteCodeReason("expired")
@@ -54,9 +70,11 @@ object DbRefusal {
             "NOT_INVITED" -> Copy.staffNotInvited
             "GOOGLE_SIGN_IN_REQUIRED" -> Copy.staffGoogleRequired
             "ACCOUNT_HAS_ANOTHER_ROLE" -> Copy.staffAccountHasAnotherRole
-            else -> e.message ?: Copy.genericFailure
+            else -> Copy.genericFailure
         }
     }
+    val firstLine = error.substringBefore('\n').trim()
+    return if (firstLine.isNotBlank()) firstLine else Copy.genericFailure
 }
 
 fun parseApiError(statusCode: Int, body: String): ApiError {
@@ -97,11 +115,12 @@ fun Throwable.userMessage(): String {
     return when (this) {
         is ApiError -> message
         is PostgrestRestException -> DbRefusal.message(this)
+        is RestException -> friendlyDbText(this.error, null)
         is HttpRequestException -> {
             val c = cause
-            if (c != null && JewelNetwork.isTransient(c)) Copy.networkError else (message ?: Copy.genericFailure)
+            if (c != null && JewelNetwork.isTransient(c)) Copy.networkError else friendlyDbText(message ?: "", null)
         }
         is IOException -> Copy.networkError
-        else -> message ?: Copy.genericFailure
+        else -> friendlyDbText(message ?: "", null)
     }
 }

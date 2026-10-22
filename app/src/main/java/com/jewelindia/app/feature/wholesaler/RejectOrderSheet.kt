@@ -30,6 +30,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.jewelindia.app.data.net.userMessage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -247,7 +248,7 @@ fun RejectOrderSheet(
                                 onConfirm(fullReason ?: return@launch)
                                 onDismiss()
                             } catch (e: Exception) {
-                                errorMessage = e.message ?: "Failed to reject order"
+                                errorMessage = e.userMessage()
                             }
                             isSaving = false
                         }

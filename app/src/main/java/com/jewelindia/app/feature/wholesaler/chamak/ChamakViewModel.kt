@@ -27,6 +27,7 @@ import com.jewelindia.app.data.api.SetStylingChip
 import com.jewelindia.app.data.api.Stage1Analysis
 import com.jewelindia.app.data.api.WeightedAttribute
 import com.jewelindia.app.data.api.WholesalerFormInput
+import com.jewelindia.app.data.net.userMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -448,7 +449,7 @@ class ChamakViewModel(
             step = Step.CatalogPicker
             stopQuoteRotation()
         } catch (e: Exception) {
-            errorMessage = e.message ?: "Failed to start analysis."
+            errorMessage = e.userMessage()
             step = if (currentGeneration == null) Step.Failed else Step.Recoverable
             stopQuoteRotation()
         } finally {
@@ -507,7 +508,7 @@ class ChamakViewModel(
             step = Step.SliderForm
             stopQuoteRotation()
         } catch (e: Exception) {
-            errorMessage = e.message ?: "Submission could not be confirmed. Check status before retrying."
+            errorMessage = e.userMessage()
             step = Step.Recoverable
             stopQuoteRotation()
         } finally {
@@ -545,7 +546,7 @@ class ChamakViewModel(
             step = Step.SetStyling
             stopQuoteRotation()
         } catch (e: Exception) {
-            errorMessage = e.message ?: "Submission could not be confirmed. Check status before retrying."
+            errorMessage = e.userMessage()
             step = Step.Recoverable
             stopQuoteRotation()
         } finally {

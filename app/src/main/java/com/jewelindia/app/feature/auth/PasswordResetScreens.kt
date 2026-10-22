@@ -20,6 +20,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.session.SessionStore
+import com.jewelindia.app.data.net.userMessage
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
 import kotlinx.coroutines.launch
@@ -105,7 +106,7 @@ fun ForgotPasswordScreen(
                                 sessionStore.requestPasswordReset(email.trim())
                                 isSubmitted = true
                             } catch (e: Exception) {
-                                errorMessage = e.message ?: "Failed to send reset email. Please try again."
+                                errorMessage = e.userMessage()
                             } finally {
                                 isLoading = false
                             }
@@ -251,7 +252,7 @@ fun UpdatePasswordScreen(
                             sessionStore.refreshDestination()
                             onPasswordUpdated()
                         } catch (e: Exception) {
-                            errorMessage = e.message ?: "Failed to update password. Please try again."
+                            errorMessage = e.userMessage()
                         } finally {
                             isLoading = false
                         }

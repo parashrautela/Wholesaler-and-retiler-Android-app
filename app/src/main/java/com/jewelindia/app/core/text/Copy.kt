@@ -41,6 +41,7 @@ object Copy {
     val bannedError = "Your account has been banned. Please use a different number or email."
     val invalidMobile = "Please enter a valid 10-digit Indian mobile number."
     val genericFailure = "Something went wrong. Please try again."
+    val featureLocked = "This feature has been turned off for your account by Jewel India. Contact support if you think this is a mistake."
     val otpSendFailure = "Failed to send OTP. Please try again."
     val networkError = "Network error. Please check your connection and try again."
         /// Shown in the red error slot even though it is a success path — matching the web.
