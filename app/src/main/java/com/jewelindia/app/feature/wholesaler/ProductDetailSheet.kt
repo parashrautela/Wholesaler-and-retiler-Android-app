@@ -42,6 +42,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -60,6 +62,7 @@ import com.jewelindia.app.core.model.ImageSize
 import com.jewelindia.app.core.model.UploadUsage
 import com.jewelindia.app.core.security.ProtectedImage
 import com.jewelindia.app.data.api.WholesalerApi
+import com.jewelindia.app.data.net.userMessage
 import com.jewelindia.app.design.JewelWeight
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.cirka
@@ -76,16 +79,19 @@ fun ProductDetailSheet(
     product: Product,
     wholesalerId: String = "",
     onDismiss: () -> Unit,
-    onPublishToggle: ((Product) -> Unit)? = null,
+    onPublishedChanged: ((Product) -> Unit)? = null,
     onEdit: ((Product) -> Unit)? = null,
     onUpdated: ((Product) -> Unit)? = null
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val requestAIConsent = rememberAIConsentRequest(wholesalerId)
     var currentProduct by remember(product) { mutableStateOf(product) }
     var activeImageURL by remember(product) { mutableStateOf(currentProduct.displayImageUrl(ImageSize.DETAIL)) }
     var viewerImageURL by remember(product) { mutableStateOf<String?>(null) }
     var isPublished by remember(product) { mutableStateOf(currentProduct.isPublished == true) }
+    var isUpdatingPublish by remember { mutableStateOf(false) }
+    var publishError by remember { mutableStateOf<String?>(null) }
     var inStock by remember(product) { mutableStateOf(currentProduct.stockAvailable != false) }
     var usage by remember { mutableStateOf<UploadUsage?>(null) }
     val reprocess = remember { ReprocessState() }
@@ -402,20 +408,37 @@ fun ProductDetailSheet(
                                 color = Color(0xFF9CA3AF)
                             )
                         }
+                        publishError?.let { err ->
+                            Text(
+                                text = err,
+                                style = manrope(12f, JewelWeight.Regular),
+                                color = Color(0xFFDC2626)
+                            )
+                        }
                     }
 
                     if (currentProduct.canPublish) {
                         Switch(
                             checked = isPublished,
+                            enabled = !isUpdatingPublish,
                             onCheckedChange = { v ->
                                 isPublished = v
+                                isUpdatingPublish = true
+                                publishError = null
                                 scope.launch {
                                     try {
                                         WholesalerApi.updateProductFlags(currentProduct.id, isPublished = v)
                                         val updated = currentProduct.copy(isPublished = v)
                                         currentProduct = updated
-                                        onPublishToggle?.invoke(updated)
-                                    } catch (_: Exception) {}
+                                        onPublishedChanged?.invoke(updated)
+                                    } catch (e: Exception) {
+                                        isPublished = !v
+                                        val msg = e.userMessage()
+                                        publishError = msg
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                    } finally {
+                                        isUpdatingPublish = false
+                                    }
                                 }
                             },
                             colors = SwitchDefaults.colors(

@@ -591,7 +591,7 @@ fun WholesalerCatalogScreen(
             product = products.firstOrNull { it.id == product.id } ?: product,
             wholesalerId = resolvedUserId,
             onDismiss = { selectedProduct = null },
-            onPublishToggle = { updated -> viewModel.togglePublish(updated) },
+            onPublishedChanged = { viewModel.replaceLocal(it) },
             onEdit = { p ->
                 selectedProduct = null
                 productToEdit = p

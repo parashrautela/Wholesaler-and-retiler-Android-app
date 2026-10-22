@@ -73,4 +73,39 @@ class WholesalerCatalogViewModelTest {
         }
     }
 
+    @Test
+    fun testReplaceLocalUpdatesListWithoutCallingApi() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            var apiCalls = 0
+            val initialProduct = Product(id = "p-1", title = "Old Title", isPublished = false)
+            val vm = WholesalerCatalogViewModel(
+                wholesalerUserId = "user-1",
+                fetchPage = { _, _, _, _ ->
+                    apiCalls++
+                    WholesalerApi.CataloguePage(
+                        products = listOf(initialProduct),
+                        total = 1,
+                        hasMore = false
+                    )
+                }
+            )
+            vm.load()
+            advanceUntilIdle()
+            assertEquals(1, apiCalls)
+            val stateBefore = vm.uiState.value as CatalogUiState.Content
+            assertEquals(false, stateBefore.products.first().isPublished)
+
+            val updatedProduct = initialProduct.copy(title = "New Title", isPublished = true)
+            vm.replaceLocal(updatedProduct)
+
+            assertEquals(1, apiCalls)
+            val stateAfter = vm.uiState.value as CatalogUiState.Content
+            assertEquals(1, stateAfter.products.size)
+            assertEquals(true, stateAfter.products.first().isPublished)
+            assertEquals("New Title", stateAfter.products.first().title)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
 }

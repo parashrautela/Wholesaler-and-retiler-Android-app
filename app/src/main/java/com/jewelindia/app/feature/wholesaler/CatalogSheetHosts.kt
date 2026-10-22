@@ -32,7 +32,7 @@ internal fun CatalogProductDetailSheetHost(
     product: Product,
     wholesalerId: String,
     onDismiss: () -> Unit,
-    onPublishToggle: (Product) -> Unit,
+    onPublishedChanged: (Product) -> Unit,
     onEdit: (Product) -> Unit,
     onUpdated: () -> Unit
 ) {
@@ -45,7 +45,7 @@ internal fun CatalogProductDetailSheetHost(
             product = product,
             wholesalerId = wholesalerId,
             onDismiss = onDismiss,
-            onPublishToggle = onPublishToggle,
+            onPublishedChanged = onPublishedChanged,
             onEdit = onEdit,
             onUpdated = { onUpdated() }
         )

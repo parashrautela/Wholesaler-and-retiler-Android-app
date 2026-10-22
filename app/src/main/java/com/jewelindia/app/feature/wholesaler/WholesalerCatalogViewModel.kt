@@ -193,25 +193,14 @@ class WholesalerCatalogViewModel(
         }
     }
 
-    fun togglePublish(
-        product: Product,
-        onSuccess: () -> Unit = {},
-        onError: (String) -> Unit = {}
-    ) {
-        val newStatus = !(product.isPublished ?: false)
-        launchSafely(onError = { e ->
-            onError(e.message ?: "Failed to update publish status")
-        }) {
-            api.updateProductFlags(product.id, isPublished = newStatus)
-            val idx = loadedProducts.indexOfFirst { it.id == product.id }
-            if (idx != -1) {
-                loadedProducts[idx] = loadedProducts[idx].copy(isPublished = newStatus)
-                _uiState.value = CatalogUiState.Content(
-                    products = loadedProducts.toList(),
-                    totalCount = totalCount
-                )
-            }
-            onSuccess()
+    fun replaceLocal(product: Product) {
+        val idx = loadedProducts.indexOfFirst { it.id == product.id }
+        if (idx != -1) {
+            loadedProducts[idx] = product
+            _uiState.value = CatalogUiState.Content(
+                products = loadedProducts.toList(),
+                totalCount = totalCount
+            )
         }
     }
 }

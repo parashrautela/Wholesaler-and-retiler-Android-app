@@ -235,7 +235,7 @@ object DebugPeek {
                     product = p,
                     wholesalerId = "w-peek-0001",
                     onDismiss = onBack,
-                    onPublishToggle = {}
+                    onPublishedChanged = {}
                 )
             }
             "addproduct" -> {
