@@ -10,12 +10,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.jewelindia.app.core.images.ImageNormalizer
 import com.jewelindia.app.core.model.Product
-import kotlinx.coroutines.CancellationException
 import com.jewelindia.app.core.model.UploadUsage
 import com.jewelindia.app.data.api.WholesalerApi
 import com.jewelindia.app.data.net.userMessage
+import com.jewelindia.app.data.supabase.JewelSupabase
+import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.util.UUID
 
 enum class FormSubmitStatus {
@@ -32,10 +38,71 @@ enum class FormSubmitStatus {
         }
 }
 
+internal fun productPayload(
+    wholesalerId: String,
+    title: String,
+    jewelleryType: String,
+    category: String,
+    style: String,
+    size: String,
+    metalPurity: String,
+    stockAvailable: Boolean,
+    grossWeight: String?,
+    stoneWeight: String?,
+    netWeight: String?,
+    makeToOrderDays: String?,
+    wholesalerEmail: String? = null,
+    rawImageUrl: String? = null,
+    isPublished: Boolean? = null
+): JsonObject = buildJsonObject {
+    put("wholesaler_id", wholesalerId)
+    put("title", title)
+    put("jewellery_type", jewelleryType)
+    put("category", category)
+    put("style", style)
+    put("size", size)
+    put("metal_purity", metalPurity)
+    put("stock_available", stockAvailable)
+
+    val net = netWeight?.takeIf { it.isNotBlank() }?.toDoubleOrNull()
+    if (net != null) put("net_weight", net) else put("net_weight", JsonNull)
+
+    val gross = grossWeight?.takeIf { it.isNotBlank() }?.toDoubleOrNull()
+    if (gross != null) put("gross_weight", gross) else put("gross_weight", JsonNull)
+
+    val stone = stoneWeight?.takeIf { it.isNotBlank() }?.toDoubleOrNull()
+    if (stone != null) put("stone_weight", stone) else put("stone_weight", JsonNull)
+
+    if (stockAvailable) {
+        put("make_to_order_days", JsonNull)
+    } else {
+        val days = makeToOrderDays?.takeIf { it.isNotBlank() }?.toIntOrNull()
+        if (days != null) put("make_to_order_days", days) else put("make_to_order_days", JsonNull)
+    }
+
+    if (!wholesalerEmail.isNullOrBlank()) {
+        put("wholesaler_email", wholesalerEmail)
+    } else {
+        put("wholesaler_email", JsonNull)
+    }
+
+    if (!rawImageUrl.isNullOrBlank()) {
+        put("raw_image_url", rawImageUrl)
+    } else {
+        put("raw_image_url", JsonNull)
+    }
+
+    if (isPublished != null) {
+        put("is_published", isPublished)
+    }
+}
+
 class AddProductFormState {
     var status by mutableStateOf(FormSubmitStatus.Idle)
     var submittedProduct by mutableStateOf<Product?>(null)
-    private val submissionKey = UUID.randomUUID().toString()
+    var submissionKey by mutableStateOf(UUID.randomUUID().toString())
+    var pendingProductId by mutableStateOf<String?>(null)
+    var pendingRawImageUrl by mutableStateOf<String?>(null)
     var bannerError by mutableStateOf<String?>(null)
     val errors = mutableStateMapOf<String, String>()
 
@@ -109,17 +176,72 @@ class AddProductFormState {
         publish: Boolean,
         onSuccess: (savedAsDraft: Boolean) -> Unit
     ): Boolean {
-        if (status.isBusy || !validate(requiresImage = publish)) return false
+        val requiresImage = publish && pendingProductId == null
+        if (status.isBusy || !validate(requiresImage = requiresImage)) return false
 
         bannerError = null
-        status = FormSubmitStatus.Uploading
 
         val finalTitle = title.trim().ifBlank {
             WholesalerProductOptions.types.firstOrNull { it.value == jewelleryType }?.label ?: "Untitled"
         }
 
-        val uri = selectedUri
-        if (publish && uri != null) {
+        if (publish) {
+            val userEmail = JewelSupabase.client.auth.currentUserOrNull()?.email
+
+            // Retry saving details if processProduct already succeeded
+            val existingId = pendingProductId
+            if (existingId != null) {
+                status = FormSubmitStatus.Saving
+                try {
+                    val payload = productPayload(
+                        wholesalerId = wholesalerId,
+                        title = finalTitle,
+                        jewelleryType = jewelleryType,
+                        category = category,
+                        style = style,
+                        size = size,
+                        metalPurity = metalPurity,
+                        stockAvailable = stockAvailable,
+                        grossWeight = grossWeight,
+                        stoneWeight = stoneWeight,
+                        netWeight = netWeight,
+                        makeToOrderDays = makeToOrderDays,
+                        wholesalerEmail = userEmail,
+                        rawImageUrl = pendingRawImageUrl
+                    )
+                    WholesalerApi.completeProduct(existingId, payload)
+                    submittedProduct = Product(
+                        id = existingId,
+                        wholesalerId = wholesalerId,
+                        title = finalTitle,
+                        jewelleryType = jewelleryType,
+                        rawImageURL = pendingRawImageUrl,
+                        aiProcessingState = "queued"
+                    )
+                    pendingProductId = null
+                    pendingRawImageUrl = null
+                    submissionKey = UUID.randomUUID().toString()
+                    status = FormSubmitStatus.Done
+                    onSuccess(false)
+                    return true
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    bannerError = e.userMessage()
+                    status = FormSubmitStatus.Error
+                    return false
+                }
+            }
+
+            // Normal AI upload path
+            status = FormSubmitStatus.Uploading
+            val uri = selectedUri
+            if (uri == null) {
+                bannerError = "Please upload a product image."
+                status = FormSubmitStatus.Error
+                return false
+            }
+
             try {
                 val bytes = withContext(Dispatchers.IO) {
                     context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
@@ -143,11 +265,39 @@ class AddProductFormState {
 
                 val id = result.productId?.takeIf { it.isNotBlank() }
                     ?: throw Exception("Upload accepted, but its product ID wasn't returned. Check your catalogue before retrying.")
+
+                pendingProductId = id
+                pendingRawImageUrl = result.rawImageURL
+
+                val payload = productPayload(
+                    wholesalerId = wholesalerId,
+                    title = finalTitle,
+                    jewelleryType = jewelleryType,
+                    category = category,
+                    style = style,
+                    size = size,
+                    metalPurity = metalPurity,
+                    stockAvailable = stockAvailable,
+                    grossWeight = grossWeight,
+                    stoneWeight = stoneWeight,
+                    netWeight = netWeight,
+                    makeToOrderDays = makeToOrderDays,
+                    wholesalerEmail = userEmail,
+                    rawImageUrl = result.rawImageURL
+                )
+                WholesalerApi.completeProduct(id, payload)
+
                 submittedProduct = Product(
-                    id = id, wholesalerId = wholesalerId, title = finalTitle,
-                    jewelleryType = jewelleryType, rawImageURL = result.rawImageURL,
+                    id = id,
+                    wholesalerId = wholesalerId,
+                    title = finalTitle,
+                    jewelleryType = jewelleryType,
+                    rawImageURL = result.rawImageURL,
                     aiProcessingState = "queued"
                 )
+                pendingProductId = null
+                pendingRawImageUrl = null
+                submissionKey = UUID.randomUUID().toString()
                 status = FormSubmitStatus.Done
                 onSuccess(false)
                 return true
@@ -159,9 +309,75 @@ class AddProductFormState {
                 return false
             }
         } else {
-            status = FormSubmitStatus.Done
-            onSuccess(true)
-            return true
+            // Draft path (Save as draft)
+            val sessionUser = JewelSupabase.client.auth.currentUserOrNull()
+            val uid = sessionUser?.id
+            if (uid == null || !uid.equals(wholesalerId, ignoreCase = true)) {
+                bannerError = "Your session isn't active on this device, so this can't be authorised. Please sign out and sign in again."
+                status = FormSubmitStatus.Error
+                return false
+            }
+
+            var draftImageUrl: String? = null
+            val uri = selectedUri
+            if (uri != null) {
+                status = FormSubmitStatus.Uploading
+                try {
+                    val bytes = withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    } ?: throw Exception("Could not read image file")
+
+                    val normalizedData = withContext(Dispatchers.IO) {
+                        ImageNormalizer.jpeg(bytes, ImageNormalizer.MAX_PRODUCT_DIMENSION)
+                    } ?: throw Exception("That file couldn't be decoded as a photo. Please choose another image.")
+
+                    draftImageUrl = WholesalerApi.upload(
+                        bucket = "plant-images",
+                        path = "raw/${uid.lowercase()}/product-draft_${UUID.randomUUID()}.jpg",
+                        data = normalizedData,
+                        contentType = "image/jpeg",
+                        upsert = false
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    bannerError = "Uploading the product image failed: ${e.userMessage()}"
+                    status = FormSubmitStatus.Error
+                    return false
+                }
+            }
+
+            status = FormSubmitStatus.Saving
+            try {
+                val payload = productPayload(
+                    wholesalerId = wholesalerId,
+                    title = finalTitle,
+                    jewelleryType = jewelleryType,
+                    category = category,
+                    style = style,
+                    size = size,
+                    metalPurity = metalPurity,
+                    stockAvailable = stockAvailable,
+                    grossWeight = grossWeight,
+                    stoneWeight = stoneWeight,
+                    netWeight = netWeight,
+                    makeToOrderDays = makeToOrderDays,
+                    wholesalerEmail = sessionUser.email,
+                    rawImageUrl = draftImageUrl,
+                    isPublished = false
+                )
+                WholesalerApi.insertDraftProduct(payload)
+                submissionKey = UUID.randomUUID().toString()
+                status = FormSubmitStatus.Done
+                onSuccess(true)
+                return true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                bannerError = "Saving the product draft failed: ${e.userMessage()}"
+                status = FormSubmitStatus.Error
+                return false
+            }
         }
     }
 }

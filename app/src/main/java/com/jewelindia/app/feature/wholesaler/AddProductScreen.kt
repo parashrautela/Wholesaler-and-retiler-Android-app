@@ -218,6 +218,11 @@ fun AddProductScreen(
                 )
             }
 
+            // Error Banner
+            form.bannerError?.let { banner ->
+                ErrorBanner(message = banner)
+            }
+
             // Usage Banner
             AddProductProgressBanner(
                 usage = form.usage,
@@ -254,7 +259,7 @@ fun AddProductScreen(
                             )
                         }
                     }
-                    if (publish) requestAIConsent(submit) else submit()
+                    if (publish && form.pendingProductId == null) requestAIConsent(submit) else submit()
                 }
             )
 

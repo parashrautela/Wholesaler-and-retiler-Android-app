@@ -18,6 +18,7 @@ import com.jewelindia.app.data.supabase.JewelJson
 import com.jewelindia.app.data.supabase.JewelSupabase
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Count
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.storage.storage
@@ -234,6 +235,29 @@ object WholesalerApi {
                     eq("id", id)
                 }
             }
+        }
+    }
+
+    @Serializable
+    private data class IdRow(val id: String)
+
+    suspend fun completeProduct(productId: String, payload: JsonObject) = withContext(Dispatchers.IO) {
+        JewelNetwork.withRetry {
+            val rows = db.from("products").update(payload) {
+                select(Columns.raw("id"))
+                filter {
+                    eq("id", productId)
+                }
+            }.decodeList<IdRow>()
+            if (rows.isEmpty()) {
+                throw PipelineException("Your design was uploaded, but its details couldn't be saved. Open it in your catalogue and tap Edit to add them.")
+            }
+        }
+    }
+
+    suspend fun insertDraftProduct(payload: JsonObject) = withContext(Dispatchers.IO) {
+        JewelNetwork.withRetry {
+            db.from("products").insert(payload)
         }
     }
 

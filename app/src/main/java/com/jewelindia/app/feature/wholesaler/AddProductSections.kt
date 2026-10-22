@@ -469,38 +469,44 @@ fun AddProductSubmitSection(
         // Submit button
         val cost = form.imageCount * 12
         val isLimitReached = form.isLimitReached
+        val isRetryDetails = form.pendingProductId != null
+        val canClickPrimary = isRetryDetails || !isLimitReached
+        val buttonText = if (isRetryDetails) "Retry saving details" else "Submit · $cost credits"
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
-                .background(if (isLimitReached) Color(0xFFD1D5DB) else Color.Black)
-                .clickable(enabled = !isLimitReached) { onSubmit(true) }
+                .background(if (canClickPrimary) Color.Black else Color(0xFFD1D5DB))
+                .clickable(enabled = canClickPrimary) { onSubmit(true) }
                 .padding(vertical = 14.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Submit · $cost credits",
+                text = buttonText,
                 style = Typography.santoshi(16.sp, FontWeight.SemiBold),
-                color = if (isLimitReached) Color(0xFF6B7280) else Color.White
+                color = if (canClickPrimary) Color.White else Color(0xFF6B7280)
             )
         }
 
-        // Save & Upload Later
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(Color.White)
-                .border(1.dp, Color.Black, RoundedCornerShape(24.dp))
-                .clickable { onSubmit(false) }
-                .padding(vertical = 14.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Save & Upload Later",
-                style = Typography.santoshi(16.sp, FontWeight.SemiBold),
-                color = Color.Black
-            )
+        // Save & Upload Later (only when not retrying details)
+        if (!isRetryDetails) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color.White)
+                    .border(1.dp, Color.Black, RoundedCornerShape(24.dp))
+                    .clickable { onSubmit(false) }
+                    .padding(vertical = 14.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Save & Upload Later",
+                    style = Typography.santoshi(16.sp, FontWeight.SemiBold),
+                    color = Color.Black
+                )
+            }
         }
 
         Text(
