@@ -117,72 +117,8 @@ open class JewelApi(
     }
 
     suspend fun invitationSettings(page: Int = 0): InvitationSettings = withContext(Dispatchers.IO) {
-        try {
-            val body = authenticatedGetSite("/api/referral/manage?page=$page")
-            JewelJson.decodeFromString(InvitationSettings.serializer(), body)
-        } catch (e: Exception) {
-            val user = supabase.auth.currentSessionOrNull()?.user ?: throw e
-
-            @Serializable
-            data class WholesalerIDRow(val id: String)
-
-            val ws = try {
-                supabase.from("wholesalers")
-                    .select(Columns.raw("id")) {
-                        filter { eq("user_id", user.id) }
-                        limit(1)
-                    }.decodeSingle<WholesalerIDRow>()
-            } catch (_: Exception) {
-                WholesalerIDRow(id = "")
-            }
-
-            @Serializable
-            data class DBRefRow(
-                val id: String,
-                val code: String,
-                @SerialName("is_active") val isActive: Boolean,
-                @SerialName("created_at") val createdAt: String,
-                @SerialName("expires_at") val expiresAt: String,
-                @SerialName("accepted_at") val acceptedAt: String? = null
-            )
-
-            val rows = try {
-                supabase.from("referral_links")
-                    .select(Columns.raw("id, code, is_active, created_at, expires_at, accepted_at")) {
-                        filter { eq("wholesaler_id", ws.id) }
-                        order("created_at", Order.DESCENDING)
-                        range((page * 20).toLong(), ((page + 1) * 20 - 1).toLong())
-                    }.decodeList<DBRefRow>()
-            } catch (_: Exception) {
-                emptyList()
-            }
-
-            val links = rows.map { row ->
-                val linkUrl = "https://jewelindia.shop/join/${row.code}"
-                val status = if (row.acceptedAt != null) "accepted" else if (!row.isActive) "cancelled" else "unclaimed"
-                RetailerInvitation(
-                    id = row.id,
-                    code = row.code,
-                    link = linkUrl,
-                    expiresAt = row.expiresAt,
-                    giftCredits = 1000,
-                    extraCredits = 0,
-                    status = status
-                )
-            }
-
-            InvitationSettings(
-                enabled = true,
-                skipGuide = false,
-                available = 2000,
-                minimum = 1000,
-                step = 500,
-                maximum = 10000,
-                reward = 1000,
-                links = links,
-                count = rows.size
-            )
-        }
+        val body = authenticatedGetSite("/api/referral/manage?page=$page")
+        JewelJson.decodeFromString(InvitationSettings.serializer(), body)
     }
 
     suspend fun saveInvitationGuide(skip: Boolean): InvitationSettings = withContext(Dispatchers.IO) {
@@ -196,137 +132,29 @@ open class JewelApi(
     }
 
     suspend fun cancelInvitation(id: String): Unit = withContext(Dispatchers.IO) {
-        try {
-            val token = freshToken()
-            val url = "${AppConfig.siteUrl.trimEnd('/')}/api/referral/manage"
-            val json = buildJsonObject { put("id", id) }.toString()
-            val req = Request.Builder()
-                .url(url)
-                .delete(json.toRequestBody("application/json".toMediaType()))
-                .addHeader("Authorization", "Bearer $token")
-                .build()
-            http.site.newCall(req).execute().use { }
-        } catch (_: Exception) {
-            // best effort fallback
+        val token = freshToken()
+        val url = "${AppConfig.siteUrl.trimEnd('/')}/api/referral/manage"
+        val json = buildJsonObject { put("id", id) }.toString()
+        val req = Request.Builder()
+            .url(url)
+            .delete(json.toRequestBody("application/json".toMediaType()))
+            .addHeader("Authorization", "Bearer $token")
+            .build()
+        http.site.newCall(req).execute().use { response ->
+            val body = response.body.string()
+            if (!response.isSuccessful) {
+                throw parseApiError(response.code, body)
+            }
         }
-    }
-
-    suspend fun fetchLatestActiveInvitation(): RetailerInvitation? = withContext(Dispatchers.IO) {
-        val user = supabase.auth.currentSessionOrNull()?.user ?: return@withContext null
-
-        @Serializable
-        data class WsId(val id: String)
-
-        val ws = try {
-            supabase.from("wholesalers").select(Columns.raw("id")) {
-                filter { eq("user_id", user.id) }
-                limit(1)
-            }.decodeSingleOrNull<WsId>()
-        } catch (_: Exception) { null } ?: return@withContext null
-
-        @Serializable
-        data class RefRow(
-            val id: String,
-            val code: String,
-            @SerialName("is_active") val isActive: Boolean,
-            @SerialName("expires_at") val expiresAt: String
-        )
-
-        val row = try {
-            supabase.from("referral_links").select(Columns.raw("id, code, is_active, expires_at")) {
-                filter {
-                    eq("wholesaler_id", ws.id)
-                    eq("is_active", true)
-                }
-                order("created_at", Order.DESCENDING)
-                limit(1)
-            }.decodeSingleOrNull<RefRow>()
-        } catch (_: Exception) { null } ?: return@withContext null
-
-        RetailerInvitation(
-            id = row.id,
-            code = row.code,
-            link = "https://jewelindia.shop/join/${row.code}",
-            expiresAt = row.expiresAt,
-            giftCredits = 1000,
-            status = "unclaimed"
-        )
     }
 
     suspend fun createRetailerInvitation(gift: Int = 1000, key: UUID = UUID.randomUUID()): RetailerInvitation = withContext(Dispatchers.IO) {
-        try {
-            val json = buildJsonObject {
-                put("gift_credits", gift)
-                put("idempotency_key", key.toString())
-            }.toString()
-            val body = authenticatedPostSite("/api/referral/generate", json)
-            JewelJson.decodeFromString(RetailerInvitation.serializer(), body)
-        } catch (_: Exception) {
-            // DB fallback
-            val user = supabase.auth.currentSessionOrNull()?.user
-                ?: throw ApiError(401, "Please sign in to invite retailers.")
-
-            @Serializable
-            data class WsRow(val id: String, @SerialName("business_name") val businessName: String? = null, @SerialName("full_name") val fullName: String? = null)
-
-            val ws = supabase.from("wholesalers").select(Columns.raw("id, business_name, full_name")) {
-                filter { eq("user_id", user.id) }
-                limit(1)
-            }.decodeSingle<WsRow>()
-
-            val name = (ws.businessName ?: ws.fullName ?: "JI").trim().replace("\\s+".toRegex(), " ")
-            val parts = name.split(" ")
-            val initials = if (parts.size >= 2) {
-                "${parts[0].take(1)}${parts[1].take(1)}".uppercase()
-            } else {
-                name.take(2).uppercase()
-            }
-
-            val chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-            val randomChars = (0 until 6).map { chars.random() }.joinToString("")
-            val code = "$initials-$randomChars"
-            val expiresAt = Instant.now().plus(7, ChronoUnit.DAYS).toString()
-
-            @Serializable
-            data class InsertBody(
-                @SerialName("wholesaler_id") val wholesalerId: String,
-                val code: String,
-                @SerialName("max_uses") val maxUses: Int = 1,
-                @SerialName("is_active") val isActive: Boolean = true,
-                @SerialName("expires_at") val expiresAt: String,
-                val source: String = "web"
-            )
-
-            @Serializable
-            data class InsertResult(
-                val id: String,
-                val code: String,
-                @SerialName("expires_at") val expiresAt: String
-            )
-
-            val inserted = supabase.from("referral_links").insert(
-                InsertBody(
-                    wholesalerId = ws.id,
-                    code = code,
-                    maxUses = 1,
-                    isActive = true,
-                    expiresAt = expiresAt,
-                    source = "web"
-                )
-            ) {
-                select(Columns.raw("id, code, expires_at"))
-            }.decodeSingle<InsertResult>()
-
-            RetailerInvitation(
-                id = inserted.id,
-                code = inserted.code,
-                link = "https://jewelindia.shop/join/${inserted.code}",
-                expiresAt = inserted.expiresAt,
-                giftCredits = gift,
-                extraCredits = 0,
-                status = "unclaimed"
-            )
-        }
+        val json = buildJsonObject {
+            put("gift_credits", gift)
+            put("idempotency_key", key.toString())
+        }.toString()
+        val body = authenticatedPostSite("/api/referral/generate", json)
+        JewelJson.decodeFromString(RetailerInvitation.serializer(), body)
     }
 
     suspend fun claimRetailerInvitation(code: String): ClaimInvitationResponse = withContext(Dispatchers.IO) {

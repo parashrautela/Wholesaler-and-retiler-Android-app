@@ -1,7 +1,6 @@
 // Port of: wholesaler ios/JewelIndia/Sources/Features/Wholesaler/InviteRetailerSheet.swift
 package com.jewelindia.app.feature.wholesaler
 
-import androidx.compose.ui.platform.LocalConfiguration
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -36,6 +35,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
@@ -57,11 +58,33 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jewelindia.app.R
+import com.jewelindia.app.data.net.userMessage
+import com.jewelindia.app.data.api.InvitationSettings
 import com.jewelindia.app.data.api.JewelApi
 import com.jewelindia.app.data.api.RetailerInvitation
+import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+object InviteRetailerLogic {
+    fun clampGift(
+        current: Int,
+        delta: Int,
+        minimum: Int,
+        maximum: Int,
+        available: Int
+    ): Int {
+        val upper = minOf(maximum, available)
+        if (upper < minimum) return minimum
+        val next = current + delta
+        return next.coerceIn(minimum, upper)
+    }
+
+    fun pickNewestUnclaimed(links: List<RetailerInvitation>?): RetailerInvitation? {
+        return links?.firstOrNull { it.status == "unclaimed" }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,39 +97,75 @@ fun InviteRetailerSheet(
     val locale = LocalConfiguration.current.locales[0]
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    var settings by remember { mutableStateOf<InvitationSettings?>(null) }
     var invitation by remember {
         mutableStateOf(
-            if (previewStage != null) {
+            if (previewStage != null && previewStage == 1) {
                 RetailerInvitation(
                     id = "preview-id",
                     code = "PJ-b61rce",
                     link = "https://jewelindia.shop/join/PJ-b61rce",
                     expiresAt = "2026-10-12",
-                    giftCredits = 1000
+                    giftCredits = 1000,
+                    status = "unclaimed"
                 )
             } else null
         )
     }
     var pointsOffered by remember { mutableIntStateOf(1000) }
+    var loadingSettings by remember { mutableStateOf(previewStage == null) }
     var busy by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    fun loadSettings() {
+        scope.launch {
+            loadingSettings = true
+            errorMessage = null
+            try {
+                val s = JewelApi.invitationSettings(page = 0)
+                settings = s
+                pointsOffered = s.minimum
+                invitation = InviteRetailerLogic.pickNewestUnclaimed(s.links)
+            } catch (e: Exception) {
+                errorMessage = e.userMessage()
+            } finally {
+                loadingSettings = false
+            }
+        }
+    }
+
     LaunchedEffect(previewStage) {
         if (previewStage == null) {
-            try {
-                val existing = JewelApi.fetchLatestActiveInvitation()
-                if (existing != null) {
-                    invitation = existing
-                } else {
-                    invitation = JewelApi.createRetailerInvitation(gift = pointsOffered)
-                }
-            } catch (_: Exception) {}
+            loadSettings()
+        } else {
+            val previewSettings = InvitationSettings(
+                enabled = true,
+                available = 5000,
+                minimum = 1000,
+                step = 500,
+                maximum = 10000,
+                reward = 1000
+            )
+            settings = previewSettings
+            pointsOffered = 1000
+            invitation = if (previewStage == 1) {
+                RetailerInvitation(
+                    id = "preview-id",
+                    code = "PJ-b61rce",
+                    link = "https://jewelindia.shop/join/PJ-b61rce",
+                    expiresAt = "2026-10-12",
+                    giftCredits = 1000,
+                    status = "unclaimed"
+                )
+            } else null
         }
     }
 
     fun handleCopy() {
-        val link = invitation?.link ?: "https://jewelindia.shop/join/${invitation?.code}"
+        val inv = invitation ?: return
+        val link = inv.link.ifEmpty { "https://jewelindia.shop/join/${inv.code}" }
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText("Jewel India Invitation", link)
         clipboard.setPrimaryClip(clip)
@@ -118,15 +177,42 @@ fun InviteRetailerSheet(
     }
 
     fun handleInviteNow() {
-        val inv = invitation ?: return
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(
-                Intent.EXTRA_TEXT,
-                "You are invited to join Jewel India as a retailer! Use code ${inv.code} to get $pointsOffered points. Open link: ${inv.link}"
-            )
+        errorMessage = null
+        val currentInv = invitation
+        if (currentInv != null) {
+            val gift = currentInv.giftCredits ?: 1000
+            val link = currentInv.link.ifEmpty { "https://jewelindia.shop/join/${currentInv.code}" }
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(
+                    Intent.EXTRA_TEXT,
+                    "You are invited to join Jewel India as a retailer! Use code ${currentInv.code} to get $gift points. Open link: $link"
+                )
+            }
+            context.startActivity(Intent.createChooser(shareIntent, "Invite retailer"))
+        } else {
+            scope.launch {
+                busy = true
+                try {
+                    val newInv = JewelApi.createRetailerInvitation(gift = pointsOffered)
+                    invitation = newInv
+                    val gift = newInv.giftCredits ?: pointsOffered
+                    val link = newInv.link.ifEmpty { "https://jewelindia.shop/join/${newInv.code}" }
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(
+                            Intent.EXTRA_TEXT,
+                            "You are invited to join Jewel India as a retailer! Use code ${newInv.code} to get $gift points. Open link: $link"
+                        )
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "Invite retailer"))
+                } catch (e: Exception) {
+                    errorMessage = e.userMessage()
+                } finally {
+                    busy = false
+                }
+            }
         }
-        context.startActivity(Intent.createChooser(shareIntent, "Invite retailer"))
     }
 
     ModalBottomSheet(
@@ -168,8 +254,9 @@ fun InviteRetailerSheet(
                                 .border(1.dp, Color(0xFFE9E9E9), CircleShape)
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
+                            val rewardPoints = settings?.reward ?: 1000
                             Text(
-                                text = "Earn 1000 points",
+                                text = "Earn $rewardPoints points",
                                 style = Typography.santoshi(12.sp),
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF2E2D2A)
@@ -215,158 +302,257 @@ fun InviteRetailerSheet(
                 lineHeight = 22.sp
             )
 
-            // Stepper Row
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    modifier = Modifier
-                        .width(152.dp)
-                        .height(44.dp)
-                        .clip(CircleShape)
-                        .background(Color.White)
-                        .border(1.dp, Color(0xFFEDEDED), CircleShape),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clickable(enabled = pointsOffered >= 250) {
-                                if (pointsOffered >= 250) pointsOffered -= 250
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_invite_minus),
-                            contentDescription = "Minus",
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(32.dp)
-                            .background(Color(0xFFEDEDED))
-                    )
-
-                    Box(
-                        modifier = Modifier.width(58.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = String.format(locale, "%,d", pointsOffered),
-                            style = Typography.santoshi(16.sp),
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2E2D2A)
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(32.dp)
-                            .background(Color(0xFFEDEDED))
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clickable { pointsOffered += 250 },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_invite_plus),
-                            contentDescription = "Plus",
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-
-                Text(
-                    text = "(Give them a head start with points from your wallet.)",
-                    style = Typography.santoshi(12.sp),
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFF949494)
-                )
-            }
-
-            // Invitation Code Box
-            invitation?.let { inv ->
-                Row(
+            if (loadingSettings) {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White)
-                        .border(1.dp, Color(0xFFE9E9E9), RoundedCornerShape(16.dp))
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text(
-                            text = "YOUR INVITATION CODE",
-                            style = Typography.santoshi(10.sp),
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF949494),
-                            letterSpacing = 0.5.sp
-                        )
-                        Text(
-                            text = inv.code,
-                            style = Typography.santoshi(20.sp),
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
-                            color = Color(0xFF2E2D2A)
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(Color(0xFFF1F2F3))
-                            .border(1.dp, Color(0xFFE0E0E0), CircleShape)
-                            .clickable { handleCopy() }
-                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = Palette.goldPrimary,
+                        strokeWidth = 2.dp
+                    )
+                }
+            } else if (invitation != null) {
+                // Showing Unclaimed Link: Hide stepper, show real giftCredits, offer "Create new link"
+                val activeInv = invitation!!
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
-                                contentDescription = null,
-                                tint = if (copied) Color(0xFF16A34A) else Color(0xFF2E2D2A),
-                                modifier = Modifier.size(13.dp)
+                        Column {
+                            Text(
+                                text = "GIFT OFFERED",
+                                style = Typography.santoshi(10.sp),
+                                fontWeight = FontWeight.Bold,
+                                color = Palette.muted,
+                                letterSpacing = 0.5.sp
                             )
                             Text(
-                                text = if (copied) "Copied" else "Copy link",
-                                style = Typography.santoshi(12.sp),
+                                text = String.format(locale, "%,d credits", activeInv.giftCredits ?: 1000),
+                                style = Typography.santoshi(18.sp),
                                 fontWeight = FontWeight.Bold,
-                                color = if (copied) Color(0xFF16A34A) else Color(0xFF2E2D2A)
+                                color = Palette.dark
                             )
                         }
+
+                        TextButton(onClick = { invitation = null }) {
+                            Text(
+                                text = "Create new link",
+                                style = Typography.santoshi(13.sp),
+                                fontWeight = FontWeight.SemiBold,
+                                color = Palette.goldPrimary
+                            )
+                        }
+                    }
+
+                    // Invitation Code Box
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.White)
+                            .border(1.dp, Color(0xFFE9E9E9), RoundedCornerShape(16.dp))
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(
+                                text = "YOUR INVITATION CODE",
+                                style = Typography.santoshi(10.sp),
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF949494),
+                                letterSpacing = 0.5.sp
+                            )
+                            Text(
+                                text = activeInv.code,
+                                style = Typography.santoshi(20.sp),
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace,
+                                color = Color(0xFF2E2D2A)
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(Color(0xFFF1F2F3))
+                                .border(1.dp, Color(0xFFE0E0E0), CircleShape)
+                                .clickable { handleCopy() }
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
+                                    contentDescription = null,
+                                    tint = if (copied) Color(0xFF16A34A) else Color(0xFF2E2D2A),
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Text(
+                                    text = if (copied) "Copied" else "Copy link",
+                                    style = Typography.santoshi(12.sp),
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (copied) Color(0xFF16A34A) else Color(0xFF2E2D2A)
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Stepper Row when no unclaimed link is selected
+                val currentSettings = settings
+                val minGift = currentSettings?.minimum ?: 1000
+                val maxGift = currentSettings?.maximum ?: 10000
+                val availGift = currentSettings?.available ?: 2000
+                val stepGift = currentSettings?.step ?: 500
+                val canMinus = pointsOffered - stepGift >= minGift
+                val canPlus = pointsOffered + stepGift <= minOf(maxGift, availGift)
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .width(152.dp)
+                            .height(44.dp)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                            .border(1.dp, Color(0xFFEDEDED), CircleShape),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clickable(enabled = canMinus) {
+                                    pointsOffered = InviteRetailerLogic.clampGift(
+                                        current = pointsOffered,
+                                        delta = -stepGift,
+                                        minimum = minGift,
+                                        maximum = maxGift,
+                                        available = availGift
+                                    )
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_invite_minus),
+                                contentDescription = "Minus",
+                                modifier = Modifier.size(18.dp),
+                                alpha = if (canMinus) 1f else 0.3f
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .height(32.dp)
+                                .background(Color(0xFFEDEDED))
+                        )
+
+                        Box(
+                            modifier = Modifier.width(58.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = String.format(locale, "%,d", pointsOffered),
+                                style = Typography.santoshi(16.sp),
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF2E2D2A)
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .height(32.dp)
+                                .background(Color(0xFFEDEDED))
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clickable(enabled = canPlus) {
+                                    pointsOffered = InviteRetailerLogic.clampGift(
+                                        current = pointsOffered,
+                                        delta = stepGift,
+                                        minimum = minGift,
+                                        maximum = maxGift,
+                                        available = availGift
+                                    )
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_invite_plus),
+                                contentDescription = "Plus",
+                                modifier = Modifier.size(18.dp),
+                                alpha = if (canPlus) 1f else 0.3f
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "(Give them a head start with points from your wallet.)",
+                        style = Typography.santoshi(12.sp),
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF949494)
+                    )
+
+                    if (currentSettings != null && currentSettings.available < currentSettings.minimum) {
+                        Text(
+                            text = "You need at least ${currentSettings.minimum} credits to invite a retailer (available: ${currentSettings.available}).",
+                            style = Typography.santoshi(12.sp),
+                            color = Palette.accentRed
+                        )
                     }
                 }
             }
 
             if (errorMessage != null) {
-                Text(
-                    text = errorMessage ?: "",
-                    style = Typography.santoshi(12.sp),
-                    color = Color.Red
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = errorMessage ?: "",
+                        style = Typography.santoshi(12.sp),
+                        color = Palette.accentRed,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (settings == null) {
+                        TextButton(onClick = { loadSettings() }) {
+                            Text("Retry", color = Palette.goldPrimary, style = Typography.santoshi(12.sp))
+                        }
+                    }
+                }
             }
 
             // Primary "Invite retailer now" Button
+            val isButtonEnabled = !busy && !loadingSettings && (invitation != null || (settings == null || settings!!.available >= settings!!.minimum))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp)
                     .clip(CircleShape)
                     .background(
-                        Brush.verticalGradient(
-                            listOf(Color(0xFF4F4F4F), Color(0xFF232323))
-                        )
+                        if (isButtonEnabled) {
+                            Brush.verticalGradient(
+                                listOf(Color(0xFF4F4F4F), Color(0xFF232323))
+                            )
+                        } else {
+                            Brush.verticalGradient(
+                                listOf(Color(0xFF9CA3AF), Color(0xFF6B7280))
+                            )
+                        }
                     )
-                    .clickable(enabled = !busy) { handleInviteNow() },
+                    .clickable(enabled = isButtonEnabled) { handleInviteNow() },
                 contentAlignment = Alignment.Center
             ) {
                 if (busy) {
@@ -394,6 +580,22 @@ fun InviteRetailerSheet(
                         )
                     }
                 }
+            }
+
+            // View history link
+            TextButton(
+                onClick = {
+                    onDismiss()
+                    onViewHistory()
+                },
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
+                Text(
+                    text = "View invitation history",
+                    style = Typography.santoshi(14.sp),
+                    fontWeight = FontWeight.SemiBold,
+                    color = Palette.dark
+                )
             }
         }
     }
