@@ -103,8 +103,12 @@ fun ForgotPasswordScreen(
                         errorMessage = null
                         scope.launch {
                             try {
-                                sessionStore.requestPasswordReset(email.trim())
-                                isSubmitted = true
+                                val err = sessionStore.requestPasswordReset(email.trim())
+                                if (err != null) {
+                                    errorMessage = err
+                                } else {
+                                    isSubmitted = true
+                                }
                             } catch (e: Exception) {
                                 errorMessage = e.userMessage()
                             } finally {
@@ -247,10 +251,14 @@ fun UpdatePasswordScreen(
                     errorMessage = null
                     scope.launch {
                         try {
-                            sessionStore.updatePassword(password)
-                            sessionStore.exitPasswordRecovery()
-                            sessionStore.refreshDestination()
-                            onPasswordUpdated()
+                            val err = sessionStore.updatePassword(password)
+                            if (err != null) {
+                                errorMessage = err
+                            } else {
+                                sessionStore.exitPasswordRecovery()
+                                sessionStore.refreshDestination()
+                                onPasswordUpdated()
+                            }
                         } catch (e: Exception) {
                             errorMessage = e.userMessage()
                         } finally {
