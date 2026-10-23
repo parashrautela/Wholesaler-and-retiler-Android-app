@@ -2,6 +2,7 @@
 package com.jewelindia.app.feature.onboarding
 
 import com.jewelindia.app.design.components.SvgImage
+import com.jewelindia.app.design.readableContentWidth
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
@@ -338,6 +339,7 @@ fun OnboardLayout(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
+            .readableContentWidth()
             .imePadding()
     ) {
         OnboardNavbar(

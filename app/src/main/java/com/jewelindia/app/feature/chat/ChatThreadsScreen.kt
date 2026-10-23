@@ -53,6 +53,7 @@ import com.jewelindia.app.data.api.ChatApi
 import com.jewelindia.app.data.api.ChatThread
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
+import com.jewelindia.app.design.readableContentWidth
 import kotlinx.coroutines.launch
 
 @Composable
@@ -105,6 +106,7 @@ fun ChatThreadsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
+            .readableContentWidth()
             .statusBarsPadding()
     ) {
         // iOS Centered Inline Title Bar

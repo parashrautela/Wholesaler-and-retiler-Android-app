@@ -39,6 +39,7 @@ import com.jewelindia.app.design.JewelWeight
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.manrope
 import com.jewelindia.app.design.sfPro
+import com.jewelindia.app.design.readableContentWidth
 
 @Composable
 fun SharedLinksScreen(
@@ -64,6 +65,7 @@ fun SharedLinksScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Color.White)
+            .readableContentWidth()
             .statusBarsPadding()
     ) {
         // Navigation Bar

@@ -44,6 +44,7 @@ import com.jewelindia.app.core.model.ManufacturingOffer
 import com.jewelindia.app.data.api.ManufacturingApi
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
+import com.jewelindia.app.design.readableContentWidth
 import kotlinx.coroutines.launch
 
 @Composable
@@ -84,6 +85,7 @@ fun WholesalerOffersListScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Palette.background)
+            .readableContentWidth()
             .statusBarsPadding()
     ) {
         Row(

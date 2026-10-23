@@ -62,6 +62,7 @@ import com.jewelindia.app.core.security.ProtectedImage
 import com.jewelindia.app.design.Cirka
 import com.jewelindia.app.design.Manrope
 import com.jewelindia.app.design.Palette
+import com.jewelindia.app.design.readableContentWidth
 import com.jewelindia.app.data.api.ChamakMode
 import com.jewelindia.app.data.api.ContentFlag
 import kotlinx.coroutines.launch
@@ -105,7 +106,7 @@ fun ChamakResultScreen(
             .fillMaxSize()
             .background(Color(0xFFF7F7F6))
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize().readableContentWidth()) {
             // Header
             Row(
                 modifier = Modifier

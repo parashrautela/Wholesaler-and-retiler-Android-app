@@ -64,6 +64,7 @@ import com.jewelindia.app.core.text.Copy
 import com.jewelindia.app.data.api.AccountApi
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
+import com.jewelindia.app.design.readableContentWidth
 import kotlinx.coroutines.launch
 
 @Composable
@@ -85,6 +86,7 @@ fun WholesalerProfileScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF2F2F7))
+            .readableContentWidth()
             .statusBarsPadding()
     ) {
         // Centered iOS Profile title

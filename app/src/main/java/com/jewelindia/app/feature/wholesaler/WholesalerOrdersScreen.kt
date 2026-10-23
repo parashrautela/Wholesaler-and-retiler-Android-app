@@ -49,6 +49,7 @@ import com.jewelindia.app.core.model.Wholesaler
 import com.jewelindia.app.data.api.WholesalerOrder
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
+import com.jewelindia.app.design.readableContentWidth
 
 enum class OrderTab(val title: String) {
     New("New Orders"),
@@ -121,6 +122,7 @@ fun WholesalerOrdersScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Palette.background)
+            .readableContentWidth()
             .statusBarsPadding()
     ) {
         // iOS Navigation Bar: Centered inline title "Orders"

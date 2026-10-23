@@ -67,6 +67,7 @@ import com.jewelindia.app.data.api.ChatApi
 import com.jewelindia.app.data.api.ChatThread
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
+import com.jewelindia.app.design.readableContentWidth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -185,6 +186,7 @@ fun ChatThreadScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Palette.background)
+            .readableContentWidth()
             .statusBarsPadding()
             .navigationBarsPadding()
             .imePadding()

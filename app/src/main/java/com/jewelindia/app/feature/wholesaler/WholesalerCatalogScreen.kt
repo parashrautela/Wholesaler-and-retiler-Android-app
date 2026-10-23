@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
@@ -88,6 +87,7 @@ import com.jewelindia.app.design.JewelWeight
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.manrope
 import com.jewelindia.app.design.sfPro
+import com.jewelindia.app.design.PhoneFirstGridCells
 import com.jewelindia.app.feature.wholesaler.share.CatalogueSelection
 import com.jewelindia.app.feature.wholesaler.share.SharedLinksScreen
 import kotlinx.coroutines.Dispatchers
@@ -499,7 +499,7 @@ fun WholesalerCatalogScreen(
                 CatalogEmptyView(hasFilter = searchQuery.isNotBlank() || selectedCategory != null)
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
+                    columns = PhoneFirstGridCells(),
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,

@@ -43,6 +43,7 @@ import com.jewelindia.app.data.api.JewelApi
 import com.jewelindia.app.data.api.RetailerInvitation
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
+import com.jewelindia.app.design.readableContentWidth
 import kotlinx.coroutines.launch
 
 @Composable
@@ -104,6 +105,7 @@ fun InvitationHistoryScreen(onBack: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .background(Palette.background)
+            .readableContentWidth()
             .statusBarsPadding()
     ) {
         Row(

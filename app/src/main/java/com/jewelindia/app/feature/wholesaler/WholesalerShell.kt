@@ -71,6 +71,7 @@ import com.jewelindia.app.design.JewelWeight
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.components.SvgImage
 import com.jewelindia.app.design.manrope
+import com.jewelindia.app.design.readableContentWidth
 import com.jewelindia.app.feature.chat.ChatThreadScreen
 import com.jewelindia.app.feature.chat.ChatThreadsScreen
 import com.jewelindia.app.feature.manufacturing.WholesalerOfferDetailScreen
@@ -505,6 +506,7 @@ fun WholesalerTabBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .readableContentWidth()
             .padding(horizontal = 16.dp)
             .navigationBarsPadding()
             .padding(bottom = 8.dp)

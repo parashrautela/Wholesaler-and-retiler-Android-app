@@ -53,6 +53,7 @@ import com.jewelindia.app.data.api.CreditPrice
 import com.jewelindia.app.data.api.CreditWallet
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
+import com.jewelindia.app.design.readableContentWidth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,6 +85,7 @@ fun TreasureChestScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Palette.background)
+            .readableContentWidth()
             .statusBarsPadding()
     ) {
         // App bar

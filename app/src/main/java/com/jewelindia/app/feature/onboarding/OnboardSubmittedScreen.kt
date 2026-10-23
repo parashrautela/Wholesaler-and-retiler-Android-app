@@ -51,6 +51,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import com.jewelindia.app.design.readableContentWidth
 
 @Serializable
 data class VerificationRow(
@@ -159,6 +160,7 @@ fun OnboardSubmittedScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
+            .readableContentWidth()
     ) {
         OnboardNavbar(
             gutter = 20.dp,

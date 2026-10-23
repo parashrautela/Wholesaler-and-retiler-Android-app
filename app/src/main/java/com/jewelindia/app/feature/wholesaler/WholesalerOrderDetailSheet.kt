@@ -45,6 +45,7 @@ import com.jewelindia.app.core.model.OrderStatus
 import com.jewelindia.app.data.api.WholesalerOrder
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
+import com.jewelindia.app.design.readableContentWidth
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,6 +66,7 @@ fun WholesalerOrderDetailSheet(
         modifier = Modifier
             .fillMaxSize()
             .background(Palette.background)
+            .readableContentWidth()
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {

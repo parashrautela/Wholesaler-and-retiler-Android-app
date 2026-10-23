@@ -50,6 +50,7 @@ import com.jewelindia.app.core.security.ProtectedImage
 import com.jewelindia.app.data.api.WholesalerApi
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
+import com.jewelindia.app.design.readableContentWidth
 import kotlinx.coroutines.launch
 
 @Composable
@@ -86,6 +87,7 @@ fun UploadHistoryScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Palette.background)
+            .readableContentWidth()
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {

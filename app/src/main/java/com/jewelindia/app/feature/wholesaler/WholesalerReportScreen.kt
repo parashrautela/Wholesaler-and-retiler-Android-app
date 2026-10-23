@@ -50,6 +50,7 @@ import com.jewelindia.app.core.images.CachedImage
 import com.jewelindia.app.data.api.WholesalerReport
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
+import com.jewelindia.app.design.readableContentWidth
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -112,6 +113,7 @@ fun WholesalerReportScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Palette.background)
+            .readableContentWidth()
             .statusBarsPadding()
             .padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

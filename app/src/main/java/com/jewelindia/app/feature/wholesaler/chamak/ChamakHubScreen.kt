@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -61,6 +60,8 @@ import com.jewelindia.app.data.api.ChamakMode
 import com.jewelindia.app.design.Cirka
 import com.jewelindia.app.design.Manrope
 import com.jewelindia.app.design.Palette
+import com.jewelindia.app.design.readableContentWidth
+import com.jewelindia.app.design.PhoneFirstGridCells
 
 data class ChamakLaunch(
     val mode: ChamakMode,
@@ -115,13 +116,14 @@ fun ChamakHubScreen(
         }
     } else {
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+            columns = PhoneFirstGridCells(),
             contentPadding = PaddingValues(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = modifier
                 .fillMaxSize()
                 .background(Color.White)
+                .readableContentWidth(840.dp)
         ) {
             // Title & Tools
             item(span = { GridItemSpan(maxLineSpan) }) {

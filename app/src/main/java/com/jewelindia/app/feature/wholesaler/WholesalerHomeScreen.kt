@@ -53,6 +53,7 @@ import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.cirka
 import com.jewelindia.app.design.manrope
 import com.jewelindia.app.design.sfPro
+import com.jewelindia.app.design.readableContentWidth
 import com.jewelindia.app.feature.manufacturing.ManufacturingOffersCard
 import com.jewelindia.app.feature.treasurechest.CreditStore
 import com.jewelindia.app.feature.treasurechest.TreasureChestCard
@@ -110,6 +111,7 @@ fun WholesalerHomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
+            .readableContentWidth()
             .statusBarsPadding()
     ) {
         // Scrollable Content
