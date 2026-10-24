@@ -44,6 +44,7 @@ object Copy {
     val featureLocked = "This feature has been turned off for your account by Jewel India. Contact support if you think this is a mistake."
     val otpSendFailure = "Failed to send OTP. Please try again."
     val networkError = "Network error. Please check your connection and try again."
+    val flagNotSaved = "Couldn't save the change. Check your connection, sign in again if needed, and try again."
         /// Shown in the red error slot even though it is a success path — matching the web.
     val googleRedirect = "You signed up with Google. Redirecting..."
 

@@ -10,6 +10,7 @@ import com.jewelindia.app.core.model.Product
 import com.jewelindia.app.core.model.UploadUsage
 import com.jewelindia.app.core.model.Wholesaler
 import com.jewelindia.app.core.text.Copy
+import com.jewelindia.app.data.net.ApiError
 import com.jewelindia.app.data.net.AuthToken
 import com.jewelindia.app.data.net.EdgeFunctions
 import com.jewelindia.app.data.net.HttpClients
@@ -190,24 +191,45 @@ object WholesalerApi {
         return rows.firstOrNull()
     }
 
+    @Serializable
+    data class SavedFlags(
+        val id: String,
+        @SerialName("stock_available") val stockAvailable: Boolean? = null,
+        @SerialName("is_published") val isPublished: Boolean? = null
+    )
+
+    /**
+     * Returns the row as stored. PostgREST answers 2xx with zero rows when RLS
+     * filters the UPDATE out (expired session, not the owner), so an empty or
+     * mismatched result is an error rather than a silent success.
+     */
     suspend fun updateProductFlags(
         id: String,
         inStock: Boolean? = null,
         isPublished: Boolean? = null
-    ) {
+    ): SavedFlags {
         @Serializable
         data class Patch(
             @SerialName("stock_available") val stockAvailable: Boolean? = null,
             @SerialName("is_published") val isPublished: Boolean? = null
         )
         val patch = Patch(stockAvailable = inStock, isPublished = isPublished)
-        JewelNetwork.withRetry {
+        val rows = JewelNetwork.withRetry {
             db.from("products").update(patch) {
+                select(Columns.raw("id, stock_available, is_published"))
                 filter {
                     eq("id", id)
                 }
-            }
+            }.decodeList<SavedFlags>()
         }
+        val saved = rows.firstOrNull()
+        if (saved == null ||
+            (isPublished != null && saved.isPublished != isPublished) ||
+            (inStock != null && saved.stockAvailable != inStock)
+        ) {
+            throw ApiError(0, Copy.flagNotSaved)
+        }
+        return saved
     }
 
     @Serializable

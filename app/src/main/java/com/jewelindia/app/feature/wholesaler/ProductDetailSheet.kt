@@ -97,6 +97,18 @@ fun ProductDetailSheet(
     val reprocess = remember { ReprocessState() }
     var showReprocessConfirm by remember { mutableStateOf(false) }
 
+    // The catalogue's copy can be stale, so reopening the sheet shows what the
+    // server has stored rather than what the list remembers.
+    LaunchedEffect(product.id) {
+        val fresh = try { WholesalerApi.fetchProduct(product.id) } catch (_: Exception) { null }
+        if (fresh != null && !isUpdatingPublish && fresh.isPublished != currentProduct.isPublished) {
+            val updated = currentProduct.copy(isPublished = fresh.isPublished)
+            currentProduct = updated
+            isPublished = updated.isPublished == true
+            onPublishedChanged?.invoke(updated)
+        }
+    }
+
     LaunchedEffect(wholesalerId) {
         if (wholesalerId.isNotBlank()) {
             usage = try { WholesalerApi.fetchUploadUsage(wholesalerId) } catch (_: Exception) { null }
@@ -427,9 +439,10 @@ fun ProductDetailSheet(
                                 publishError = null
                                 scope.launch {
                                     try {
-                                        WholesalerApi.updateProductFlags(currentProduct.id, isPublished = v)
-                                        val updated = currentProduct.copy(isPublished = v)
+                                        val saved = WholesalerApi.updateProductFlags(currentProduct.id, isPublished = v)
+                                        val updated = currentProduct.copy(isPublished = saved.isPublished == true)
                                         currentProduct = updated
+                                        isPublished = updated.isPublished == true
                                         onPublishedChanged?.invoke(updated)
                                     } catch (e: Exception) {
                                         isPublished = !v
