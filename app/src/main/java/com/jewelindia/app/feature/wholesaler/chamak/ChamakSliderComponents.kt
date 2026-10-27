@@ -60,15 +60,15 @@ fun buildAvailableArtisanChips(
     list.add(
         ArtisanChip(
             id = "integrity_d2",
-            title = "Integrity of $d2Name",
-            elaboratedPrompt = "Preserve the structural integrity, balance, and proportions of $d2Name as the foundational silhouette, while harmoniously weaving in the signature artistry, motifs, and texture of $d1Name."
+            title = "More of $d2Name",
+            elaboratedPrompt = "Bring in more of the look of $d2Name: its motifs, stones and details. Keep the type and shape of $d1Name."
         )
     )
     list.add(
         ArtisanChip(
             id = "heritage_d1",
-            title = "Heritage of $d1Name",
-            elaboratedPrompt = "Anchor the piece in the authentic heritage, motif geometry, and distinctive hallmark features of $d1Name, allowing $d2Name to inspire elevated modern finishing details."
+            title = "More of $d1Name",
+            elaboratedPrompt = "Keep the piece close to $d1Name: its shape, motifs and details lead, with only light touches from $d2Name."
         )
     )
     val s1 = (analysis?.image1Strengths ?: defaultStrengths1).firstOrNull()
@@ -76,8 +76,8 @@ fun buildAvailableArtisanChips(
         list.add(
             ArtisanChip(
                 id = "strength_d1",
-                title = s1.replaceFirstChar { it.titlecase() },
-                elaboratedPrompt = "Accentuate the $s1 from $d1Name, ensuring it anchors the central focal point and surface ornamentation."
+                title = "Highlight: ${s1.replaceFirstChar { it.titlecase() }}",
+                elaboratedPrompt = "Make the $s1 from $d1Name stand out as a main feature of the piece."
             )
         )
     }
@@ -86,37 +86,37 @@ fun buildAvailableArtisanChips(
         list.add(
             ArtisanChip(
                 id = "strength_d2",
-                title = s2.replaceFirstChar { it.titlecase() },
-                elaboratedPrompt = "Incorporate the distinctive $s2 from $d2Name, introducing harmonious contrast and modern luxury."
+                title = "Add: ${s2.replaceFirstChar { it.titlecase() }}",
+                elaboratedPrompt = "Bring the $s2 from $d2Name into the piece."
             )
         )
     }
     list.add(
         ArtisanChip(
             id = "gold_finish",
-            title = "22K Handcrafted Gold",
-            elaboratedPrompt = "Render in rich 22K yellow gold with an authentic handcrafted micro-matte luster and subtle antique patina across all metal surfaces."
+            title = "Rich yellow gold",
+            elaboratedPrompt = "Use a rich 22K yellow gold colour for all the metal."
         )
     )
     list.add(
         ArtisanChip(
             id = "filigree",
-            title = "Intricate Filigree Work",
-            elaboratedPrompt = "Incorporate delicate royal filigree wirework, with openwork jaali detailing and finely twisted precious gold threads."
+            title = "Fine wire work",
+            elaboratedPrompt = "Add neat, even, fine gold wirework (filigree) in clean open patterns."
         )
     )
     list.add(
         ArtisanChip(
             id = "gemstones",
-            title = "High-Clarity Gemstones",
-            elaboratedPrompt = "Highlight vibrant, high-clarity gemstones with precise master prong settings that maximize light refraction and brilliance."
+            title = "Bright, clear stones",
+            elaboratedPrompt = "Use bright, clear stones, each set cleanly in a proper setting."
         )
     )
     list.add(
         ArtisanChip(
             id = "temple",
-            title = "Temple Architecture",
-            elaboratedPrompt = "Infuse traditional South Indian temple motifs with sacred nagas, ornate pillars, and hand-carved divine elements."
+            title = "Temple style",
+            elaboratedPrompt = "Use traditional South Indian temple motifs, such as a deity, peacock or lotus, cleanly sculpted."
         )
     )
     return list

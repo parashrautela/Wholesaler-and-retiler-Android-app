@@ -244,7 +244,7 @@ fun ChamakSliderFormScreen(
                         ) {
                             Icon(Icons.Default.Info, null, tint = Color(0xFFCA8A04), modifier = Modifier.size(18.dp))
                             Text(
-                                "These two designs look very similar. The fusion will emphasize subtle styling details.",
+                                "These two designs look almost the same, so only small details will change.",
                                 fontFamily = Manrope,
                                 fontSize = 12.sp,
                                 color = Color(0xFF854D0E)
@@ -263,7 +263,7 @@ fun ChamakSliderFormScreen(
                         ) {
                             Icon(Icons.Default.Warning, null, tint = Color(0xFFCA8A04), modifier = Modifier.size(18.dp))
                             Text(
-                                "Designs appear to be different jewelry types. The model will create a hybrid blend.",
+                                "These are different kinds of jewellery. We'll keep $d1Name as the base and use ideas from $d2Name.",
                                 fontFamily = Manrope,
                                 fontSize = 12.sp,
                                 color = Color(0xFF854D0E)
@@ -375,7 +375,7 @@ fun ChamakSliderFormScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Text(
-                        text = "Fine Tune",
+                        text = "Adjust the mix",
                         fontFamily = Manrope,
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
