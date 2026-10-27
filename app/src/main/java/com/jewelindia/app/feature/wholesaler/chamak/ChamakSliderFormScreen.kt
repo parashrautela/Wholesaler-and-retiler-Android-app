@@ -463,6 +463,59 @@ fun ChamakSliderFormScreen(
                             }
                         }
                     }
+
+                    // How far the new design may move away from the two picked
+                    // designs. Plain words on purpose: the five names match the
+                    // backend's five levels.
+                    HorizontalDivider(color = Color(0xFFE7E5E4))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "How new should it look?",
+                                fontFamily = Manrope,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Palette.dark,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                text = wildnessName(vm.effectiveWildness),
+                                fontFamily = Manrope,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFCA8A04)
+                            )
+                        }
+                        Slider(
+                            value = vm.effectiveWildness.toFloat(),
+                            onValueChange = { vm.wildness = it },
+                            valueRange = 0f..10f,
+                            steps = 9,
+                            colors = SliderDefaults.colors(
+                                thumbColor = Color(0xFFD97706),
+                                activeTrackColor = Color(0xFFD97706),
+                                inactiveTrackColor = Color(0xFFE5E7EB)
+                            )
+                        )
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "Close to originals",
+                                fontFamily = Manrope,
+                                fontSize = 13.sp,
+                                color = Palette.muted,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                text = "Totally new",
+                                fontFamily = Manrope,
+                                fontSize = 13.sp,
+                                color = Palette.muted
+                            )
+                        }
+                    }
                 }
 
                 // Last Result Card (shown on revision)
@@ -577,4 +630,10 @@ fun ChamakSliderFormScreen(
     }
 }
 
-
+private fun wildnessName(level: Int): String = when {
+    level <= 1 -> "Stay close"
+    level <= 3 -> "Small changes"
+    level <= 6 -> "Fresh take"
+    level <= 8 -> "Bold and new"
+    else -> "Totally new"
+}

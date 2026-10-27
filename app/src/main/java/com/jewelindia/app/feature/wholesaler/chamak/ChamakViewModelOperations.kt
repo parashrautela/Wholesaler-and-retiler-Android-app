@@ -174,6 +174,7 @@ suspend fun ChamakViewModel.restoreGeneration(id: String) {
     retrievalMessage = null
     mode = updated.mode
     sliderValues = updated.wholesalerFormJSON?.sliderWeights ?: sliderValues
+    updated.wholesalerFormJSON?.wildness?.let { wildness = it.toFloat() }
     if (updated.noteText != null) {
         noteText = updated.noteText
         selectedStylingChips = emptySet()

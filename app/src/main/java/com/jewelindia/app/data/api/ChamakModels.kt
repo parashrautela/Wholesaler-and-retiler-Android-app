@@ -138,7 +138,10 @@ data class Stage1Analysis(
     @SerialName("image2_weaknesses") val image2Weaknesses: List<String> = emptyList(),
     @SerialName("near_identical") val nearIdentical: Boolean = false,
     @SerialName("type_mismatch") val typeMismatch: Boolean = false,
-    @SerialName("content_flag") val contentFlag: ContentFlag = ContentFlag.Ok
+    @SerialName("content_flag") val contentFlag: ContentFlag = ContentFlag.Ok,
+    // Where the wildness slider starts: CHAMAK_WILDNESS on Railway, sent back
+    // with the analysis. Null on older rows or when it isn't set.
+    @SerialName("default_wildness") val defaultWildness: Int? = null
 ) {
     val dynamicAttributes: List<ChamakAttribute>
         get() {
@@ -254,7 +257,10 @@ data class WeightedAttribute(
 data class WholesalerFormInput(
     @SerialName("slider_weights") val sliderWeights: Map<String, Double> = emptyMap(),
     @SerialName("attribute_context") val attributeContext: List<WeightedAttribute> = emptyList(),
-    val note: String? = null
+    val note: String? = null,
+    // 0–10, how far the design may move from the two references. Null falls
+    // back to CHAMAK_WILDNESS on the backend.
+    val wildness: Int? = null
 )
 
 @Serializable

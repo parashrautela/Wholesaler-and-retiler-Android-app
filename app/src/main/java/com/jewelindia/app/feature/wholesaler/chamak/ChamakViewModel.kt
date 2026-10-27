@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlin.math.roundToInt
 import com.jewelindia.app.core.model.ImageSize
 import com.jewelindia.app.core.model.Product
 import com.jewelindia.app.data.api.ChamakApi
@@ -172,6 +173,11 @@ class ChamakViewModel(
         }
 
     var sliderValues by mutableStateOf<Map<String, Double>>(emptyMap())
+    // The wildness slider (0–10). Null until the wholesaler moves it, so it
+    // shows (and sends) the Railway default carried by the analysis.
+    var wildness by mutableStateOf<Float?>(null)
+    val effectiveWildness: Int
+        get() = (wildness ?: (currentGeneration?.stage1AnalysisJSON?.defaultWildness ?: 3).toFloat()).roundToInt()
     var noteText by mutableStateOf("")
     var selectedBackdrop by mutableStateOf(SetBackdrop.VelvetBust)
     var selectedStylingChips by mutableStateOf<Set<SetStylingChip>>(emptySet())
@@ -486,7 +492,8 @@ class ChamakViewModel(
         val formInput = WholesalerFormInput(
             sliderWeights = sliderValues,
             attributeContext = buildAttributeContext(),
-            note = noteText.ifEmpty { null }
+            note = noteText.ifEmpty { null },
+            wildness = effectiveWildness
         )
 
         try {
@@ -727,6 +734,7 @@ class ChamakViewModel(
         attemptThumbnailURLs = emptyMap()
         selectedAttempt = null
         sliderValues = emptyMap()
+        wildness = null
         noteText = ""
         selectedBackdrop = SetBackdrop.VelvetBust
         selectedStylingChips = emptySet()
