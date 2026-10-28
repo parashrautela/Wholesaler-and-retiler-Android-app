@@ -141,7 +141,9 @@ data class Stage1Analysis(
     @SerialName("content_flag") val contentFlag: ContentFlag = ContentFlag.Ok,
     // Where the wildness slider starts: CHAMAK_WILDNESS on Railway, sent back
     // with the analysis. Null on older rows or when it isn't set.
-    @SerialName("default_wildness") val defaultWildness: Int? = null
+    @SerialName("default_wildness") val defaultWildness: Int? = null,
+    // Where the shape slider starts: CHAMAK_STRUCTURE on Railway.
+    @SerialName("default_structure") val defaultStructure: Int? = null
 ) {
     val dynamicAttributes: List<ChamakAttribute>
         get() {
@@ -260,7 +262,12 @@ data class WholesalerFormInput(
     val note: String? = null,
     // 0–10, how far the design may move from the two references. Null falls
     // back to CHAMAK_WILDNESS on the backend.
-    val wildness: Int? = null
+    val wildness: Int? = null,
+    // 0–10, how much the shape may change. Null falls back to CHAMAK_STRUCTURE.
+    val structure: Int? = null,
+    // "transparent" asks for a PNG with only the jewellery; null keeps the
+    // studio background.
+    val background: String? = null
 )
 
 @Serializable
@@ -276,11 +283,31 @@ data class SetCreationOutput(
 )
 
 @Serializable
+data class ChamakAttemptSettings(
+    val mix: List<Mix> = emptyList(),
+    val wildness: Int? = null,
+    val structure: Int? = null,
+    // "kept", "removed" or "not_removed" (asked for, but OpenAI couldn't).
+    val background: String? = null,
+    @SerialName("style_chips") val styleChips: List<String> = emptyList(),
+    val note: String? = null
+) {
+    @Serializable
+    data class Mix(
+        val name: String,
+        @SerialName("design_2_percent") val design2Percent: Int
+    )
+}
+
+@Serializable
 data class ChamakAttempt(
     val attempt: Int,
     val path: String,
     val variants: Map<String, String> = emptyMap(),
-    @SerialName("created_at") val createdAt: String? = null
+    @SerialName("created_at") val createdAt: String? = null,
+    // The settings that made this render; null for renders made before the
+    // backend started saving them.
+    val settings: ChamakAttemptSettings? = null
 ) {
     fun path(size: ImageSize): String {
         return variants[size.value] ?: path

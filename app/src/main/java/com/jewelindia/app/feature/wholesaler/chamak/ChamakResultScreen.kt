@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jewelindia.app.core.security.ProtectedImage
 import com.jewelindia.app.design.Cirka
+import com.jewelindia.app.data.api.ChamakAttemptSettings
 import com.jewelindia.app.design.Manrope
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.readableContentWidth
@@ -410,6 +411,20 @@ fun ChamakResultScreen(
                         }
                     }
 
+                    // What made the image on screen, so attempts can be compared
+                    // and a good recipe copied.
+                    val displayed = history.firstOrNull { it.attempt == vm.selectedAttempt } ?: history.lastOrNull()
+                    val displayedSettings = displayed?.settings
+                    if (!isSet && displayed != null && displayedSettings != null) {
+                        ChamakSettingsSummary(
+                            attempt = displayed.attempt,
+                            isLatest = displayed.attempt == history.lastOrNull()?.attempt,
+                            settings = displayedSettings,
+                            d1Name = vm.selectedDesign1?.title ?: "Core design",
+                            d2Name = vm.selectedDesign2?.title ?: "New direction"
+                        )
+                    }
+
                     // Source Designs Section
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
@@ -581,6 +596,69 @@ private fun SourcePieceTile(
                 tint = Palette.dark,
                 modifier = Modifier.size(12.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun ChamakSettingsSummary(
+    attempt: Int,
+    isLatest: Boolean,
+    settings: ChamakAttemptSettings,
+    d1Name: String,
+    d2Name: String
+) {
+    val rows = buildList {
+        settings.mix.forEach { mix ->
+            add(mix.name.replaceFirstChar { it.titlecase() } to "${100 - mix.design2Percent}% $d1Name · ${mix.design2Percent}% $d2Name")
+        }
+        settings.wildness?.let { add("How new" to "${wildnessName(it)} ($it/10)") }
+        settings.structure?.let { add("Shape change" to "${structureName(it)} ($it/10)") }
+        when (settings.background) {
+            "removed" -> add("Background" to "Removed (PNG)")
+            "not_removed" -> add("Background" to "Couldn't be removed this time")
+            "kept" -> add("Background" to "Kept")
+        }
+        if (settings.styleChips.isNotEmpty()) {
+            add("Style" to settings.styleChips.joinToString(", ") { chip ->
+                chip.replace("_", " ").replaceFirstChar { it.titlecase() }
+            })
+        }
+        settings.note?.takeIf { it.isNotBlank() }?.let { add("Note" to it) }
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFFF9FAFB))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = if (isLatest) "Settings for this design" else "Settings for attempt #$attempt",
+            fontFamily = Manrope,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = Palette.muted
+        )
+        rows.forEach { (label, value) ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = label,
+                    fontFamily = Manrope,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Palette.dark,
+                    modifier = Modifier.width(110.dp)
+                )
+                Text(
+                    text = value,
+                    fontFamily = Manrope,
+                    fontSize = 12.sp,
+                    color = Palette.dark,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }

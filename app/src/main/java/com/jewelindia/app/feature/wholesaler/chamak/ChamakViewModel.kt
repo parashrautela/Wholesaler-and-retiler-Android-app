@@ -178,6 +178,12 @@ class ChamakViewModel(
     var wildness by mutableStateOf<Float?>(null)
     val effectiveWildness: Int
         get() = (wildness ?: (currentGeneration?.stage1AnalysisJSON?.defaultWildness ?: 3).toFloat()).roundToInt()
+    // The shape slider (0–10), same pattern: null shows the Railway default.
+    var structure by mutableStateOf<Float?>(null)
+    val effectiveStructure: Int
+        get() = (structure ?: (currentGeneration?.stage1AnalysisJSON?.defaultStructure ?: 2).toFloat()).roundToInt()
+    // "Remove background": ask for a PNG with only the jewellery.
+    var removeBackground by mutableStateOf(false)
     var noteText by mutableStateOf("")
     var selectedBackdrop by mutableStateOf(SetBackdrop.VelvetBust)
     var selectedStylingChips by mutableStateOf<Set<SetStylingChip>>(emptySet())
@@ -493,7 +499,9 @@ class ChamakViewModel(
             sliderWeights = sliderValues,
             attributeContext = buildAttributeContext(),
             note = noteText.ifEmpty { null },
-            wildness = effectiveWildness
+            wildness = effectiveWildness,
+            structure = effectiveStructure,
+            background = if (removeBackground) "transparent" else null
         )
 
         try {
@@ -735,6 +743,8 @@ class ChamakViewModel(
         selectedAttempt = null
         sliderValues = emptyMap()
         wildness = null
+        structure = null
+        removeBackground = false
         noteText = ""
         selectedBackdrop = SetBackdrop.VelvetBust
         selectedStylingChips = emptySet()

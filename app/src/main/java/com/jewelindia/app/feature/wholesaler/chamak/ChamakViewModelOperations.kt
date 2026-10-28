@@ -175,6 +175,8 @@ suspend fun ChamakViewModel.restoreGeneration(id: String) {
     mode = updated.mode
     sliderValues = updated.wholesalerFormJSON?.sliderWeights ?: sliderValues
     updated.wholesalerFormJSON?.wildness?.let { wildness = it.toFloat() }
+    updated.wholesalerFormJSON?.structure?.let { structure = it.toFloat() }
+    updated.wholesalerFormJSON?.let { removeBackground = it.background == "transparent" }
     if (updated.noteText != null) {
         noteText = updated.noteText
         selectedStylingChips = emptySet()

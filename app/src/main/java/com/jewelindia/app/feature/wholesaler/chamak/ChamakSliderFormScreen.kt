@@ -465,53 +465,66 @@ fun ChamakSliderFormScreen(
                     }
 
                     // How far the new design may move away from the two picked
-                    // designs. Plain words on purpose: the five names match the
-                    // backend's five levels.
+                    // designs, and how much its shape may change. Plain words on
+                    // purpose: the five names match the backend's five levels.
+                    HorizontalDivider(color = Color(0xFFE7E5E4))
+                    ChamakLevelRow(
+                        title = "How new should it look?",
+                        level = vm.effectiveWildness,
+                        levelName = wildnessName(vm.effectiveWildness),
+                        lowLabel = "Close to originals",
+                        highLabel = "Totally new",
+                        onChange = { vm.wildness = it }
+                    )
+                    ChamakLevelRow(
+                        title = "How much should the shape change?",
+                        level = vm.effectiveStructure,
+                        levelName = structureName(vm.effectiveStructure),
+                        lowLabel = "Keep the shape",
+                        highLabel = "Completely new",
+                        onChange = { vm.structure = it }
+                    )
+
+                    // Keep the studio look, or get a PNG of only the jewellery.
                     HorizontalDivider(color = Color(0xFFE7E5E4))
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Background",
+                            fontFamily = Manrope,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Palette.dark
+                        )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                text = "How new should it look?",
-                                fontFamily = Manrope,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Palette.dark,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text(
-                                text = wildnessName(vm.effectiveWildness),
-                                fontFamily = Manrope,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFCA8A04)
-                            )
+                            listOf(false to "Keep background", true to "Remove background").forEach { (remove, label) ->
+                                val selected = vm.removeBackground == remove
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (selected) Color(0xFF212120) else Color(0xFFF3F4F6))
+                                        .clickable { vm.removeBackground = remove }
+                                        .padding(vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        fontFamily = Manrope,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (selected) Color.White else Palette.dark
+                                    )
+                                }
+                            }
                         }
-                        Slider(
-                            value = vm.effectiveWildness.toFloat(),
-                            onValueChange = { vm.wildness = it },
-                            valueRange = 0f..10f,
-                            steps = 9,
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color(0xFFD97706),
-                                activeTrackColor = Color(0xFFD97706),
-                                inactiveTrackColor = Color(0xFFE5E7EB)
-                            )
-                        )
-                        Row(modifier = Modifier.fillMaxWidth()) {
+                        if (vm.removeBackground) {
                             Text(
-                                text = "Close to originals",
+                                text = "You'll get a PNG with only the jewellery, ready to put on any background.",
                                 fontFamily = Manrope,
-                                fontSize = 13.sp,
-                                color = Palette.muted,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text(
-                                text = "Totally new",
-                                fontFamily = Manrope,
-                                fontSize = 13.sp,
+                                fontSize = 12.sp,
                                 color = Palette.muted
                             )
                         }
@@ -630,10 +643,77 @@ fun ChamakSliderFormScreen(
     }
 }
 
-private fun wildnessName(level: Int): String = when {
+internal fun wildnessName(level: Int): String = when {
     level <= 1 -> "Stay close"
     level <= 3 -> "Small changes"
     level <= 6 -> "Fresh take"
     level <= 8 -> "Bold and new"
     else -> "Totally new"
+}
+
+internal fun structureName(level: Int): String = when {
+    level <= 1 -> "Keep the shape"
+    level <= 3 -> "Small changes"
+    level <= 6 -> "Some changes"
+    level <= 8 -> "Big changes"
+    else -> "All-new shape"
+}
+
+@Composable
+private fun ChamakLevelRow(
+    title: String,
+    level: Int,
+    levelName: String,
+    lowLabel: String,
+    highLabel: String,
+    onChange: (Float) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                fontFamily = Manrope,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = Palette.dark,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = levelName,
+                fontFamily = Manrope,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFCA8A04)
+            )
+        }
+        Slider(
+            value = level.toFloat(),
+            onValueChange = onChange,
+            valueRange = 0f..10f,
+            steps = 9,
+            colors = SliderDefaults.colors(
+                thumbColor = Color(0xFFD97706),
+                activeTrackColor = Color(0xFFD97706),
+                inactiveTrackColor = Color(0xFFE5E7EB)
+            )
+        )
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = lowLabel,
+                fontFamily = Manrope,
+                fontSize = 13.sp,
+                color = Palette.muted,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = highLabel,
+                fontFamily = Manrope,
+                fontSize = 13.sp,
+                color = Palette.muted
+            )
+        }
+    }
 }
