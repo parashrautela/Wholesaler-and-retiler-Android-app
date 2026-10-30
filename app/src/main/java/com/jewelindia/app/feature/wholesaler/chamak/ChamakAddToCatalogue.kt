@@ -53,11 +53,11 @@ private const val ADDED_KEY = "chamak.addedToCatalogue"
 private class UploadedSource(val url: String, val title: String, val jewelleryType: String)
 
 /** A stored source photo uploaded from the device, not a catalogue image. */
-private fun isDeviceUpload(url: String): Boolean =
+internal fun isDeviceUpload(url: String): Boolean =
     "/raw/" in url && ("/chamak_" in url || "/setcreation_" in url)
 
 /** The analysis's word for a piece, as the Add Product form's type. Blank when the form has none. */
-private fun catalogueType(analysisType: String?): String = when (analysisType) {
+internal fun catalogueType(analysisType: String?): String = when (analysisType) {
     "necklace", "choker" -> "necklace"
     "long_necklace" -> "haram"
     "pendant" -> "pendant"
