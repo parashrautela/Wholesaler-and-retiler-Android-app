@@ -53,6 +53,7 @@ class AddProductRulesTest {
         val state = form()
         assertFalse(state.validate(requiresImage = true))
         assertEquals(setOf("image"), state.errors.keys.toSet())
+        assertEquals("Please upload a product image.", state.bannerError)
     }
 
     @Test fun blankOptionalFieldsAreStoredEmptyNotBlankText() {

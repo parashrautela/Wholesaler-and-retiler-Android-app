@@ -165,7 +165,12 @@ class AddProductFormState {
 
         errors.clear()
         errors.putAll(found)
-        bannerError = if (found.isNotEmpty()) "Please correct the fields highlighted in red below." else null
+        // The photo box has no red state, so a missing photo is named here.
+        bannerError = when {
+            found.isEmpty() -> null
+            "image" in found -> found["image"]
+            else -> "Please correct the fields highlighted in red below."
+        }
         return found.isEmpty()
     }
 
