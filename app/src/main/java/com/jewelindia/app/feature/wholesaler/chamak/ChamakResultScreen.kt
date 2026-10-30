@@ -425,6 +425,8 @@ fun ChamakResultScreen(
                         )
                     }
 
+                    ChamakAddToCatalogueSection(vm = vm, wholesalerId = wholesalerId)
+
                     // Source Designs Section
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(

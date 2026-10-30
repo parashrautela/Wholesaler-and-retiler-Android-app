@@ -143,7 +143,10 @@ data class Stage1Analysis(
     // with the analysis. Null on older rows or when it isn't set.
     @SerialName("default_wildness") val defaultWildness: Int? = null,
     // Where the shape slider starts: CHAMAK_STRUCTURE on Railway.
-    @SerialName("default_structure") val defaultStructure: Int? = null
+    @SerialName("default_structure") val defaultStructure: Int? = null,
+    // What each photo shows, one word from the backend's list.
+    @SerialName("image1_type") val image1Type: String? = null,
+    @SerialName("image2_type") val image2Type: String? = null
 ) {
     val dynamicAttributes: List<ChamakAttribute>
         get() {

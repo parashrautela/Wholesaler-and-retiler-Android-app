@@ -88,14 +88,16 @@ fun AddProductSheet(
     userId: String,
     onDismiss: () -> Unit,
     onAdded: (Product) -> Unit,
-    onOpenUploadHistory: (() -> Unit)? = null
+    onOpenUploadHistory: (() -> Unit)? = null,
+    prefill: AddProductPrefill? = null
 ) {
     AddProductScreen(
         wholesalerId = wholesalerId,
         userId = userId,
         onClose = onDismiss,
         onOpenUploadHistory = onOpenUploadHistory,
-        onAdded = onAdded
+        onAdded = onAdded,
+        prefill = prefill
     )
 }
 

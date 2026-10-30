@@ -44,10 +44,14 @@ import com.jewelindia.app.data.api.WholesalerApi
 import com.jewelindia.app.core.model.Product
 import com.jewelindia.app.design.Palette
 import com.jewelindia.app.design.Typography
+import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
+
+/** Photo and type to start from, when opened from a Chamak result. */
+class AddProductPrefill(val imageBytes: ByteArray, val jewelleryType: String)
 
 @Composable
 fun AddProductScreen(
@@ -57,7 +61,8 @@ fun AddProductScreen(
     previewState: AddProductFormState? = null,
     onClose: (() -> Unit)? = null,
     onOpenUploadHistory: (() -> Unit)? = null,
-    onAdded: ((Product) -> Unit)? = null
+    onAdded: ((Product) -> Unit)? = null,
+    prefill: AddProductPrefill? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -81,6 +86,18 @@ fun AddProductScreen(
                 } catch (e: CancellationException) { throw e }
                 catch (_: Exception) { form.bannerError = "Couldn't open that photo. Please choose it again." }
             }
+        }
+    }
+
+    LaunchedEffect(prefill) {
+        if (prefill != null && form.selectedUri == null) {
+            // The form reads its photo through a Uri, so hand it a cached copy.
+            val file = withContext(Dispatchers.IO) {
+                File(context.cacheDir, "chamak-design-${System.nanoTime()}.jpg").apply { writeBytes(prefill.imageBytes) }
+            }
+            form.selectedUri = Uri.fromFile(file)
+            form.imageBytes = prefill.imageBytes
+            form.jewelleryType = prefill.jewelleryType
         }
     }
 

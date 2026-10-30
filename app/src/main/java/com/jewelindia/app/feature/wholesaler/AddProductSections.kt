@@ -270,7 +270,7 @@ fun AddProductDetailsSection(form: AddProductFormState) {
             subtitle = "Add the key information that helps retailers understand and find this piece."
         )
 
-        LabelledField(label = "Product Title", error = form.errors["title"]) {
+        LabelledField(label = "Product Title (optional)", error = form.errors["title"]) {
             JewelTextInput(
                 value = form.title,
                 onValueChange = { form.title = it },
@@ -290,7 +290,7 @@ fun AddProductDetailsSection(form: AddProductFormState) {
             },
             trailing = {
                 JewelSelect(
-                    label = "Material",
+                    label = "Material (optional)",
                     options = WholesalerProductOptions.categories,
                     selection = form.category,
                     onSelectionChange = { form.category = it },
@@ -302,7 +302,7 @@ fun AddProductDetailsSection(form: AddProductFormState) {
         FieldPair(
             leading = {
                 JewelSelect(
-                    label = "Style",
+                    label = "Style (optional)",
                     options = WholesalerProductOptions.styles,
                     selection = form.style,
                     onSelectionChange = { form.style = it },
@@ -311,7 +311,7 @@ fun AddProductDetailsSection(form: AddProductFormState) {
             },
             trailing = {
                 JewelSelect(
-                    label = "Size",
+                    label = "Size (optional)",
                     options = WholesalerProductOptions.sizes,
                     selection = form.size,
                     onSelectionChange = { form.size = it },
@@ -321,7 +321,7 @@ fun AddProductDetailsSection(form: AddProductFormState) {
         )
 
         JewelSelect(
-            label = "Karatage",
+            label = "Karatage (optional)",
             options = WholesalerProductOptions.purities,
             selection = form.metalPurity,
             onSelectionChange = { form.metalPurity = it },
@@ -342,16 +342,6 @@ fun AddProductSpecsSection(form: AddProductFormState) {
         FieldPair(
             leading = {
                 InputWithSuffix(
-                    label = "Gross weight",
-                    suffix = "gm",
-                    text = form.grossWeight,
-                    onTextChange = { form.grossWeight = it },
-                    placeholder = "0.0",
-                    error = form.errors["grossWeight"]
-                )
-            },
-            trailing = {
-                InputWithSuffix(
                     label = "Net weight",
                     suffix = "gm",
                     text = form.netWeight,
@@ -359,13 +349,23 @@ fun AddProductSpecsSection(form: AddProductFormState) {
                     placeholder = "0.0",
                     error = form.errors["netWeight"]
                 )
+            },
+            trailing = {
+                InputWithSuffix(
+                    label = "Gross weight (optional)",
+                    suffix = "gm",
+                    text = form.grossWeight,
+                    onTextChange = { form.grossWeight = it },
+                    placeholder = "0.0",
+                    error = form.errors["grossWeight"]
+                )
             }
         )
 
         FieldPair(
             leading = {
                 InputWithSuffix(
-                    label = "Stone weight",
+                    label = "Stone weight (optional)",
                     suffix = "gm",
                     text = form.stoneWeight,
                     onTextChange = { form.stoneWeight = it },
@@ -376,7 +376,7 @@ fun AddProductSpecsSection(form: AddProductFormState) {
             trailing = {
                 if (!form.stockAvailable) {
                     InputWithSuffix(
-                        label = "Dispatch time",
+                        label = "Dispatch time (optional)",
                         suffix = "days",
                         text = form.makeToOrderDays,
                         onTextChange = { form.makeToOrderDays = it },

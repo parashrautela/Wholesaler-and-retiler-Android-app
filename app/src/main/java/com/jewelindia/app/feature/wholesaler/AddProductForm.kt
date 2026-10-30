@@ -38,6 +38,10 @@ enum class FormSubmitStatus {
         }
 }
 
+/** Accepts "12,5" as well as "12.5": some phone keypads only offer a comma. */
+internal fun weightNumber(text: String?): Double? =
+    text?.trim()?.replace(',', '.')?.toDoubleOrNull()
+
 internal fun productPayload(
     wholesalerId: String,
     title: String,
@@ -58,25 +62,26 @@ internal fun productPayload(
     put("wholesaler_id", wholesalerId)
     put("title", title)
     put("jewellery_type", jewelleryType)
-    put("category", category)
-    put("style", style)
-    put("size", size)
-    put("metal_purity", metalPurity)
+    // Optional fields: blank is stored as empty, never as "".
+    put("category", category.ifBlank { null })
+    put("style", style.ifBlank { null })
+    put("size", size.ifBlank { null })
+    put("metal_purity", metalPurity.ifBlank { null })
     put("stock_available", stockAvailable)
 
-    val net = netWeight?.takeIf { it.isNotBlank() }?.toDoubleOrNull()
+    val net = weightNumber(netWeight)
     if (net != null) put("net_weight", net) else put("net_weight", JsonNull)
 
-    val gross = grossWeight?.takeIf { it.isNotBlank() }?.toDoubleOrNull()
+    val gross = weightNumber(grossWeight)
     if (gross != null) put("gross_weight", gross) else put("gross_weight", JsonNull)
 
-    val stone = stoneWeight?.takeIf { it.isNotBlank() }?.toDoubleOrNull()
+    val stone = weightNumber(stoneWeight)
     if (stone != null) put("stone_weight", stone) else put("stone_weight", JsonNull)
 
     if (stockAvailable) {
         put("make_to_order_days", JsonNull)
     } else {
-        val days = makeToOrderDays?.takeIf { it.isNotBlank() }?.toIntOrNull()
+        val days = makeToOrderDays?.trim()?.takeIf { it.isNotBlank() }?.toIntOrNull()
         if (days != null) put("make_to_order_days", days) else put("make_to_order_days", JsonNull)
     }
 
@@ -142,25 +147,19 @@ class AddProductFormState {
         if (requiresImage && selectedUri == null) {
             found["image"] = "Please upload a product image."
         }
-        if (title.trim().isEmpty()) {
-            found["title"] = "Product title is required."
-        }
+        // Only the type and the net weight are required. Everything else is
+        // optional, but what's typed into an optional field is still checked.
         if (jewelleryType.isEmpty()) found["jewellery_type"] = "Please select a jewellery type."
-        if (category.isEmpty()) found["category"] = "Please select a material category."
-        if (style.isEmpty()) found["style"] = "Please select a style aesthetic."
-        if (size.isEmpty()) found["size"] = "Please select a size."
-        if (metalPurity.isEmpty()) found["metalPurity"] = "Please select a purity."
-
-        if (grossWeight.toDoubleOrNull()?.let { it > 0 } != true) {
+        if (weightNumber(netWeight)?.let { it > 0 } != true) {
+            found["netWeight"] = "Please enter the net weight."
+        }
+        if (grossWeight.isNotBlank() && (weightNumber(grossWeight) ?: 0.0) <= 0) {
             found["grossWeight"] = "Gross weight must be greater than 0."
         }
-        if (stoneWeight.isBlank() || (stoneWeight.toDoubleOrNull() ?: -1.0) < 0) {
+        if (stoneWeight.isNotBlank() && (weightNumber(stoneWeight) ?: -1.0) < 0) {
             found["stoneWeight"] = "Stone weight must be 0 or greater."
         }
-        if (netWeight.toDoubleOrNull()?.let { it > 0 } != true) {
-            found["netWeight"] = "Net weight must be greater than 0."
-        }
-        if (!stockAvailable && (makeToOrderDays.toIntOrNull() ?: 0) <= 0) {
+        if (!stockAvailable && makeToOrderDays.isNotBlank() && (makeToOrderDays.trim().toIntOrNull() ?: 0) <= 0) {
             found["makeToOrderDays"] = "Production time must be greater than 0 days."
         }
 
